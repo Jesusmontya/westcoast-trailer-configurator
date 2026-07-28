@@ -1,10 +1,18 @@
+import { ConfiguratorProvider } from './context/ConfiguratorContext'
 import Scene from './components/viewer3d/Scene'
+import OptionsPanel from './components/configurator/OptionsPanel'
+import './styles/panel.css'
 
 function App() {
   return (
-    <div style={{ width: '100vw', height: '100vh' }}>
-      <Scene />
-    </div>
+    <ConfiguratorProvider>
+      <div className="configurator-layout">
+        <div className="scene-container">
+          <Scene />
+        </div>
+        <OptionsPanel />
+      </div>
+    </ConfiguratorProvider>
   )
 }
 

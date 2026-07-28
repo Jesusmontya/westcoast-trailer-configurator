@@ -1,36 +1,59 @@
-import { useRef, useState } from 'react'
-import { useFrame } from '@react-three/fiber'
+import { useConfigurator } from '../../context/ConfiguratorContext'
 
 export default function TrailerModel() {
-  const bodyRef = useRef()
-  const [color, setColor] = useState('#e63946')
-
-  // pequeña rotación automática, además del control manual con el mouse
-  useFrame(() => {
-    bodyRef.current.rotation.y += 0.002
-  })
+  const { size, selectedItems } = useConfigurator()
+  const { width, height, depth } = size.dimensions
+  const bodyColor = '#3a3a3a'
 
   return (
-    <group ref={bodyRef}>
-      {/* Cuerpo principal del trailer */}
-      <mesh position={[0, 0.6, 0]} castShadow>
-        <boxGeometry args={[3, 1.2, 1.5]} />
-        <meshStandardMaterial color={color} />
+    <group position={[0, height / 2 + 0.15, 0]}>
+      <mesh position={[0, -height / 2, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[width, depth]} />
+        <meshStandardMaterial color="#888888" />
       </mesh>
 
-      {/* Ventana lateral (pieza intercambiable a futuro) */}
-      <mesh position={[0.5, 0.7, 0.76]}>
-        <boxGeometry args={[0.8, 0.5, 0.05]} />
-        <meshStandardMaterial color="#a8dadc" />
+      <mesh position={[-width / 2, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+        <planeGeometry args={[depth, height]} />
+        <meshStandardMaterial color={bodyColor} transparent opacity={0.15} side={2} />
       </mesh>
 
-      {/* Ruedas */}
-      <mesh position={[-1, 0, 0.8]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.3, 0.3, 0.2, 16]} />
+      <mesh position={[width / 2, 0, 0]} rotation={[0, -Math.PI / 2, 0]}>
+        <planeGeometry args={[depth, height]} />
+        <meshStandardMaterial color={bodyColor} transparent opacity={0.15} side={2} />
+      </mesh>
+
+      <mesh position={[0, 0, -depth / 2]}>
+        <planeGeometry args={[width, height]} />
+        <meshStandardMaterial color={bodyColor} transparent opacity={0.6} side={2} />
+      </mesh>
+
+      <mesh position={[0, 0, depth / 2]}>
+        <planeGeometry args={[width, height]} />
+        <meshStandardMaterial color={bodyColor} transparent opacity={0.15} side={2} />
+      </mesh>
+
+      <mesh position={[0, height / 2, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[width, depth]} />
+        <meshStandardMaterial color={bodyColor} transparent opacity={0.1} side={2} />
+      </mesh>
+
+      {/* Items interiores seleccionados */}
+      {selectedItems.map((item) => (
+        <mesh
+          key={item.id}
+          position={[item.position.x, -height / 2 + item.size.h / 2, item.position.z]}
+        >
+          <boxGeometry args={[item.size.w, item.size.h, item.size.d]} />
+          <meshStandardMaterial color={item.color} />
+        </mesh>
+      ))}
+
+      <mesh position={[-width / 2.5, -height / 2 - 0.15, depth / 2 + 0.05]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.25, 0.25, 0.15, 16]} />
         <meshStandardMaterial color="#1d1d1d" />
       </mesh>
-      <mesh position={[1, 0, 0.8]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.3, 0.3, 0.2, 16]} />
+      <mesh position={[width / 2.5, -height / 2 - 0.15, depth / 2 + 0.05]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.25, 0.25, 0.15, 16]} />
         <meshStandardMaterial color="#1d1d1d" />
       </mesh>
     </group>
