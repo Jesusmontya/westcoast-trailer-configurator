@@ -93,9 +93,7 @@ export default function Home() {
     }}
   >
     {/* placeholder visual mientras no hay foto real */}
-    <div className="absolute inset-0 flex items-center justify-center text-zinc-500 text-sm">
-      [ Foto de fondo: trailer terminado ]
-    </div>
+   
   </div>
 
   {/* Overlay oscuro para legibilidad del texto */}
