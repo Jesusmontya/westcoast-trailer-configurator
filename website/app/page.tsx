@@ -81,72 +81,48 @@ export default function Home() {
 
   return (
     <main className="flex flex-col">
-      {/* HERO */}
-      <section className="w-full bg-[#1c1917] text-white">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12">
-          <div className="lg:col-span-7 px-6 sm:px-10 pt-24 pb-16 flex flex-col justify-center">
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.98]">
-              {t.hero.headline}
-            </h1>
-            <p className="mt-6 max-w-md text-lg text-zinc-400">
-              {t.hero.paragraph}
-            </p>
-            <a
-              href={CONFIGURATOR_URL}
-              className="mt-9 inline-block w-fit px-7 py-3.5 bg-[#a8503f] text-white font-semibold hover:bg-[#8f4234] transition-colors"
-            >
-              {t.hero.cta} →
-            </a>
-          </div>
-          <div className="lg:col-span-5">
-            <ImagePlaceholder
-              label="[ Foto: trailer terminado ]"
-              className="h-full min-h-[420px]"
-            />
-          </div>
-        </div>
-      </section>
+      {/* HERO — imagen de fondo completa con overlay oscuro */}
+<section className="relative w-full min-h-[85vh] flex items-center overflow-hidden">
+  {/* FOTO DE FONDO — reemplaza backgroundImage por tu foto real cuando la tengas */}
+  <div
+    className="absolute inset-0 bg-zinc-800"
+    style={{
+      // backgroundImage: "url('/photos/hero-trailer.jpg')",
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+    }}
+  >
+    {/* placeholder visual mientras no hay foto real */}
+    <div className="absolute inset-0 flex items-center justify-center text-zinc-500 text-sm">
+      [ Foto de fondo: trailer terminado ]
+    </div>
+  </div>
 
-      {/* MARQUEE */}
-      <section className="w-full py-5 bg-[#a8503f] overflow-hidden">
-        <div className="flex gap-14 w-max animate-marquee-left">
-          {[...clientNames, ...clientNames, ...clientNames].map((name, i) => (
-            <span
-              key={i}
-              className="text-sm font-bold text-white uppercase tracking-widest whitespace-nowrap"
-            >
-              {name}
-            </span>
-          ))}
-        </div>
-      </section>
+  {/* Overlay oscuro para legibilidad del texto */}
+  <div className="absolute inset-0 bg-black/55" />
 
-      {/* ADVANTAGES */}
-      <section className="w-full bg-white">
-        <div className="max-w-6xl mx-auto px-6 py-24">
-          <h2 className="text-3xl sm:text-4xl font-bold text-[#1c1917] max-w-lg">
-            {t.advantages.heading}
-          </h2>
-          <div className="mt-14 divide-y divide-zinc-200 border-t border-zinc-200">
-            {t.advantages.items.map((item, i) => (
-              <div
-                key={i}
-                className="grid grid-cols-1 sm:grid-cols-12 gap-4 py-8 items-baseline"
-              >
-                <span className="sm:col-span-1 text-sm font-bold text-[#a8503f]">
-                  {String(i + 1).padStart(2, "0")}
-                </span>
-                <h3 className="sm:col-span-4 text-lg font-semibold text-[#1c1917]">
-                  {item.title}
-                </h3>
-                <p className="sm:col-span-7 text-zinc-500 leading-relaxed">
-                  {item.text}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+  {/* Contenido */}
+  <div className="relative z-10 max-w-7xl mx-auto w-full px-6 sm:px-10">
+    <div className="max-w-xl">
+      <span className="block text-sm sm:text-base font-bold tracking-[0.2em] text-[#a8503f] mb-4">
+        TRAILERS FOR ANY IDEA
+      </span>
+      <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold tracking-tight leading-[0.98] text-white">
+        We build the trailer. You build the business.
+      </h1>
+      <p className="mt-6 max-w-md text-lg text-zinc-200">
+        Custom food trailers, built in Nevada, from the frame up — for people
+        ready to start something of their own.
+      </p>
+      <a
+        href="https://westcoast-trailer-configurator-tdlm.vercel.app"
+        className="mt-9 inline-block w-fit px-7 py-3.5 bg-[#a8503f] text-white font-semibold hover:bg-[#8f4234] transition-colors"
+      >
+        Build my trailer →
+      </a>
+    </div>
+  </div>
+</section>
 
       {/* CLIENT WORK — galería con ventana emergente */}
       <section className="w-full bg-zinc-50 border-t border-zinc-200">
