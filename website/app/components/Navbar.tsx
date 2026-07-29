@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useLanguage } from "../context/LanguageContext";
 
 const CONFIGURATOR_URL =
-  "https://westcoast-trailer-configurator-tdlm-mz9b16twn.vercel.app";
+  "https://westcoast-trailer-configurator-tdlm.vercel.app";
 
 export default function Navbar() {
   const { lang, toggleLang, t } = useLanguage();
