@@ -3,9 +3,15 @@ import Scene from './components/viewer3d/Scene'
 import OptionsPanel from './components/configurator/OptionsPanel'
 import './styles/panel.css'
 
-const LANDING_PAGE_URL = 'https://westcoast-trailer-configurator.vercel.app'
+const LANDING_PAGE_URL = 'https://westcoast-trailer-configurator-tdlm.vercel.app'
 
 function App() {
+  function handleBackClick(e) {
+    e.preventDefault()
+    e.stopPropagation()
+    window.location.href = LANDING_PAGE_URL
+  }
+
   return (
     <ConfiguratorProvider>
       <div className="configurator-layout">
@@ -14,12 +20,15 @@ function App() {
         </div>
         <OptionsPanel />
 
-        <a
-          href={LANDING_PAGE_URL}
+        <button
+          onClick={handleBackClick}
+          onMouseDown={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
           className="back-button"
+          style={{ zIndex: 9999 }}
         >
           ← Back to West Coast
-        </a>
+        </button>
       </div>
     </ConfiguratorProvider>
   )
