@@ -81,9 +81,9 @@ export default function Home() {
 
   return (
     <main className="flex flex-col">
-      {/* HERO — imagen de fondo completa con overlay oscuro */}
+      {/* HERO */}
 <section className="relative w-full min-h-[85vh] flex items-center overflow-hidden">
-  {/* FOTO DE FONDO — reemplaza backgroundImage por tu foto real cuando la tengas */}
+  
   <div
     className="absolute inset-0 bg-zinc-800"
     style={{
