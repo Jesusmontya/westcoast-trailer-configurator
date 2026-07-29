@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useLanguage } from "./context/LanguageContext";
 
 const CONFIGURATOR_URL =
-  "westcoast-trailer-configurator.vercel.app";
+  "https://westcoast-trailer-configurator.vercel.app";
 
 function ImagePlaceholder({ label, className }: { label: string; className?: string }) {
   return (
