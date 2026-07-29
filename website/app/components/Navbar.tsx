@@ -54,8 +54,6 @@ export default function Navbar() {
 
           <a
             href={CONFIGURATOR_URL}
-            target="_blank"
-            rel="noopener noreferrer"
             className="px-5 py-2.5 rounded-md bg-[#a8503f] text-white text-sm font-semibold hover:bg-[#8f4234] transition-colors whitespace-nowrap"
           >
             {t.nav.cta} →

@@ -93,8 +93,6 @@ export default function Home() {
             </p>
             <a
               href={CONFIGURATOR_URL}
-              target="_blank"
-              rel="noopener noreferrer"
               className="mt-9 inline-block w-fit px-7 py-3.5 bg-[#a8503f] text-white font-semibold hover:bg-[#8f4234] transition-colors"
             >
               {t.hero.cta} →
