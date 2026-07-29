@@ -14,6 +14,7 @@ const translations = {
       cta: "Build my trailer",
     },
     hero: {
+      eyebrow: "TRAILERS FOR ANY IDEA",
       headline: "We build the trailer. You build the business.",
       paragraph:
         "Custom food trailers, built in Nevada, from the frame up — for people ready to start something of their own.",
@@ -85,6 +86,7 @@ const translations = {
       cta: "Arma tu trailer",
     },
     hero: {
+      eyebrow: "TRAILERS PARA CUALQUIER IDEA",
       headline: "Nosotros hacemos el trailer. Tú haces el negocio.",
       paragraph:
         "Trailers de comida personalizados, hechos en Nevada, desde la estructura — para quienes están listos para empezar su propio negocio.",
