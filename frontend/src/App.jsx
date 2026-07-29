@@ -3,6 +3,8 @@ import Scene from './components/viewer3d/Scene'
 import OptionsPanel from './components/configurator/OptionsPanel'
 import './styles/panel.css'
 
+const LANDING_PAGE_URL = 'https://westcoast-trailer-configurator-tdlm.vercel.app'
+
 function App() {
   return (
     <ConfiguratorProvider>
@@ -11,6 +13,13 @@ function App() {
           <Scene />
         </div>
         <OptionsPanel />
+
+        <a
+          href={LANDING_PAGE_URL}
+          className="back-button"
+        >
+          ← Back to West Coast
+        </a>
       </div>
     </ConfiguratorProvider>
   )
