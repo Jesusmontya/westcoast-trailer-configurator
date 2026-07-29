@@ -87,7 +87,7 @@ export default function Home() {
   <div
     className="absolute inset-0 bg-zinc-800"
     style={{
-      // backgroundImage: "url('/photos/hero-trailer.jpg')",
+      backgroundImage: "url('/photos/hero-trailer.jpg')",
       backgroundSize: "cover",
       backgroundPosition: "center",
     }}
