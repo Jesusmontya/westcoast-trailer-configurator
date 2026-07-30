@@ -24,15 +24,23 @@ const clientNames = [
 ];
 
 // Trabajos reales — reemplaza "image" por la ruta de tu foto cuando la tengas
-// (ej. "/photos/parrilla-1.jpg") y ajusta name/type con el proyecto real
 const clientWork = [
   { name: "A La Parrilla", type: "Taco Trailer", image: null },
   { name: "Los Mandilones", type: "Full Kitchen Trailer", image: null },
   { name: "Pelons Micheladas", type: "Beverage Trailer", image: null },
   { name: "Costa's Tacos", type: "Taco Trailer", image: null },
   { name: "Client Project", type: "Custom Build", image: null },
-  { name: "Client Project", type: "Custom Build", image: null },
 ];
+
+function LoadingDots() {
+  return (
+    <span className="inline-flex gap-1 ml-1">
+      <span className="w-1 h-1 rounded-full bg-zinc-400 animate-bounce [animation-delay:-0.3s]" />
+      <span className="w-1 h-1 rounded-full bg-zinc-400 animate-bounce [animation-delay:-0.15s]" />
+      <span className="w-1 h-1 rounded-full bg-zinc-400 animate-bounce" />
+    </span>
+  );
+}
 
 function ClientWorkModal({
   work,
@@ -81,7 +89,7 @@ export default function Home() {
 
   return (
     <main className="flex flex-col">
-      {/* HERO — imagen de fondo completa, conectado a traducción */}
+      {/* HERO */}
       <section className="relative w-full min-h-[85vh] flex items-center overflow-hidden">
         <div
           className="absolute inset-0 bg-zinc-800"
@@ -129,34 +137,36 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ADVANTAGES */}
+      {/* ADVANTAGES — formato pregunta que se hace el cliente */}
       <section className="w-full bg-white">
         <div className="max-w-6xl mx-auto px-6 py-24">
-          <h2 className="text-3xl sm:text-4xl font-bold text-[#1c1917] max-w-lg">
+          <h2 className="text-3xl sm:text-4xl font-bold text-[#1c1917] max-w-lg mb-14">
             {t.advantages.heading}
           </h2>
-          <div className="mt-14 divide-y divide-zinc-200 border-t border-zinc-200">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-12">
             {t.advantages.items.map((item, i) => (
-              <div
-                key={i}
-                className="grid grid-cols-1 sm:grid-cols-12 gap-4 py-8 items-baseline"
-              >
-                <span className="sm:col-span-1 text-sm font-bold text-[#a8503f]">
+              <div key={i} className="flex gap-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-[#a8503f]/10 flex items-center justify-center text-[#a8503f] font-bold text-sm">
                   {String(i + 1).padStart(2, "0")}
-                </span>
-                <h3 className="sm:col-span-4 text-lg font-semibold text-[#1c1917]">
-                  {item.title}
-                </h3>
-                <p className="sm:col-span-7 text-zinc-500 leading-relaxed">
-                  {item.text}
-                </p>
+                </div>
+                <div>
+                  <p className="text-base font-semibold text-[#1c1917] italic">
+                    &quot;{item.question}&quot;
+                  </p>
+                  <p className="mt-2 text-sm font-bold uppercase tracking-wide text-[#a8503f]">
+                    {item.title}
+                  </p>
+                  <p className="mt-1 text-sm text-zinc-500 leading-relaxed">
+                    {item.text}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* CLIENT WORK — galería con ventana emergente */}
+      {/* CLIENT WORK — 5 reales + teaser de próximo proyecto */}
       <section className="w-full bg-zinc-50 border-t border-zinc-200">
         <div className="max-w-6xl mx-auto px-6 py-24">
           <h2 className="text-3xl sm:text-4xl font-bold text-[#1c1917] max-w-lg">
@@ -182,6 +192,20 @@ export default function Home() {
                 <p className="text-xs text-zinc-500">{work.type}</p>
               </button>
             ))}
+
+            {/* Tarjeta 6: próximo proyecto, estilo "cargando" */}
+            <div className="text-left">
+              <div className="flex items-center justify-center h-48 border-2 border-dashed border-zinc-300 bg-transparent">
+                <span className="text-zinc-400 text-xs font-medium">[ ? ]</span>
+              </div>
+              <p className="mt-3 text-sm font-semibold text-zinc-400">
+                {t.nextProject.title}
+              </p>
+              <p className="text-xs text-zinc-400 flex items-center">
+                {t.nextProject.subtitle}
+                <LoadingDots />
+              </p>
+            </div>
           </div>
         </div>
       </section>

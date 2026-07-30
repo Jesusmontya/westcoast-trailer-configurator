@@ -24,26 +24,32 @@ const translations = {
       heading: "Why build with West Coast",
       items: [
         {
+          question: "Can I afford this without paying it all upfront?",
           title: "Flexible Financing",
           text: "We work with financing partners to help you get started without paying everything upfront.",
         },
         {
+          question: "How long until I can actually open?",
           title: "Fast Turnaround",
           text: "Efficient production timelines so you can open your business sooner, not later.",
         },
         {
+          question: "Will it actually fit how I work?",
           title: "Fully Custom Design",
           text: "Every trailer is built around your menu, equipment, and workflow — not a fixed template.",
         },
         {
+          question: "Will it hold up over time?",
           title: "Structural Warranty",
           text: "Every trailer comes backed by a warranty covering the structure and build quality.",
         },
         {
+          question: "Can it handle real daily volume?",
           title: "Commercial-Grade Equipment",
           text: "We install professional equipment built to handle real daily volume, not just show well.",
         },
         {
+          question: "Am I overpaying for this?",
           title: "Accessible Pricing",
           text: "Quality trailers at prices built for real small business budgets, not inflated estimates.",
         },
@@ -62,6 +68,10 @@ const translations = {
         { title: "Build & install", text: "Frame, equipment, electrical — all done in-house, start to finish." },
         { title: "Delivery", text: "Pick it up or we bring it to you. Ready to open." },
       ],
+    },
+    nextProject: {
+      title: "Your next project",
+      subtitle: "Loading",
     },
     trustWall: {
       heading: "Businesses we've built for",
@@ -96,26 +106,32 @@ const translations = {
       heading: "Por qué construir con West Coast",
       items: [
         {
+          question: "¿Puedo pagarlo sin dar todo de una vez?",
           title: "Financiamiento flexible",
           text: "Trabajamos con socios de financiamiento para que puedas empezar sin pagar todo por adelantado.",
         },
         {
+          question: "¿Cuánto tardo en abrir de verdad?",
           title: "Entrega rápida",
           text: "Tiempos de producción eficientes para que abras tu negocio antes, no después.",
         },
         {
+          question: "¿De verdad se va a acomodar a cómo trabajo?",
           title: "Diseño 100% personalizado",
           text: "Cada trailer se construye alrededor de tu menú, equipo y forma de trabajar — no de una plantilla fija.",
         },
         {
+          question: "¿Va a aguantar con el tiempo?",
           title: "Garantía estructural",
           text: "Cada trailer viene respaldado por una garantía que cubre la estructura y calidad de construcción.",
         },
         {
+          question: "¿Aguanta el volumen real del día a día?",
           title: "Equipo de calidad comercial",
           text: "Instalamos equipo profesional hecho para aguantar volumen real todos los días, no solo verse bien.",
         },
         {
+          question: "¿Estoy pagando de más por esto?",
           title: "Precios accesibles",
           text: "Trailers de calidad a precios pensados para presupuestos reales de negocios pequeños.",
         },
@@ -134,6 +150,10 @@ const translations = {
         { title: "Construcción e instalación", text: "Estructura, equipo, eléctrico — todo hecho en casa, de principio a fin." },
         { title: "Entrega", text: "Lo recoges o te lo llevamos. Listo para abrir." },
       ],
+    },
+    nextProject: {
+      title: "Your next project",
+      subtitle: "Loading",
     },
     trustWall: {
       heading: "Negocios para los que hemos construido",
