@@ -175,6 +175,7 @@ export default function Home() {
           }}
         />
         <div className="absolute inset-0 bg-black/55" />
+
         <div className="relative z-10 max-w-7xl mx-auto w-full px-6 sm:px-10">
           <div className="max-w-xl">
             <span className="block text-sm sm:text-base font-bold tracking-[0.2em] text-[#a8503f] mb-4">
@@ -186,6 +187,9 @@ export default function Home() {
             <p className="mt-6 max-w-md text-lg text-zinc-200">
               {t.hero.paragraph}
             </p>
+            <p className="mt-3 text-sm text-zinc-400 font-medium">
+              {t.hero.trustLine}
+            </p>
             <a
               href={CONFIGURATOR_URL}
               className="mt-9 inline-block w-fit px-7 py-3.5 bg-[#a8503f] text-white font-semibold hover:bg-[#8f4234] transition-colors"
@@ -194,12 +198,36 @@ export default function Home() {
             </a>
           </div>
         </div>
+
+        {/* CARICATURA — reemplazar por <img> cuando esté lista la imagen */}
+        <div className="hidden sm:block absolute bottom-6 right-6 sm:right-10 z-10 w-32 sm:w-40 h-32 sm:h-40 animate-sway">
+          <div className="w-full h-full flex items-center justify-center bg-white/10 backdrop-blur-sm rounded-full text-xs text-zinc-300 text-center px-2">
+            [ Caricatura aquí ]
+          </div>
+        </div>
+
+        {/* INDICADOR DE SCROLL */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 animate-bounce">
+          <span className="text-xs text-zinc-300 uppercase tracking-widest">
+            Scroll
+          </span>
+          <div className="w-px h-8 bg-zinc-300/50" />
+        </div>
       </section>
 
       {/* MARQUEE DE CLIENTES */}
       <section className="w-full py-5 bg-[#a8503f] overflow-hidden">
         <div className="flex gap-14 w-max animate-marquee-left">
-          {[...clientNames, ...clientNames, ...clientNames].map((name, i) => (
+          {[
+            ...clientNames,
+            ...clientNames,
+            ...clientNames,
+            ...clientNames,
+            ...clientNames,
+            ...clientNames,
+            ...clientNames,
+            ...clientNames,
+          ].map((name, i) => (
             <span
               key={i}
               className="text-sm font-bold text-white uppercase tracking-widest whitespace-nowrap"

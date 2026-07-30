@@ -38,3 +38,17 @@ body {
 .animate-marquee-left {
   animation: marquee-left 35s linear infinite;
 }
+
+@keyframes sway {
+  0%, 100% {
+    transform: rotate(-3deg);
+  }
+  50% {
+    transform: rotate(3deg);
+  }
+}
+
+.animate-sway {
+  animation: sway 3.5s ease-in-out infinite;
+  transform-origin: bottom center;
+}

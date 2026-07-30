@@ -18,6 +18,7 @@ const translations = {
       headline: "We build the trailer. You build the business.",
       paragraph:
         "Custom food trailers, built in Nevada, from the frame up — for people ready to start something of their own.",
+      trustLine: "100+ trailers delivered · 3+ years in Nevada",
       cta: "Build my trailer",
     },
     advantages: {
@@ -122,6 +123,7 @@ const translations = {
       headline: "Nosotros hacemos el trailer. Tú haces el negocio.",
       paragraph:
         "Trailers de comida personalizados, hechos en Nevada, desde la estructura — para quienes están listos para empezar su propio negocio.",
+      trustLine: "100+ trailers entregados · 3+ años en Nevada",
       cta: "Arma tu trailer",
     },
     advantages: {
