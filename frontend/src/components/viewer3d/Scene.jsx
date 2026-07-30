@@ -1,6 +1,41 @@
-import { Canvas } from '@react-three/fiber'
+import { useRef, useEffect } from 'react'
+import { Canvas, useThree } from '@react-three/fiber'
 import { OrbitControls, Environment, ContactShadows } from '@react-three/drei'
 import TrailerModel from './TrailerModel'
+import { useConfigurator } from '../../context/ConfiguratorContext'
+
+function CameraRig() {
+  const { viewMode } = useConfigurator()
+  const { camera } = useThree()
+  const controlsRef = useRef()
+
+  useEffect(() => {
+    if (!controlsRef.current) return
+    if (viewMode === 'top') {
+      camera.position.set(0, 6, 0.01)
+      controlsRef.current.target.set(0, 0.7, 0)
+    } else {
+      camera.position.set(0, 1.2, 5)
+      controlsRef.current.target.set(0, 0.7, 0)
+    }
+    controlsRef.current.update()
+  }, [viewMode, camera])
+
+  const { isDragging } = useConfigurator()
+
+  return (
+    <OrbitControls
+      ref={controlsRef}
+      enabled={!isDragging}
+      enablePan={false}
+      minDistance={3}
+      maxDistance={9}
+      minPolarAngle={viewMode === 'top' ? 0.01 : Math.PI / 2.3}
+      maxPolarAngle={viewMode === 'top' ? 0.01 : Math.PI / 2.3}
+      target={[0, 0.7, 0]}
+    />
+  )
+}
 
 export default function Scene() {
   return (
@@ -11,25 +46,18 @@ export default function Scene() {
 
       <TrailerModel />
 
-      {/* Terreno alrededor */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
         <planeGeometry args={[20, 20]} />
         <meshStandardMaterial color="#2b2b2b" />
       </mesh>
 
-      {/* Carretera — corre a lo largo del eje X, igual que el trailer */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[20, 3.5]} />
         <meshStandardMaterial color="#1a1a1a" />
       </mesh>
 
-      {/* Línea central segmentada, corriendo en X */}
       {Array.from({ length: 10 }).map((_, i) => (
-        <mesh
-          key={i}
-          rotation={[-Math.PI / 2, 0, 0]}
-          position={[-9 + i * 2, 0.005, 0]}
-        >
+        <mesh key={i} rotation={[-Math.PI / 2, 0, 0]} position={[-9 + i * 2, 0.005, 0]}>
           <planeGeometry args={[1, 0.1]} />
           <meshStandardMaterial color="#f1c40f" />
         </mesh>
@@ -37,13 +65,7 @@ export default function Scene() {
 
       <ContactShadows position={[0, 0.01, 0]} opacity={0.4} scale={10} blur={2} far={2} />
 
-      <OrbitControls
-        enablePan={false}
-        minDistance={3}
-        maxDistance={9}
-        maxPolarAngle={Math.PI / 2.1}
-        target={[0, 0.7, 0]}
-      />
+      <CameraRig />
 
       <Environment preset="city" />
     </Canvas>

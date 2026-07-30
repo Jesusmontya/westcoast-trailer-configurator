@@ -185,3 +185,31 @@
     font-size: 13px;
   }
 }
+.view-toggle-button {
+  padding: 10px 16px;
+  background: rgba(30, 30, 30, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #fff;
+  font-family: Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+}
+
+.view-toggle-button:hover {
+  background: rgba(30, 30, 30, 0.9);
+}
+
+.scene-container canvas {
+  touch-action: none;
+}
+
+@media (max-width: 768px) {
+  .view-toggle-button {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+}

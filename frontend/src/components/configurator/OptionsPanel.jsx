@@ -1,50 +1,68 @@
-import { SIZES, INTERIOR_ITEMS, useConfigurator } from '../../context/ConfiguratorContext'
+import { useConfigurator } from '../../context/ConfiguratorContext'
+import StepIndicator from './StepIndicator'
+import StepPreset from './StepPreset'
+import StepSize from './StepSize'
+import StepEquipment from './StepEquipment'
+import StepSummary from './StepSummary'
 import '../../styles/panel.css'
 
 export default function OptionsPanel() {
-  const { sizeId, setSizeId, selectedItemIds, toggleItem, totalPrice } = useConfigurator()
+  const { step, nextStep, prevStep, submitted } = useConfigurator()
 
   return (
     <div className="glass-panel">
-      <h2 className="panel-heading">Arma tu trailer</h2>
+      <StepIndicator />
 
-      <section className="panel-section">
-        <h3 className="panel-subheading">1. Elige el tamaño</h3>
-        {SIZES.map((s) => (
-          <label key={s.id} className="option-row">
-            <input
-              type="radio"
-              name="size"
-              checked={sizeId === s.id}
-              onChange={() => setSizeId(s.id)}
-            />
-            <span className="option-label">{s.label}</span>
-            <span className="option-price">${s.basePrice.toLocaleString()}</span>
-          </label>
-        ))}
-      </section>
+      {step === 1 && <StepPreset />}
+      {step === 2 && <StepSize />}
+      {step === 3 && <StepEquipment />}
+      {step === 4 && <StepSummary />}
 
-      <section className="panel-section">
-        <h3 className="panel-subheading">2. Agrega equipo interior</h3>
-        {INTERIOR_ITEMS.map((item) => (
-          <label key={item.id} className="option-row">
-            <input
-              type="checkbox"
-              checked={selectedItemIds.includes(item.id)}
-              onChange={() => toggleItem(item.id)}
-            />
-            <span className="option-label">{item.label}</span>
-            <span className="option-price">+${item.price.toLocaleString()}</span>
-          </label>
-        ))}
-      </section>
-
-      <div className="total-box">
-        <span className="total-label">Total estimado</span>
-        <span className="total-value">${totalPrice.toLocaleString()}</span>
-      </div>
-
-      <button className="quote-button">Generar cotización</button>
+      {!submitted && (
+        <div style={styles.navRow}>
+          {step > 1 && (
+            <button onClick={prevStep} style={styles.backButton}>
+              ← Back
+            </button>
+          )}
+          {step < 4 && (
+            <button onClick={nextStep} style={styles.nextButton}>
+              Next →
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
+}
+
+const styles = {
+  navRow: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: '10px',
+    marginTop: '24px',
+    paddingTop: '16px',
+    borderTop: '1px solid rgba(255,255,255,0.1)',
+  },
+  backButton: {
+    padding: '10px 16px',
+    background: 'transparent',
+    border: '1px solid rgba(255,255,255,0.2)',
+    borderRadius: '8px',
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: '13px',
+    cursor: 'pointer',
+  },
+  nextButton: {
+    marginLeft: 'auto',
+    padding: '10px 20px',
+    background: '#e63946',
+    border: 'none',
+    borderRadius: '8px',
+    color: '#fff',
+    fontSize: '13px',
+    fontWeight: 600,
+    cursor: 'pointer',
+  },
 }
