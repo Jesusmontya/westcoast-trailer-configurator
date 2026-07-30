@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useLanguage } from "./context/LanguageContext";
+import { supabase } from "../lib/supabase";
 
 const CONFIGURATOR_URL =
   "https://westcoast-trailer-configurator-tdlm.vercel.app";
@@ -75,16 +76,39 @@ function ClientWorkModal({
   );
 }
 
+// Agrega este import arriba del archivo page.tsx, junto a los demás:
+// import { supabase } from "../lib/supabase";
+
 function ContactForm() {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [trailerType, setTrailerType] = useState(t.contact.typeOptions[0]);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // TODO: conectar a Supabase aquí (insert en tabla leads, origen "contact_form")
+    setLoading(true);
+    setError(false);
+
+    const { error: insertError } = await supabase.from("leads").insert({
+      name,
+      phone,
+      source: "contact_form",
+      trailer_type: trailerType,
+      language: lang,
+    });
+
+    setLoading(false);
+
+    if (insertError) {
+      console.error(insertError);
+      setError(true);
+      return;
+    }
+
     setSubmitted(true);
   }
 
@@ -143,11 +167,18 @@ function ContactForm() {
         </select>
       </div>
 
+      {error && (
+        <p className="text-sm text-red-600">
+          Something went wrong. Please try again or call us directly.
+        </p>
+      )}
+
       <button
         type="submit"
-        className="mt-2 px-6 py-3.5 bg-[#a8503f] text-white font-semibold rounded-md hover:bg-[#8f4234] transition-colors"
+        disabled={loading}
+        className="mt-2 px-6 py-3.5 bg-[#a8503f] text-white font-semibold rounded-md hover:bg-[#8f4234] transition-colors disabled:opacity-60"
       >
-        {t.contact.submitButton}
+        {loading ? "..." : t.contact.submitButton}
       </button>
     </form>
   );
@@ -199,12 +230,7 @@ export default function Home() {
           </div>
         </div>
 
-        {/* CARICATURA — reemplazar por <img> cuando esté lista la imagen */}
-        <div className="hidden sm:block absolute bottom-6 right-6 sm:right-10 z-10 w-32 sm:w-40 h-32 sm:h-40 animate-sway">
-          <div className="w-full h-full flex items-center justify-center bg-white/10 backdrop-blur-sm rounded-full text-xs text-zinc-300 text-center px-2">
-            [ Caricatura aquí ]
-          </div>
-        </div>
+       
 
         {/* INDICADOR DE SCROLL */}
         <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-2 animate-bounce">

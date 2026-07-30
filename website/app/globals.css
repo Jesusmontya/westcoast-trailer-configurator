@@ -48,7 +48,3 @@ body {
   }
 }
 
-.animate-sway {
-  animation: sway 3.5s ease-in-out infinite;
-  transform-origin: bottom center;
-}
