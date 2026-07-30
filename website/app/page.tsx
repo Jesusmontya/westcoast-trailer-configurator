@@ -23,7 +23,6 @@ const clientNames = [
   "Costa's Tacos",
 ];
 
-// Trabajos reales — reemplaza "image" por la ruta de tu foto cuando la tengas
 const clientWork = [
   { name: "A La Parrilla", type: "Taco Trailer", image: null },
   { name: "Los Mandilones", type: "Full Kitchen Trailer", image: null },
@@ -58,15 +57,10 @@ function ClientWorkModal({
         className="bg-white max-w-2xl w-full overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <ImagePlaceholder
-          label={`[ Foto: ${work.name} ]`}
-          className="w-full h-80"
-        />
+        <ImagePlaceholder label={`[ Foto: ${work.name} ]`} className="w-full h-80" />
         <div className="p-6 flex items-center justify-between">
           <div>
-            <h3 className="text-lg font-semibold text-[#1c1917]">
-              {work.name}
-            </h3>
+            <h3 className="text-lg font-semibold text-[#1c1917]">{work.name}</h3>
             <p className="text-sm text-zinc-500">{work.type}</p>
           </div>
           <button
@@ -81,6 +75,84 @@ function ClientWorkModal({
   );
 }
 
+function ContactForm() {
+  const { t } = useLanguage();
+  const [submitted, setSubmitted] = useState(false);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [trailerType, setTrailerType] = useState(t.contact.typeOptions[0]);
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    // TODO: conectar a Supabase aquí (insert en tabla leads, origen "contact_form")
+    setSubmitted(true);
+  }
+
+  if (submitted) {
+    return (
+      <div className="bg-white p-8 rounded-lg text-center">
+        <p className="text-lg font-semibold text-[#1c1917]">
+          {t.contact.successMessage}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="bg-white p-8 rounded-lg flex flex-col gap-5">
+      <div>
+        <label className="block text-sm font-semibold text-[#1c1917] mb-1.5">
+          {t.contact.nameLabel}
+        </label>
+        <input
+          type="text"
+          required
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          className="w-full px-4 py-3 border border-zinc-300 rounded-md text-sm focus:outline-none focus:border-[#a8503f]"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-[#1c1917] mb-1.5">
+          {t.contact.phoneLabel}
+        </label>
+        <input
+          type="tel"
+          required
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          className="w-full px-4 py-3 border border-zinc-300 rounded-md text-sm focus:outline-none focus:border-[#a8503f]"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-semibold text-[#1c1917] mb-1.5">
+          {t.contact.typeLabel}
+        </label>
+        <select
+          value={trailerType}
+          onChange={(e) => setTrailerType(e.target.value)}
+          className="w-full px-4 py-3 border border-zinc-300 rounded-md text-sm focus:outline-none focus:border-[#a8503f] bg-white"
+        >
+          {t.contact.typeOptions.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <button
+        type="submit"
+        className="mt-2 px-6 py-3.5 bg-[#a8503f] text-white font-semibold rounded-md hover:bg-[#8f4234] transition-colors"
+      >
+        {t.contact.submitButton}
+      </button>
+    </form>
+  );
+}
+
 export default function Home() {
   const { t } = useLanguage();
   const [activeWork, setActiveWork] = useState<
@@ -90,7 +162,10 @@ export default function Home() {
   return (
     <main className="flex flex-col">
       {/* HERO */}
-      <section className="relative w-full min-h-[85vh] flex items-center overflow-hidden">
+      <section
+        className="relative w-full min-h-[85vh] flex items-center overflow-hidden"
+        id="home"
+      >
         <div
           className="absolute inset-0 bg-zinc-800"
           style={{
@@ -99,9 +174,7 @@ export default function Home() {
             backgroundPosition: "center",
           }}
         />
-
         <div className="absolute inset-0 bg-black/55" />
-
         <div className="relative z-10 max-w-7xl mx-auto w-full px-6 sm:px-10">
           <div className="max-w-xl">
             <span className="block text-sm sm:text-base font-bold tracking-[0.2em] text-[#a8503f] mb-4">
@@ -137,7 +210,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ADVANTAGES — formato pregunta que se hace el cliente */}
+      {/* ADVANTAGES */}
       <section className="w-full bg-white">
         <div className="max-w-6xl mx-auto px-6 py-24">
           <h2 className="text-3xl sm:text-4xl font-bold text-[#1c1917] max-w-lg mb-14">
@@ -166,15 +239,16 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CLIENT WORK — 5 reales + teaser de próximo proyecto */}
-      <section className="w-full bg-zinc-50 border-t border-zinc-200">
+      {/* GALLERY */}
+      <section
+        className="w-full bg-zinc-50 border-t border-zinc-200"
+        id="gallery"
+      >
         <div className="max-w-6xl mx-auto px-6 py-24">
           <h2 className="text-3xl sm:text-4xl font-bold text-[#1c1917] max-w-lg">
-            Trailers we&apos;ve built
+            {t.gallery.heading}
           </h2>
-          <p className="mt-3 text-zinc-500 max-w-md">
-            Real clients, real projects. Click any trailer to see more.
-          </p>
+          <p className="mt-3 text-zinc-500 max-w-md">{t.gallery.subheading}</p>
           <div className="mt-12 grid grid-cols-2 lg:grid-cols-3 gap-4">
             {clientWork.map((work, i) => (
               <button
@@ -193,7 +267,6 @@ export default function Home() {
               </button>
             ))}
 
-            {/* Tarjeta 6: próximo proyecto, estilo "cargando" */}
             <div className="text-left">
               <div className="flex items-center justify-center h-48 border-2 border-dashed border-zinc-300 bg-transparent">
                 <span className="text-zinc-400 text-xs font-medium">[ ? ]</span>
@@ -214,20 +287,34 @@ export default function Home() {
         <ClientWorkModal work={activeWork} onClose={() => setActiveWork(null)} />
       )}
 
-      {/* TRUST */}
-      <section className="w-full bg-white">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12">
-          <div className="lg:col-span-4 px-6 sm:px-10 py-20 flex flex-col justify-center order-2 lg:order-1">
-            <h2 className="text-2xl sm:text-3xl font-bold text-[#1c1917]">
-              {t.trust.heading}
-            </h2>
-            <p className="mt-4 text-zinc-500">{t.trust.paragraph}</p>
-          </div>
-          <div className="lg:col-span-8 order-1 lg:order-2">
+      {/* ABOUT */}
+      <section className="w-full bg-white" id="about">
+        <div className="max-w-6xl mx-auto px-6 py-24">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+            <div>
+              <h2 className="text-3xl sm:text-4xl font-bold text-[#1c1917]">
+                {t.about.heading}
+              </h2>
+              <p className="mt-6 text-zinc-600 leading-relaxed">
+                {t.about.paragraph1}
+              </p>
+              <p className="mt-4 text-zinc-600 leading-relaxed">
+                {t.about.paragraph2}
+              </p>
+            </div>
             <ImagePlaceholder
-              label="[ Foto: interior con equipo instalado ]"
+              label="[ Foto: taller / equipo de West Coast ]"
               className="h-72 lg:h-full"
             />
+          </div>
+
+          <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-8 border-t border-zinc-200 pt-12">
+            {t.about.stats.map((stat, i) => (
+              <div key={i}>
+                <p className="text-3xl font-bold text-[#a8503f]">{stat.value}</p>
+                <p className="mt-1 text-sm text-zinc-500">{stat.label}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -271,18 +358,16 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA FINAL */}
-      <section className="w-full bg-white border-t border-zinc-200">
-        <div className="max-w-6xl mx-auto px-6 py-20 flex flex-col sm:flex-row items-center justify-between gap-8">
-          <h2 className="text-2xl sm:text-3xl font-bold text-[#1c1917] text-center sm:text-left max-w-md">
-            {t.ctaFinal.heading}
-          </h2>
-          <a
-            href="/contact"
-            className="px-7 py-3.5 bg-[#a8503f] text-white font-semibold hover:bg-[#8f4234] transition-colors whitespace-nowrap"
-          >
-            {t.ctaFinal.button}
-          </a>
+      {/* CONTACT */}
+      <section className="w-full bg-zinc-50 border-t border-zinc-200" id="contact">
+        <div className="max-w-5xl mx-auto px-6 py-24 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+          <div>
+            <h2 className="text-3xl sm:text-4xl font-bold text-[#1c1917]">
+              {t.contact.heading}
+            </h2>
+            <p className="mt-4 text-zinc-500 max-w-sm">{t.contact.subheading}</p>
+          </div>
+          <ContactForm />
         </div>
       </section>
     </main>

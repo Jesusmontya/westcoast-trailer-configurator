@@ -8,8 +8,8 @@ const translations = {
   en: {
     nav: {
       home: "Home",
-      about: "About",
       gallery: "Gallery",
+      about: "About",
       contact: "Contact",
       cta: "Build my trailer",
     },
@@ -55,10 +55,25 @@ const translations = {
         },
       ],
     },
-    trust: {
-      heading: "Trusted by great amazing businesses",
-      paragraph:
-        "West Coast LLC is a leading supplier of the best quality trailers in Nevada, trusted by over 100 businesses.",
+    gallery: {
+      heading: "Trailers we've built",
+      subheading: "Real clients, real projects. Click any trailer to see more.",
+    },
+    nextProject: {
+      title: "Your next project",
+      subtitle: "Loading",
+    },
+    about: {
+      heading: "Making dreams possible.",
+      paragraph1:
+        "West Coast LLC has been building custom food trailers in Nevada for over three years. What started as a simple commitment — doing things right, at a fair price — has grown into more than 100 trailers delivered to real business owners: taco stands, michelada bars, food trucks, all built from the frame up, right here.",
+      paragraph2:
+        "We know starting your own business isn't easy. That's why we work with flexible financing partners, so you can get started without paying everything upfront — the same philosophy that helps our clients turn their own business dreams into reality.",
+      stats: [
+        { value: "100+", label: "Trailers delivered" },
+        { value: "3+", label: "Years building in Nevada" },
+        { value: "Flexible", label: "Financing available" },
+      ],
     },
     process: {
       heading: "How we build your trailer",
@@ -69,29 +84,36 @@ const translations = {
         { title: "Delivery", text: "Pick it up or we bring it to you. Ready to open." },
       ],
     },
-    nextProject: {
-      title: "Your next project",
-      subtitle: "Loading",
-    },
-    trustWall: {
-      heading: "Businesses we've built for",
-      paragraph: "Real clients, real trailers, real businesses running today.",
-    },
     testimonial: {
       quote:
         "They are super professional and nice, they helped me get my loan and encouraged me to get going on my dream of making a business.",
       author: "— Annel Zamudio, Co-owner, Pelons Micheladas",
     },
-    ctaFinal: {
-      heading: "Build your trailer. Start working with West Coast LLC.",
-      button: "Get in touch",
+    contact: {
+      heading: "Let's build your trailer",
+      subheading:
+        "Leave your info and we'll reach out within 24 hours to talk details.",
+      nameLabel: "Full name",
+      phoneLabel: "Phone number",
+      typeLabel: "What are you looking to build?",
+      typeOptions: ["Taco / Food Trailer", "Beverage Trailer", "Full Kitchen Trailer", "Custom / Other"],
+      submitButton: "Send",
+      successMessage: "Thanks! We'll contact you within 24 hours.",
+    },
+    footer: {
+      tagline: "We build the trailer. You build the business.",
+      contactHeading: "Contact",
+      phone: "Phone: coming soon",
+      email: "Email: coming soon",
+      location: "Nevada, USA",
+      copyright: "West Coast LLC. All rights reserved.",
     },
   },
   es: {
     nav: {
       home: "Inicio",
-      about: "Nosotros",
       gallery: "Galería",
+      about: "Nosotros",
       contact: "Contacto",
       cta: "Arma tu trailer",
     },
@@ -137,10 +159,25 @@ const translations = {
         },
       ],
     },
-    trust: {
-      heading: "Con la confianza de negocios increíbles",
-      paragraph:
-        "West Coast LLC es un proveedor líder de trailers de la mejor calidad en Nevada, con la confianza de más de 100 negocios.",
+    gallery: {
+      heading: "Trailers que hemos construido",
+      subheading: "Clientes reales, proyectos reales. Haz click en cualquiera para ver más.",
+    },
+    nextProject: {
+      title: "Tu próximo proyecto",
+      subtitle: "Cargando",
+    },
+    about: {
+      heading: "Haciendo realidad tus sueños.",
+      paragraph1:
+        "West Coast LLC lleva más de tres años construyendo trailers de comida personalizados en Nevada. Lo que empezó como un compromiso simple — hacer las cosas bien, a un precio justo — se ha convertido en más de 100 trailers entregados a dueños de negocios reales: taquerías, michelerías, food trucks, todos construidos desde la estructura, aquí mismo.",
+      paragraph2:
+        "Sabemos que empezar tu propio negocio no es fácil. Por eso trabajamos con socios de financiamiento flexible, para que puedas arrancar sin pagar todo de una vez — la misma filosofía con la que ayudamos a nuestros clientes a hacer realidad el sueño de tener su propio negocio.",
+      stats: [
+        { value: "100+", label: "Trailers entregados" },
+        { value: "3+", label: "Años construyendo en Nevada" },
+        { value: "Flexible", label: "Financiamiento disponible" },
+      ],
     },
     process: {
       heading: "Cómo construimos tu trailer",
@@ -151,22 +188,28 @@ const translations = {
         { title: "Entrega", text: "Lo recoges o te lo llevamos. Listo para abrir." },
       ],
     },
-    nextProject: {
-      title: "Your next project",
-      subtitle: "Loading",
-    },
-    trustWall: {
-      heading: "Negocios para los que hemos construido",
-      paragraph: "Clientes reales, trailers reales, negocios reales funcionando hoy.",
-    },
     testimonial: {
       quote:
         "Son súper profesionales y amables, me ayudaron a conseguir mi préstamo y me motivaron a seguir con mi sueño de tener mi propio negocio.",
       author: "— Annel Zamudio, Co-owner, Pelons Micheladas",
     },
-    ctaFinal: {
-      heading: "Arma tu trailer. Empieza a trabajar con West Coast LLC.",
-      button: "Contáctanos",
+    contact: {
+      heading: "Construyamos tu trailer",
+      subheading: "Déjanos tus datos y te contactamos en menos de 24 horas para platicar los detalles.",
+      nameLabel: "Nombre completo",
+      phoneLabel: "Número de teléfono",
+      typeLabel: "¿Qué buscas construir?",
+      typeOptions: ["Taco / Food Trailer", "Trailer de bebidas", "Cocina completa", "Personalizado / Otro"],
+      submitButton: "Enviar",
+      successMessage: "¡Gracias! Te contactaremos en menos de 24 horas.",
+    },
+    footer: {
+      tagline: "Nosotros hacemos el trailer. Tú haces el negocio.",
+      contactHeading: "Contacto",
+      phone: "Teléfono: próximamente",
+      email: "Correo: próximamente",
+      location: "Nevada, USA",
+      copyright: "West Coast LLC. Todos los derechos reservados.",
     },
   },
 };

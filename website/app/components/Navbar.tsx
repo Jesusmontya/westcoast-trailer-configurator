@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useLanguage } from "../context/LanguageContext";
 
 const CONFIGURATOR_URL =
@@ -12,23 +11,23 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full bg-[#1c1917]">
       <nav className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
-        <Link href="/" className="font-semibold text-lg tracking-tight text-white">
+        <a href="#home" className="font-semibold text-lg tracking-tight text-white">
           West Coast
-        </Link>
+        </a>
 
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-zinc-400">
-          <Link href="/" className="hover:text-white transition-colors">
+          <a href="#home" className="hover:text-white transition-colors">
             {t.nav.home}
-          </Link>
-          <Link href="/about" className="hover:text-white transition-colors">
-            {t.nav.about}
-          </Link>
-          <Link href="/gallery" className="hover:text-white transition-colors">
+          </a>
+          <a href="#gallery" className="hover:text-white transition-colors">
             {t.nav.gallery}
-          </Link>
-          <Link href="/contact" className="hover:text-white transition-colors">
+          </a>
+          <a href="#about" className="hover:text-white transition-colors">
+            {t.nav.about}
+          </a>
+          <a href="#contact" className="hover:text-white transition-colors">
             {t.nav.contact}
-          </Link>
+          </a>
         </div>
 
         <div className="flex items-center gap-3">
