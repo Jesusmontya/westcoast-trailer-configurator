@@ -1,0 +1,160 @@
+.step-size {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.step-header {
+  text-align: center;
+}
+
+.step-header h2 {
+  margin: 0 0 8px 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.step-header p {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.size-selector {
+  background: white;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.size-selector h3 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.size-buttons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.size-button {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 16px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.size-button:hover {
+  border-color: #4a90e2;
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.1);
+}
+
+.size-button.active {
+  border-color: #4a90e2;
+  background: #f0f6ff;
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
+}
+
+.size-number {
+  font-size: 20px;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.size-dims {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+}
+
+.size-price {
+  font-size: 16px;
+  font-weight: 600;
+  color: #27ae60;
+}
+
+.size-persons {
+  font-size: 11px;
+  color: #999;
+}
+
+.size-selected-info {
+  background: #e8f5e9;
+  border-left: 4px solid #27ae60;
+  border-radius: 4px;
+  padding: 16px;
+}
+
+.size-selected-info h4 {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1b5e20;
+}
+
+.size-selected-info p {
+  margin: 0;
+  font-size: 13px;
+  color: #2e7d32;
+  line-height: 1.5;
+}
+
+.size-selected-info p.note {
+  margin-top: 8px;
+  color: #558b2f;
+  font-style: italic;
+}
+
+.step-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.btn-prev,
+.btn-next {
+  border: none;
+  border-radius: 6px;
+  padding: 12px 32px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-prev {
+  background: white;
+  color: #4a90e2;
+  border: 2px solid #4a90e2;
+}
+
+.btn-prev:hover {
+  background: #f0f6ff;
+}
+
+.btn-next {
+  background: #4a90e2;
+  color: white;
+}
+
+.btn-next:hover:not(:disabled) {
+  background: #3a7bc8;
+}
+
+.btn-next:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  color: white;
+}

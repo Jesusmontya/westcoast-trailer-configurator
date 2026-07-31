@@ -1,191 +1,251 @@
-import { useConfigurator } from '../../context/ConfiguratorContext'
+import { useContext } from 'react';
+import { BuildContext } from '../../context/BuildContext';
+import { ConfiguratorUIContext } from '../../context/ConfiguratorUIContext';
+import { PriceBreakdown } from './PriceBreakdown';
+import { TrailerMiniMap } from './TrailerMiniMap';
+import { validateLeadData } from '../../utils/validation';
+import { supabase } from '../../services/supabase';
 
-function FloorPlanMiniMap() {
-  const { size, selectedItems, positions } = useConfigurator()
-  const { floorFt } = size
-  const svgW = 260
-  const svgH = (floorFt.depth / floorFt.width) * svgW
-
-  return (
-    <svg width={svgW} height={svgH} style={styles.svg}>
-      <rect x={0} y={0} width={svgW} height={svgH} fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.2)" />
-      {selectedItems.map((item) => {
-        const pos = positions[item.id]
-        if (!pos) return null
-        const x = (pos.x / floorFt.width) * svgW
-        const y = (pos.z / floorFt.depth) * svgH
-        const w = (item.footprintFt.w / floorFt.width) * svgW
-        const h = (item.footprintFt.d / floorFt.depth) * svgH
-        return (
-          <g key={item.id}>
-            <rect x={x} y={y} width={w} height={h} fill={item.color} opacity={0.85} rx={2} />
-            <text x={x + w / 2} y={y + h / 2 + 3} fontSize="9" fill="#1c1917" textAnchor="middle">
-              {item.icon}
-            </text>
-          </g>
-        )
-      })}
-    </svg>
-  )
-}
-
-export default function StepSummary() {
+export function StepSummary() {
   const {
-    size,
-    selectedItems,
-    totalPrice,
+    trailerSize,
+    equipmentList,
+    acPosition,
     notes,
-    name,
-    setName,
-    phone,
-    setPhone,
-    submitting,
-    submitted,
-    submitError,
-    submitLead,
-  } = useConfigurator()
+    saveDraftToLocal,
+    resetBuild,
+  } = useContext(BuildContext);
 
-  const monthlyEstimate = Math.round(totalPrice / 48)
+  const { goToStep, setSubmissionStatus, setSubmissionError, submissionStatus } =
+    useContext(ConfiguratorUIContext);
 
-  function handleSubmit(e) {
-    e.preventDefault()
-    submitLead()
-  }
+  const [formData, setFormData] = useState({
+    name: '',
+    phone: '',
+    email: '',
+  });
 
-  if (submitted) {
-    return (
-      <div style={styles.successBox}>
-        <p style={styles.successTitle}>Thanks{name ? `, ${name}` : ''}!</p>
-        <p style={styles.successText}>
-          We'll be in touch within 24 hours — excited to build this with you.
-        </p>
-      </div>
-    )
-  }
+  const [errors, setErrors] = useState({});
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: null }));
+    }
+  };
+
+  const handleValidateField = (field) => {
+    const { validateName, validatePhone, validateEmail } = require('../utils/validation');
+    let error = null;
+
+    if (field === 'name') {
+      const result = validateName(formData.name);
+      error = result.error;
+    } else if (field === 'phone') {
+      const result = validatePhone(formData.phone);
+      error = result.error;
+    } else if (field === 'email') {
+      const result = validateEmail(formData.email);
+      error = result.error;
+    }
+
+    if (error) {
+      setErrors((prev) => ({ ...prev, [field]: error }));
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    const leadData = {
+      name: formData.name,
+      phone: formData.phone,
+      email: formData.email,
+      trailerSize,
+      equipmentList,
+    };
+
+    const validation = validateLeadData(leadData);
+    if (!validation.valid) {
+      setErrors({ submit: validation.error });
+      return;
+    }
+
+    setSubmissionStatus('sending');
+    setSubmissionError(null);
+
+    try {
+      const { data: leadData, error: leadError } = await supabase
+        .from('leads')
+        .insert([
+          {
+            name: formData.name,
+            phone: formData.phone,
+            email: formData.email || null,
+            source: 'configurator',
+            trailer_type: trailerSize,
+            language: 'es',
+            attended: false,
+          },
+        ])
+        .select();
+
+      if (leadError) throw leadError;
+
+      const leadId = leadData[0].id;
+
+      const { error: buildError } = await supabase.from('builds').insert([
+        {
+          lead_id: leadId,
+          trailer_size: trailerSize,
+          equipment_list: equipmentList,
+          ac_position: acPosition,
+          notes: notes,
+          total_price: calculateTotal(),
+        },
+      ]);
+
+      if (buildError) throw buildError;
+
+      setSubmissionStatus('success');
+      localStorage.removeItem('trailer-draft');
+      resetBuild();
+
+      setTimeout(() => {
+        window.location.href = '/thank-you';
+      }, 2000);
+    } catch (err) {
+      console.error('Error enviando:', err);
+      setSubmissionStatus('error');
+      setSubmissionError(err.message || 'Error al enviar. Intenta de nuevo.');
+    }
+  };
+
+  const calculateTotal = () => {
+    const { calculatePricing } = require('../utils/pricing');
+    const pricing = calculatePricing(trailerSize, equipmentList);
+    return pricing.total || 0;
+  };
 
   return (
-    <div>
-      <h2 style={styles.heading}>Your quote</h2>
-
-      <p style={styles.mapLabel}>Your layout</p>
-      <FloorPlanMiniMap />
-
-      <div style={styles.breakdown}>
-        <div style={styles.breakdownRow}>
-          <span>{size.label} trailer</span>
-          <span>${size.basePrice.toLocaleString()}</span>
-        </div>
-        {selectedItems.map((item) => (
-          <div key={item.id} style={styles.breakdownRow}>
-            <span>{item.icon} {item.label}</span>
-            <span>+${item.price.toLocaleString()}</span>
-          </div>
-        ))}
-        <div style={styles.totalRow}>
-          <span>Total</span>
-          <span>${totalPrice.toLocaleString()}</span>
-        </div>
-        <p style={styles.financing}>
-          As low as ${monthlyEstimate.toLocaleString()}/mo with flexible financing
-        </p>
+    <div className="step-summary">
+      <div className="step-header">
+        <h2>Resumen de tu Configuracion</h2>
+        <p>Verifica todo antes de enviar tu solicitud</p>
       </div>
 
-      {notes && (
-        <div style={styles.notesPreview}>
-          <p style={styles.notesLabel}>Your notes:</p>
-          <p style={styles.notesText}>{notes}</p>
+      <div className="summary-grid">
+        <div className="summary-section">
+          <h3>Tu Trailer</h3>
+          <TrailerMiniMap trailerSize={trailerSize} equipmentList={equipmentList} />
+          <div className="summary-info">
+            <p>
+              <strong>Tamaño:</strong> {trailerSize}
+            </p>
+            <p>
+              <strong>Equipos:</strong> {equipmentList.length} items
+            </p>
+            {acPosition && (
+              <p>
+                <strong>A/C:</strong> Posicion {acPosition}
+              </p>
+            )}
+            {notes && (
+              <p>
+                <strong>Notas:</strong> {notes}
+              </p>
+            )}
+          </div>
+          <button className="btn-edit" onClick={() => goToStep(3)}>
+            Editar Equipos
+          </button>
+        </div>
+
+        <div className="summary-section">
+          <PriceBreakdown trailerSize={trailerSize} equipmentList={equipmentList} />
+        </div>
+      </div>
+
+      <form className="contact-form" onSubmit={handleSubmit}>
+        <h3>Tus Datos de Contacto</h3>
+
+        <div className="form-group">
+          <label htmlFor="name">Nombre Completo *</label>
+          <input
+            id="name"
+            type="text"
+            name="name"
+            value={formData.name}
+            onChange={handleInputChange}
+            onBlur={() => handleValidateField('name')}
+            className={errors.name ? 'error' : ''}
+            placeholder="Tu nombre"
+            required
+          />
+          {errors.name && <span className="error-text">{errors.name}</span>}
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="phone">Teléfono *</label>
+          <input
+            id="phone"
+            type="tel"
+            name="phone"
+            value={formData.phone}
+            onChange={handleInputChange}
+            onBlur={() => handleValidateField('phone')}
+            className={errors.phone ? 'error' : ''}
+            placeholder="+1 (702) 123-4567"
+            required
+          />
+          {errors.phone && <span className="error-text">{errors.phone}</span>}
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="email">Email (Opcional)</label>
+          <input
+            id="email"
+            type="email"
+            name="email"
+            value={formData.email}
+            onChange={handleInputChange}
+            onBlur={() => handleValidateField('email')}
+            className={errors.email ? 'error' : ''}
+            placeholder="tu@email.com"
+          />
+          {errors.email && <span className="error-text">{errors.email}</span>}
+        </div>
+
+        {errors.submit && (
+          <div className="form-error">
+            <p>{errors.submit}</p>
+          </div>
+        )}
+
+        <button
+          type="submit"
+          className="btn-submit"
+          disabled={submissionStatus === 'sending'}
+        >
+          {submissionStatus === 'sending' ? 'Enviando...' : 'Enviar Solicitud'}
+        </button>
+      </form>
+
+      {submissionStatus === 'success' && (
+        <div className="success-banner">
+          <div className="checkmark">✓</div>
+          <h4>Solicitud Recibida</h4>
+          <p>Nos pondremos en contacto en 24 horas. Redireccionando...</p>
         </div>
       )}
 
-      <form onSubmit={handleSubmit} style={styles.form}>
-        <input
-          type="text"
-          placeholder="Full name"
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          style={styles.input}
-        />
-        <input
-          type="tel"
-          placeholder="Phone number"
-          required
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          style={styles.input}
-        />
-
-        {submitError && <p style={styles.errorText}>Something went wrong. Please try again.</p>}
-
-        <button type="submit" disabled={submitting} style={styles.submitButton}>
-          {submitting ? '...' : 'Get my quote →'}
-        </button>
-        <p style={styles.disclaimer}>No commitment — just your quote.</p>
-      </form>
+      {submissionStatus === 'error' && (
+        <div className="error-banner">
+          <p>{submissionError}</p>
+          <button onClick={() => setSubmissionStatus('idle')}>Reintentar</button>
+        </div>
+      )}
     </div>
-  )
-}
-
-const styles = {
-  heading: { fontSize: '20px', color: '#fff', margin: '0 0 12px' },
-  mapLabel: { fontSize: '11px', color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase', margin: '0 0 8px' },
-  svg: { display: 'block', marginBottom: '16px', borderRadius: '8px' },
-  breakdown: {
-    background: 'rgba(255,255,255,0.05)',
-    borderRadius: '12px',
-    padding: '16px',
-    marginBottom: '16px',
-  },
-  breakdownRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    fontSize: '13px',
-    color: 'rgba(255,255,255,0.7)',
-    padding: '4px 0',
-  },
-  totalRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    fontSize: '16px',
-    fontWeight: 700,
-    color: '#2ecc71',
-    borderTop: '1px solid rgba(255,255,255,0.15)',
-    marginTop: '8px',
-    paddingTop: '8px',
-  },
-  financing: { fontSize: '11px', color: '#f1c40f', marginTop: '8px', marginBottom: 0 },
-  notesPreview: {
-    background: 'rgba(255,255,255,0.03)',
-    borderRadius: '8px',
-    padding: '10px',
-    marginBottom: '16px',
-  },
-  notesLabel: { fontSize: '11px', color: 'rgba(255,255,255,0.4)', margin: '0 0 4px' },
-  notesText: { fontSize: '12px', color: 'rgba(255,255,255,0.7)', margin: 0 },
-  form: { display: 'flex', flexDirection: 'column', gap: '10px' },
-  input: {
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.15)',
-    borderRadius: '8px',
-    padding: '10px 12px',
-    color: '#fff',
-    fontSize: '14px',
-    fontFamily: 'Arial, sans-serif',
-  },
-  submitButton: {
-    marginTop: '6px',
-    padding: '14px',
-    background: '#e63946',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '8px',
-    fontSize: '15px',
-    fontWeight: 600,
-    cursor: 'pointer',
-  },
-  disclaimer: { fontSize: '11px', color: 'rgba(255,255,255,0.4)', textAlign: 'center', margin: '4px 0 0' },
-  errorText: { fontSize: '12px', color: '#e63946', margin: 0 },
-  successBox: { padding: '20px 0', textAlign: 'center' },
-  successTitle: { fontSize: '18px', color: '#fff', fontWeight: 600, margin: '0 0 8px' },
-  successText: { fontSize: '14px', color: 'rgba(255,255,255,0.6)', margin: 0 },
+  );
 }

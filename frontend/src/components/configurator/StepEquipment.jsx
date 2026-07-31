@@ -1,162 +1,162 @@
-import {
-  useConfigurator,
-  INTERIOR_ITEMS,
-  EQUIPMENT_CATEGORIES,
-} from '../../context/ConfiguratorContext'
+import { useContext } from 'react';
+import { BuildContext } from '../../context/BuildContext';
+import { ConfiguratorUIContext } from '../../context/ConfiguratorUIContext';
+import { PriceBreakdown } from './PriceBreakdown';
+import { CapacityMeter } from './CapacityMeter';
+import { WorkflowWarnings } from './WorkflowWarnings';
+import { EQUIPMENT_CATALOG, EQUIPMENT_CATEGORIES } from '../../data/equipment';
+import { useTrailerPhysics } from '../../hooks/useTrailerPhysics';
 
-export default function StepEquipment() {
-  const {
-    selectedItemIds,
-    toggleItem,
-    isOverCapacity,
-    selectedPresetId,
-    notes,
-    setNotes,
-    size,
-  } = useConfigurator()
+export function StepEquipment() {
+  const { trailerSize, equipmentList, acPosition, notes, addEquipment, removeEquipment, setAcPosition, setNotes } =
+    useContext(BuildContext);
+  const { nextStep, prevStep } = useContext(ConfiguratorUIContext);
+  const { validateCapacity, checkWorkflowRecommendations } = useTrailerPhysics(trailerSize);
+
+  const [selectedCategory, setSelectedCategory] = useState('Kitchen');
+
+  const capacity = useMemo(() => validateCapacity(equipmentList), [equipmentList, validateCapacity]);
+  const recommendations = useMemo(() => checkWorkflowRecommendations(equipmentList), [equipmentList, checkWorkflowRecommendations]);
+
+  const equipmentByCategory = useMemo(() => {
+    const grouped = {};
+    Object.entries(EQUIPMENT_CATEGORIES).forEach(([key]) => {
+      grouped[key] = Object.values(EQUIPMENT_CATALOG).filter((eq) => eq.category === key);
+    });
+    return grouped;
+  }, []);
+
+  const handleAddEquipment = (equipmentId) => {
+    addEquipment(equipmentId);
+  };
+
+  const handleRemoveEquipment = (pieceId) => {
+    removeEquipment(pieceId);
+  };
+
+  const handleAcPositionChange = (position) => {
+    setAcPosition(position);
+  };
+
+  const handleNotesChange = (e) => {
+    setNotes(e.target.value);
+  };
+
+  const floorEquipment = equipmentList.filter((p) => EQUIPMENT_CATALOG[p.equipmentId]?.mountType === 'floor');
+  const wallEquipment = equipmentList.filter((p) => EQUIPMENT_CATALOG[p.equipmentId]?.mountType === 'wall');
 
   return (
-    <div>
-      <h2 style={styles.heading}>Add your equipment</h2>
+    <div className="step-equipment">
+      <div className="step-header">
+        <h2>Equipa tu Trailer</h2>
+        <p>Elige los equipos que necesitas. Arrastralos en el 3D para posicionar.</p>
+      </div>
 
-      <p style={styles.dragHint}>
-        💡 Tip: once added, drag equipment pieces around in the 3D view to arrange your kitchen.
-      </p>
+      <div className="equipment-layout">
+        {/* Panel izquierdo: catalogo de equipos */}
+        <div className="equipment-catalog">
+          <div className="catalog-categories">
+            {Object.entries(EQUIPMENT_CATEGORIES).map(([key, label]) => (
+              <button
+                key={key}
+                className={`category-btn ${selectedCategory === key ? 'active' : ''}`}
+                onClick={() => setSelectedCategory(key)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
 
-      {selectedPresetId && (
-        <p style={styles.presetNote}>
-          Preset loaded — feel free to adjust anything below.
-        </p>
-      )}
-
-      {isOverCapacity && (
-        <p style={styles.warning}>
-          This might be tight for a {size.label} trailer — consider a bigger size.
-        </p>
-      )}
-
-      {EQUIPMENT_CATEGORIES.map((category) => {
-        const itemsInCategory = INTERIOR_ITEMS.filter((i) => i.category === category)
-        if (itemsInCategory.length === 0) return null
-
-        return (
-          <div key={category} style={styles.categoryBlock}>
-            <p style={styles.categoryLabel}>{category}</p>
-            <div style={styles.cardGrid}>
-              {itemsInCategory.map((item) => {
-                const isSelected = selectedItemIds.includes(item.id)
-                return (
+          <div className="catalog-items">
+            {equipmentByCategory[selectedCategory]?.map((equipment) => {
+              const isAdded = equipmentList.some((p) => p.equipmentId === equipment.id);
+              return (
+                <div key={equipment.id} className="catalog-item">
+                  <div className="item-header">
+                    <h4>{equipment.name}</h4>
+                    <span className="item-price">${equipment.price}</span>
+                  </div>
+                  <p className="item-specs">{equipment.specs}</p>
                   <button
-                    key={item.id}
-                    onClick={() => toggleItem(item.id)}
-                    style={{
-                      ...styles.card,
-                      borderColor: isSelected ? '#e63946' : 'rgba(255,255,255,0.1)',
-                      background: isSelected ? 'rgba(230,57,70,0.12)' : 'rgba(255,255,255,0.05)',
-                    }}
+                    className={`btn-add ${isAdded ? 'added' : ''}`}
+                    onClick={() => handleAddEquipment(equipment.id)}
                   >
-                    <span style={styles.cardIcon}>{item.icon}</span>
-                    <span style={styles.cardLabel}>{item.label}</span>
-                    <span style={styles.cardPrice}>+${item.price.toLocaleString()}</span>
-                    {isSelected && <span style={styles.checkBadge}>✓</span>}
+                    {isAdded ? 'Agregado' : 'Agregar'}
                   </button>
-                )
-              })}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Panel derecho: resumen y controles */}
+        <div className="equipment-summary">
+          <CapacityMeter capacity={capacity} />
+
+          {recommendations.length > 0 && (
+            <WorkflowWarnings recommendations={recommendations} />
+          )}
+
+          <div className="ac-selector">
+            <h3>Aire Acondicionado</h3>
+            <p className="ac-info">Posicion en pared trasera</p>
+            <div className="ac-positions">
+              {['left', 'center', 'right'].map((pos) => (
+                <button
+                  key={pos}
+                  className={`ac-btn ${acPosition === pos ? 'active' : ''}`}
+                  onClick={() => handleAcPositionChange(pos)}
+                >
+                  {pos === 'left' ? 'Izquierda' : pos === 'center' ? 'Centro' : 'Derecha'}
+                </button>
+              ))}
             </div>
           </div>
-        )
-      })}
 
-      <div style={styles.notesBlock}>
-        <p style={styles.categoryLabel}>Anything specific in mind? (optional)</p>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="e.g. extra window on the left side..."
-          style={styles.textarea}
-        />
+          <div className="notes-section">
+            <label htmlFor="notes">Notas Especiales</label>
+            <textarea
+              id="notes"
+              value={notes}
+              onChange={handleNotesChange}
+              placeholder="Ej: Necesito conexion a agua cerca del sink, espacio para...registro"
+              rows={4}
+            />
+          </div>
+
+          <PriceBreakdown trailerSize={trailerSize} equipmentList={equipmentList} />
+        </div>
+      </div>
+
+      {/* Resumen de equipos agregados */}
+      <div className="equipment-added">
+        <h3>Equipos Agregados ({floorEquipment.length})</h3>
+        <div className="added-list">
+          {floorEquipment.map((piece) => {
+            const equipment = EQUIPMENT_CATALOG[piece.equipmentId];
+            return (
+              <div key={piece.id} className="added-item">
+                <div className="added-info">
+                  <span className="added-name">{equipment?.name}</span>
+                  <span className="added-price">${equipment?.price}</span>
+                </div>
+                <button className="btn-remove" onClick={() => handleRemoveEquipment(piece.id)}>
+                  Remover
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="step-actions">
+        <button className="btn-prev" onClick={prevStep}>
+          Atras
+        </button>
+        <button className="btn-next" onClick={nextStep} disabled={floorEquipment.length === 0}>
+          Continuar
+        </button>
       </div>
     </div>
-  )
-}
-
-const styles = {
-  heading: { fontSize: '20px', color: '#fff', margin: '0 0 12px' },
-  dragHint: {
-    fontSize: '12px',
-    color: 'rgba(255,255,255,0.6)',
-    background: 'rgba(255,255,255,0.05)',
-    padding: '10px 12px',
-    borderRadius: '8px',
-    marginBottom: '16px',
-    lineHeight: 1.4,
-  },
-  presetNote: {
-    fontSize: '12px',
-    color: '#f1c40f',
-    background: 'rgba(241,196,15,0.1)',
-    padding: '8px 12px',
-    borderRadius: '8px',
-    marginBottom: '16px',
-  },
-  warning: {
-    fontSize: '12px',
-    color: '#e63946',
-    background: 'rgba(230,57,70,0.1)',
-    padding: '8px 12px',
-    borderRadius: '8px',
-    marginBottom: '16px',
-  },
-  categoryBlock: { marginBottom: '20px' },
-  categoryLabel: {
-    fontSize: '11px',
-    color: 'rgba(255,255,255,0.4)',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-    marginBottom: '10px',
-  },
-  cardGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '8px' },
-  card: {
-    position: 'relative',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'flex-start',
-    gap: '4px',
-    padding: '12px',
-    border: '1px solid',
-    borderRadius: '10px',
-    cursor: 'pointer',
-    textAlign: 'left',
-  },
-  cardIcon: { fontSize: '20px' },
-  cardLabel: { fontSize: '12px', color: '#fff', fontWeight: 600, lineHeight: 1.2 },
-  cardPrice: { fontSize: '11px', color: '#f1c40f' },
-  checkBadge: {
-    position: 'absolute',
-    top: '8px',
-    right: '8px',
-    width: '18px',
-    height: '18px',
-    borderRadius: '50%',
-    background: '#e63946',
-    color: '#fff',
-    fontSize: '11px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  notesBlock: { marginTop: '20px' },
-  textarea: {
-    width: '100%',
-    minHeight: '70px',
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: '8px',
-    padding: '10px',
-    color: '#fff',
-    fontSize: '13px',
-    fontFamily: 'Arial, sans-serif',
-    resize: 'vertical',
-    boxSizing: 'border-box',
-  },
+  );
 }

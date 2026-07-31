@@ -1,98 +1,90 @@
-import { useConfigurator, SIZES, INTERIOR_ITEMS } from '../../context/ConfiguratorContext'
+import { useContext, useEffect } from 'react';
+import { PresetsContext } from '../../context/PresetsContext';
+import { BuildContext } from '../../context/BuildContext';
+import { ConfiguratorUIContext } from '../../context/ConfiguratorUIContext';
+import { CardPreset } from './CardPreset';
 
-export default function StepPreset() {
-  const { presets, selectedPresetId, applyPreset, startFromScratch, nextStep } = useConfigurator()
+export function StepPreset() {
+  const { presets, loading, error, isOffline, retryLoadPresets } = useContext(PresetsContext);
+  const { setFocusedEquipmentId } = useContext(BuildContext);
+  const { selectedPresetId, setSelectedPresetId, nextStep } = useContext(ConfiguratorUIContext);
 
-  function estimatePrice(preset) {
-    const size = SIZES.find((s) => s.id === preset.size)
-    const itemsTotal = preset.equipment.reduce((sum, id) => {
-      const item = INTERIOR_ITEMS.find((i) => i.id === id)
-      return sum + (item ? item.price : 0)
-    }, 0)
-    return (size ? size.basePrice : 0) + itemsTotal
-  }
+  useEffect(() => {
+    setFocusedEquipmentId(null);
+  }, [setFocusedEquipmentId]);
 
-  function handleSelect(preset) {
-    applyPreset(preset)
-    nextStep()
-  }
+  const handleSelectPreset = (presetId) => {
+    setSelectedPresetId(presetId);
+  };
 
-  function handleScratch() {
-    startFromScratch()
-    nextStep()
+  const handleStartFromScratch = () => {
+    setSelectedPresetId(null);
+  };
+
+  const handleNext = () => {
+    if (selectedPresetId || selectedPresetId === null) {
+      nextStep();
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="step-preset">
+        <h2>Cargando opciones...</h2>
+        <div className="spinner" />
+      </div>
+    );
   }
 
   return (
-    <div>
-      <h2 style={styles.heading}>Pick a starting point</h2>
-      <p style={styles.subheading}>You can adjust everything after.</p>
+    <div className="step-preset">
+      <div className="step-header">
+        <h2>Elige tu Punto de Partida</h2>
+        <p>Selecciona un combo predefinido o arma desde cero</p>
+      </div>
 
-      <div style={styles.list}>
+      {error && (
+        <div className="warning-banner">
+          <span>{error}</span>
+          {isOffline && (
+            <button className="retry-btn" onClick={retryLoadPresets}>
+              Reintentar
+            </button>
+          )}
+        </div>
+      )}
+
+      <div className="preset-grid">
         {presets.map((preset) => (
-          <button
+          <CardPreset
             key={preset.id}
-            onClick={() => handleSelect(preset)}
-            style={{
-              ...styles.card,
-              borderColor: selectedPresetId === preset.id ? '#e63946' : 'rgba(255,255,255,0.1)',
-            }}
-          >
-            <div style={styles.cardHeader}>
-              <span style={styles.cardName}>{preset.name}</span>
-              <span style={styles.cardPrice}>from ${estimatePrice(preset).toLocaleString()}</span>
-            </div>
-            <div style={styles.tagRow}>
-              {preset.equipment.map((id) => {
-                const item = INTERIOR_ITEMS.find((i) => i.id === id)
-                return item ? (
-                  <span key={id} style={styles.tag}>
-                    {item.label}
-                  </span>
-                ) : null
-              })}
-            </div>
-          </button>
+            preset={preset}
+            isSelected={selectedPresetId === preset.id}
+            onSelect={handleSelectPreset}
+          />
         ))}
+      </div>
 
-        <button onClick={handleScratch} style={styles.scratchCard}>
-          Start from scratch
+      <div className="step-preset-scratch">
+        <div className="scratch-card">
+          <h3>Empezar desde Cero</h3>
+          <p>
+            Sin preset. Elige cada equipo manualmente y arma tu trailer exacto como lo necesitas.
+          </p>
+          <button
+            className={`scratch-button ${selectedPresetId === null ? 'selected' : ''}`}
+            onClick={handleStartFromScratch}
+          >
+            {selectedPresetId === null ? 'Seleccionado' : 'Elegir'}
+          </button>
+        </div>
+      </div>
+
+      <div className="step-actions">
+        <button className="btn-next" onClick={handleNext}>
+          Continuar
         </button>
       </div>
     </div>
-  )
-}
-
-const styles = {
-  heading: { fontSize: '20px', color: '#fff', margin: '0 0 4px' },
-  subheading: { fontSize: '13px', color: 'rgba(255,255,255,0.5)', margin: '0 0 20px' },
-  list: { display: 'flex', flexDirection: 'column', gap: '10px' },
-  card: {
-    textAlign: 'left',
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: '12px',
-    padding: '14px',
-    cursor: 'pointer',
-  },
-  cardHeader: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' },
-  cardName: { color: '#fff', fontSize: '14px', fontWeight: 600 },
-  cardPrice: { color: '#f1c40f', fontSize: '13px' },
-  tagRow: { display: 'flex', flexWrap: 'wrap', gap: '6px' },
-  tag: {
-    fontSize: '11px',
-    color: 'rgba(255,255,255,0.6)',
-    background: 'rgba(255,255,255,0.08)',
-    padding: '3px 8px',
-    borderRadius: '999px',
-  },
-  scratchCard: {
-    textAlign: 'center',
-    background: 'transparent',
-    border: '1px dashed rgba(255,255,255,0.25)',
-    borderRadius: '12px',
-    padding: '14px',
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: '13px',
-    cursor: 'pointer',
-  },
+  );
 }

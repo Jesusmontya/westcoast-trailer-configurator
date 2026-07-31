@@ -1,52 +1,83 @@
-import { ConfiguratorProvider, useConfigurator } from './context/ConfiguratorContext'
-import Scene from './components/viewer3d/Scene'
-import OptionsPanel from './components/configurator/OptionsPanel'
-import './styles/panel.css'
-
-const LANDING_PAGE_URL = 'https://westcoast-trailer-configurator-tdlm.vercel.app'
-
-function ViewToggle() {
-  const { viewMode, setViewMode } = useConfigurator()
-  return (
-    <button
-      onClick={() => setViewMode(viewMode === 'side' ? 'top' : 'side')}
-      className="view-toggle-button"
-    >
-      {viewMode === 'side' ? '⬆ Top view' : '↔ Side view'}
-    </button>
-  )
-}
+import React, { useContext, useEffect } from 'react';
+import { BuildContextProvider, BuildContext } from './context/BuildContext';
+import { ConfiguratorUIContextProvider, ConfiguratorUIContext } from './context/ConfiguratorUIContext';
+import { PresetsContextProvider } from './context/PresetsContext';
+// import { Scene } from './components/viewer3d/Scene';
+import { OptionsPanel } from './components/configurator/OptionsPanel';
+import { OnboardingOverlay } from './components/configurator/OnboardingOverlay';
+import { StepIndicator } from './components/configurator/StepIndicator';
+import './App.css';
 
 function AppContent() {
-  function handleBackClick(e) {
-    e.preventDefault()
-    window.location.href = LANDING_PAGE_URL
-  }
+  const { loadDraftFromLocal, saveDraftToLocal } = useContext(BuildContext);
+  const { currentStep, cameraView, toggleCameraView, goToStep } = useContext(ConfiguratorUIContext);
+
+  useEffect(() => {
+    const hasDraft = loadDraftFromLocal();
+    if (hasDraft) {
+      console.log('Draft cargado desde localStorage');
+    }
+  }, [loadDraftFromLocal]);
+
+  useEffect(() => {
+    saveDraftToLocal();
+  }, [saveDraftToLocal]);
+
+  const handleBackToHome = () => {
+    if (window.confirm('Volver al inicio? Perderás tu configuracion actual.')) {
+      window.location.href = '/';
+    }
+  };
 
   return (
-    <div className="configurator-layout">
-      <div className="scene-container">
-        <Scene />
-      </div>
-      <OptionsPanel />
+    <div className="app-container">
+      <OnboardingOverlay />
 
-      <button onClick={handleBackClick} className="back-button" style={{ zIndex: 9999 }}>
-        ← Back to West Coast
-      </button>
+      <header className="app-header">
+        <div className="header-left">
+          <button className="btn-home" onClick={handleBackToHome}>
+            Inicio
+          </button>
+        </div>
 
-      <div style={{ position: 'fixed', top: 24, left: 220, zIndex: 9999 }}>
-        <ViewToggle />
-      </div>
+        <div className="header-center">
+          <StepIndicator currentStep={currentStep} totalSteps={4} />
+        </div>
+
+        <div className="header-right">
+          {currentStep >= 2 && (
+            <button className="btn-camera" onClick={toggleCameraView}>
+              {cameraView === 'side' ? 'Vista Superior' : 'Vista Lateral'}
+            </button>
+          )}
+        </div>
+      </header>
+
+      <main className="app-main">
+        <div className="viewer-container">
+          {currentStep >= 2 && {/* <Scene /> */}}
+        </div>
+
+        <aside className="panel-container">
+          <OptionsPanel />
+        </aside>
+      </main>
+
+      <footer className="app-footer">
+        <p>West Coast Trailers - Configurador 3D</p>
+      </footer>
     </div>
-  )
+  );
 }
 
-function App() {
+export default function App() {
   return (
-    <ConfiguratorProvider>
-      <AppContent />
-    </ConfiguratorProvider>
-  )
+    <PresetsContextProvider>
+      <BuildContextProvider>
+        <ConfiguratorUIContextProvider>
+          <AppContent />
+        </ConfiguratorUIContextProvider>
+      </BuildContextProvider>
+    </PresetsContextProvider>
+  );
 }
-
-export default App

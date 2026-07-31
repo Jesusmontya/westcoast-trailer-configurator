@@ -1,58 +1,71 @@
-import { useConfigurator, SIZES } from '../../context/ConfiguratorContext'
+import { useContext } from 'react';
+import { BuildContext } from '../../context/BuildContext';
+import { ConfiguratorUIContext } from '../../context/ConfiguratorUIContext';
+import { SizeComparison } from './SizeComparison';
+import { TRAILER_SPECS, formatCurrency } from '../../utils/pricing';
 
-export default function StepSize() {
-  const { sizeId, setSizeId } = useConfigurator()
+export function StepSize() {
+  const { trailerSize, setTrailerSize } = useContext(BuildContext);
+  const { nextStep, prevStep } = useContext(ConfiguratorUIContext);
+
+  const handleSelectSize = (size) => {
+    setTrailerSize(size);
+  };
+
+  const handleNext = () => {
+    if (trailerSize) {
+      nextStep();
+    }
+  };
 
   return (
-    <div>
-      <h2 style={styles.heading}>Choose your size</h2>
-      <p style={styles.subheading}>You can change this anytime.</p>
+    <div className="step-size">
+      <div className="step-header">
+        <h2>Elige el Tamaño del Trailer</h2>
+        <p>Visualiza las opciones y elige la que mejor se adapte a tu negocio</p>
+      </div>
 
-      <div style={styles.list}>
-        {SIZES.map((s) => (
-          <label
-            key={s.id}
-            style={{
-              ...styles.card,
-              borderColor: sizeId === s.id ? '#e63946' : 'rgba(255,255,255,0.1)',
-            }}
-          >
-            <input
-              type="radio"
-              name="size"
-              checked={sizeId === s.id}
-              onChange={() => setSizeId(s.id)}
-              style={{ marginRight: '10px' }}
-            />
-            <div>
-              <div style={styles.cardHeader}>
-                <span style={styles.cardName}>{s.label}</span>
-                <span style={styles.cardPrice}>${s.basePrice.toLocaleString()}</span>
+      <SizeComparison />
+
+      <div className="size-selector">
+        <h3>Selecciona tu Tamaño</h3>
+        <div className="size-buttons">
+          {Object.entries(TRAILER_SPECS).map(([size, spec]) => (
+            <button
+              key={size}
+              className={`size-button ${trailerSize === size ? 'active' : ''}`}
+              onClick={() => handleSelectSize(size)}
+            >
+              <div className="size-number">{size}</div>
+              <div className="size-dims">
+                {spec.length}ft x {spec.width}ft
               </div>
-              <p style={styles.tagline}>{s.tagline}</p>
-            </div>
-          </label>
-        ))}
+              <div className="size-price">{formatCurrency(spec.price)}</div>
+              <div className="size-persons">{spec.recommendedPersons} operador(es)</div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {trailerSize && (
+        <div className="size-selected-info">
+          <h4>Seleccion Actual</h4>
+          <p>
+            Has elegido un trailer de <strong>{trailerSize}</strong> con precio base de{' '}
+            <strong>{formatCurrency(TRAILER_SPECS[trailerSize].price)}</strong>
+          </p>
+          <p className="note">El precio total se ajustara cuando agregues equipos en el proximo paso.</p>
+        </div>
+      )}
+
+      <div className="step-actions">
+        <button className="btn-prev" onClick={prevStep}>
+          Atras
+        </button>
+        <button className="btn-next" onClick={handleNext} disabled={!trailerSize}>
+          Continuar
+        </button>
       </div>
     </div>
-  )
-}
-
-const styles = {
-  heading: { fontSize: '20px', color: '#fff', margin: '0 0 4px' },
-  subheading: { fontSize: '13px', color: 'rgba(255,255,255,0.5)', margin: '0 0 20px' },
-  list: { display: 'flex', flexDirection: 'column', gap: '10px' },
-  card: {
-    display: 'flex',
-    alignItems: 'flex-start',
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.1)',
-    borderRadius: '12px',
-    padding: '14px',
-    cursor: 'pointer',
-  },
-  cardHeader: { display: 'flex', justifyContent: 'space-between', gap: '12px' },
-  cardName: { color: '#fff', fontSize: '15px', fontWeight: 600 },
-  cardPrice: { color: '#f1c40f', fontSize: '13px' },
-  tagline: { color: 'rgba(255,255,255,0.5)', fontSize: '12px', margin: '4px 0 0' },
+  );
 }
