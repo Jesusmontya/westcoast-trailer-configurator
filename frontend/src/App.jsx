@@ -1,6 +1,6 @@
 import GalleryPage from './components/gallery/GalleryPage'
 
-const LANDING_PAGE_URL = 'https://westcoast-trailer-configurator.vercel.app'
+const LANDING_PAGE_URL = 'https://allcustomtrailers.com'
 
 function App() {
   function handleBackClick(e) {
