@@ -3,7 +3,7 @@
 import { useLanguage } from "../context/LanguageContext";
 
 const CONFIGURATOR_URL =
-  "https://westcoast-trailer-configurator-tdlm.vercel.app";
+  "https://3d.allcustomtrailers.com";
 
 export default function Footer() {
   const { t } = useLanguage();
