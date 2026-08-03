@@ -1,50 +1,94 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
-section[id] {
-  scroll-margin-top: 80px;
+  --bg: #16130f;
+  --surface: #211c17;
+  --surface-2: #2b241d;
+  --accent: #b8562f;
+  --accent-glow: #e8794a;
+  --text: #f2ece2;
+  --text-muted: #8f8477;
+  --line: rgba(242, 236, 226, 0.08);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body), Arial, sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-display), serif;
+}
+
+.font-mono {
+  font-family: var(--font-mono), monospace;
+}
+
+.blueprint-bg {
+  background:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px),
+    var(--bg);
+  background-size: 32px 32px, 32px 32px, 100% 100%;
+}
+
+/* Tarjeta con sombras apiladas, como placas de metal */
+.stacked-card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.4),
+    0 12px 24px -12px rgba(0, 0, 0, 0.6),
+    4px 4px 0 -2px var(--bg),
+    5px 5px 0 -2px rgba(242, 236, 226, 0.06),
+    8px 8px 0 -4px var(--bg),
+    9px 9px 0 -4px rgba(242, 236, 226, 0.04);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.stacked-card:hover {
+  transform: translate(-3px, -3px);
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.4),
+    0 20px 32px -14px rgba(184, 86, 47, 0.35),
+    4px 4px 0 -2px var(--bg),
+    5px 5px 0 -2px rgba(242, 236, 226, 0.08),
+    8px 8px 0 -4px var(--bg),
+    9px 9px 0 -4px rgba(242, 236, 226, 0.05);
+}
+
+.corner-mark {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--accent-glow);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+.corner-mark.tl { top: 8px; left: 8px; border-right: none; border-bottom: none; }
+.corner-mark.br { bottom: 8px; right: 8px; border-left: none; border-top: none; }
+.stacked-card:hover .corner-mark { opacity: 1; }
+
+.tag-pill {
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent-glow);
+  background: rgba(184, 86, 47, 0.12);
+  padding: 3px 8px;
+  border-radius: 3px;
+  display: inline-block;
 }
 
 @keyframes marquee-left {
-  0% {
-    transform: translateX(0);
-  }
-  100% {
-    transform: translateX(-50%);
-  }
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
 }
-
 .animate-marquee-left {
   animation: marquee-left 35s linear infinite;
 }
-
-@keyframes sway {
-  0%, 100% {
-    transform: rotate(-3deg);
-  }
-  50% {
-    transform: rotate(3deg);
-  }
-}
-

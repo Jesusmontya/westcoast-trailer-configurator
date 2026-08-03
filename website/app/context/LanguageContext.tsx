@@ -11,7 +11,7 @@ const translations = {
       gallery: "Gallery",
       about: "About",
       contact: "Contact",
-      cta: "Build my trailer",
+      cta: "Step inside, in 3D",
     },
     hero: {
       eyebrow: "TRAILERS FOR ANY IDEA",
@@ -19,10 +19,10 @@ const translations = {
       paragraph:
         "Custom food trailers, built in Nevada, from the frame up — for people ready to start something of their own.",
       trustLine: "100+ trailers delivered · 3+ years in Nevada",
-      cta: "Build my trailer",
+      cta: "Step inside, in 3D",
     },
     advantages: {
-      heading: "Why build with West Coast",
+      heading: "Why build with All Custom Trailers",
       items: [
         {
           question: "Can I afford this without paying it all upfront?",
@@ -67,7 +67,7 @@ const translations = {
     about: {
       heading: "Making dreams possible.",
       paragraph1:
-        "West Coast LLC has been building custom food trailers in Nevada for over three years. What started as a simple commitment — doing things right, at a fair price — has grown into more than 100 trailers delivered to real business owners: taco stands, michelada bars, food trucks, all built from the frame up, right here.",
+        "All Custom Trailers LLC has been building custom food trailers in Nevada for over three years. What started as a simple commitment — doing things right, at a fair price — has grown into more than 100 trailers delivered to real business owners: taco stands, michelada bars, food trucks, all built from the frame up, right here.",
       paragraph2:
         "We know starting your own business isn't easy. That's why we work with flexible financing partners, so you can get started without paying everything upfront — the same philosophy that helps our clients turn their own business dreams into reality.",
       stats: [
@@ -107,7 +107,7 @@ const translations = {
       phone: "Phone: coming soon",
       email: "Email: coming soon",
       location: "Nevada, USA",
-      copyright: "West Coast LLC. All rights reserved.",
+      copyright: "All Custom Trailers LLC. All rights reserved.",
     },
   },
   es: {
@@ -116,7 +116,7 @@ const translations = {
       gallery: "Galería",
       about: "Nosotros",
       contact: "Contacto",
-      cta: "Arma tu trailer",
+      cta: "Entra en 3D",
     },
     hero: {
       eyebrow: "TRAILERS PARA CUALQUIER IDEA",
@@ -124,10 +124,10 @@ const translations = {
       paragraph:
         "Trailers de comida personalizados, hechos en Nevada, desde la estructura — para quienes están listos para empezar su propio negocio.",
       trustLine: "100+ trailers entregados · 3+ años en Nevada",
-      cta: "Arma tu trailer",
+      cta: "Entra en 3D",
     },
     advantages: {
-      heading: "Por qué construir con West Coast",
+      heading: "Por qué construir con All Custom Trailers",
       items: [
         {
           question: "¿Puedo pagarlo sin dar todo de una vez?",
@@ -172,7 +172,7 @@ const translations = {
     about: {
       heading: "Haciendo realidad tus sueños.",
       paragraph1:
-        "West Coast LLC lleva más de tres años construyendo trailers de comida personalizados en Nevada. Lo que empezó como un compromiso simple — hacer las cosas bien, a un precio justo — se ha convertido en más de 100 trailers entregados a dueños de negocios reales: taquerías, michelerías, food trucks, todos construidos desde la estructura, aquí mismo.",
+        "All Custom Trailers LLC lleva más de tres años construyendo trailers de comida personalizados en Nevada. Lo que empezó como un compromiso simple — hacer las cosas bien, a un precio justo — se ha convertido en más de 100 trailers entregados a dueños de negocios reales: taquerías, michelerías, food trucks, todos construidos desde la estructura, aquí mismo.",
       paragraph2:
         "Sabemos que empezar tu propio negocio no es fácil. Por eso trabajamos con socios de financiamiento flexible, para que puedas arrancar sin pagar todo de una vez — la misma filosofía con la que ayudamos a nuestros clientes a hacer realidad el sueño de tener su propio negocio.",
       stats: [
@@ -211,7 +211,7 @@ const translations = {
       phone: "Teléfono: próximamente",
       email: "Correo: próximamente",
       location: "Nevada, USA",
-      copyright: "West Coast LLC. Todos los derechos reservados.",
+      copyright: "All Custom Trailers LLC. Todos los derechos reservados.",
     },
   },
 };
