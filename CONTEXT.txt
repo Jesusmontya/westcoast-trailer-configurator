@@ -51,3 +51,116 @@ El GITHUB_TOKEN automático de Codespaces NO tiene permiso para crear repos vía
 Vercel necesita que el "Root Directory" apunte a la subcarpeta correcta (website) cuando el proyecto Next.js no vive en la raíz del repo
 
 Precio de referencia de mercado (si se vendiera como servicio a terceros): Configuradores 3D con motor de precios: $3,000–$15,000 USD; con capa de IA y CRM completo: $10,000–$50,000 USD.
+
+
+
+
+
+# CHECKPOINT — All Custom Trailers
+**Fecha:** Agosto 2026
+
+---
+
+## 1. ARQUITECTURA
+
+```
+westcoast-trailer-configurator/  (nombre de repo sin cambiar, negocio ya rebrandeado)
+├── website/    → Next.js, landing pública + panel admin
+│   Dominios: allcustomtrailers.com, admin.allcustomtrailers.com
+│   Vercel project: "website"
+├── frontend/   → Vite + React, galería 3D de trailers escaneados
+│   Dominio: 3d.allcustomtrailers.com
+│   Vercel project: "frontend"
+```
+
+**Importante:** el custom-build (trailer a la medida) **se eliminó** de la galería. Ahora la galería es solo el visor 3D con su único formulario de interés.
+
+---
+
+## 2. BASE DE DATOS (Supabase)
+
+### Tablas activas
+- **`leads`** — con `status` (nuevo/contactado/cotizado/convertido/perdido), `converted_at`, `source`, `trailer_type`, `notes`, etc.
+- **`lead_activity`** — historial de contacto por lead (nota + fecha)
+- **`clients`** — ficha de cliente convertido: `quote_status`, `payment_type`, `total_amount`, `lead_id` de referencia
+- **`payments`** — historial de abonos por cliente
+- **`quote_presets`** — creada en SQL, **aún sin construir su pantalla** (plantillas de cotización con foto)
+
+### Tablas legacy sin uso
+- `builds`, `presets` (del configurador viejo, eliminado) — pendiente decidir si se borran
+
+### SQL pendiente de correr (si no se ha hecho)
+1. `nuevas_tablas.sql` → clients, payments, quote_presets
+2. `migracion_leads_status.sql` → status, converted_at, lead_activity
+
+---
+
+## 3. PANEL ADMIN (admin.allcustomtrailers.com)
+
+Ruta real: `website/app/panel-act-9k2m/`
+
+| Archivo | Estado |
+|---|---|
+| `page.tsx` | ✅ entregado (v4) — header con tabs Leads / Clientes / PDF Generator |
+| `LeadsPanel.tsx` | ✅ entregado — estados reales, urgencia +48h, historial de contacto, buscador |
+| `ClientsPanel.tsx` | ✅ entregado — ficha de cliente, estado de pago, historial de abonos |
+| `PdfGenerator.tsx` | ✅ entregado — genera cotización en PDF con membrete, **usuario no ha confirmado que probó el output** |
+
+**Pendiente construir:** pantalla de **Plantillas de cotización** (`quote_presets`) — presets reutilizables con foto (de la galería 3D) + items con precio, para acelerar la generación de PDF.
+
+---
+
+## 4. GALERÍA 3D (frontend/)
+
+| Archivo | Estado |
+|---|---|
+| `src/lib/supabase.js` | ✅ entregado — el frontend nunca tuvo cliente propio de Supabase |
+| `src/lib/leads.js` | ✅ entregado — helper `submitLead()` con deduplicación (30 días por teléfono) |
+| `src/components/gallery/TrailerModal.jsx` | ✅ entregado, ya conectado a `submitLead()`, source: `gallery` |
+| `CustomBuildModal.jsx` | ❌ **ya no aplica** — se eliminó el custom-build de la galería, ignorar este archivo si se llegó a entregar |
+
+**Pendiente para que funcione:**
+- Agregar `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY` en Vercel (proyecto `frontend`) y `.env` local
+- `npm install @supabase/supabase-js` dentro de `frontend/`
+- Puede faltar la clase CSS `.modal-error` en `gallery.css`
+
+---
+
+## 5. DEDUPLICACIÓN DE LEADS
+
+Vive en `submitLead()` (`website/lib/leads.ts` y `frontend/src/lib/leads.js`):
+si ya existe un lead con el mismo teléfono en los últimos 30 días, no se duplica — se agrega como entrada nueva en `lead_activity`.
+
+| Punto de entrada | ¿Usa `submitLead()`? |
+|---|---|
+| Galería 3D (`TrailerModal.jsx`) | ✅ sí |
+| Formulario de contacto (landing) | ❌ **no todavía** — sigue insertando directo a `leads`, sin dedup. Pendiente si se quiere parejo. |
+
+---
+
+## 6. PENDIENTES GENERALES (fuera del sprint actual)
+
+1. Confirmar que el generador de PDF funciona bien con datos reales
+2. Construir pantalla de Plantillas de cotización (`quote_presets`)
+3. Decidir si se actualiza el formulario de contacto de la landing para usar `submitLead()`
+4. Fotos reales en el sitio (hero, about, gallery cards, testimonial) — siguen siendo placeholders
+5. Más testimonios de clientes (el usuario dijo que los tiene, no los ha mandado)
+6. Teléfono/email real en el footer (dice "coming soon")
+7. Arreglar rotación chueca del modelo 3D escaneado (`rotationFix` en `mockTrailers.js`)
+8. Decidir si se borran las tablas legacy `builds` y `presets`
+9. Métrica de tiempo lead → cliente (ya se guarda `converted_at`, falta construir la vista/reporte)
+
+---
+
+## 7. FLUJO DE TRABAJO ESTÁNDAR
+
+```bash
+cd /workspaces/westcoast-trailer-configurator
+# colocar archivos entregados en sus rutas
+git add .
+git commit -m "..."
+git push
+# auto-deploy en Vercel según qué carpeta cambió (website/ o frontend/)
+```
+
+Acceso al panel: **admin.allcustomtrailers.com** (login por Supabase Auth, Authentication → Users)
