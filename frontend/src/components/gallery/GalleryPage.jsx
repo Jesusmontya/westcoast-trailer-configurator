@@ -20,7 +20,8 @@ export default function GalleryPage() {
         <span className="gallery-eyebrow">Real trailers, scanned in 3D</span>
         <h1 className="gallery-title">Explore our trailers</h1>
         <p className="gallery-subtitle">
-          Browse what we've built — or tell us your idea and we'll build it from scratch.
+          These are examples of what we've built — every trailer we make is custom.
+          Ship anywhere in the country.
         </p>
       </div>
 
@@ -37,6 +38,20 @@ export default function GalleryPage() {
       </div>
 
       <div className="gallery-grid">
+        {/* Tarjeta de custom build — primera, para que quede claro desde el inicio
+            que estos trailers son ejemplos, no el catálogo completo */}
+        <button className="trailer-card" onClick={() => setShowCustomModal(true)}>
+          <div className="trailer-card-inner custom-card-inner">
+            <span className="custom-card-icon">✏️</span>
+            <p className="custom-card-title">Don't see it here?</p>
+            <p className="custom-card-text">
+              Every trailer below is a real example — we build custom, to your idea,
+              and ship anywhere.
+            </p>
+            <span className="custom-card-cta">Start a custom build →</span>
+          </div>
+        </button>
+
         {filtered.map((trailer) => (
           <button
             key={trailer.id}
@@ -57,16 +72,6 @@ export default function GalleryPage() {
             </div>
           </button>
         ))}
-
-        {/* Tarjeta especial: trailers personalizados */}
-        <button className="trailer-card" onClick={() => setShowCustomModal(true)}>
-          <div className="trailer-card-inner custom-card-inner">
-            <span className="custom-card-icon">✏️</span>
-            <p className="custom-card-title">Don't see it here?</p>
-            <p className="custom-card-text">We build custom trailers too — tell us your idea.</p>
-            <span className="custom-card-cta">Start a custom build →</span>
-          </div>
-        </button>
 
         {filtered.length === 0 && (
           <p className="empty-state">No trailers in this category yet.</p>
