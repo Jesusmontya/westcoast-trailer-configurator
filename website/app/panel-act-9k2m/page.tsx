@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
+import PdfGenerator from "./PdfGenerator";
+import ClientsPanel from "./ClientsPanel";
 
 type Lead = {
   id: string;
@@ -90,7 +92,7 @@ const SOURCE_LABELS: Record<string, string> = {
   configurator: "Configurator",
 };
 
-function Dashboard({ onLogout }: { onLogout: () => void }) {
+function LeadsPanel() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>("all");
@@ -116,7 +118,6 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
   async function toggleAttended(lead: Lead) {
     const newValue = !lead.attended;
 
-    // actualiza en pantalla de inmediato, sin esperar a la respuesta del servidor
     setLeads((prev) =>
       prev.map((l) => (l.id === lead.id ? { ...l, attended: newValue } : l))
     );
@@ -139,20 +140,166 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
     return matchesSource && matchesAttended;
   });
 
+  const [convertedIds, setConvertedIds] = useState<Set<string>>(new Set());
+
+  async function convertToClient(lead: Lead) {
+    await supabase.from("clients").insert({
+      lead_id: lead.id,
+      name: lead.name,
+      phone: lead.phone,
+      email: lead.email,
+      quote_status: "pendiente",
+    });
+    setConvertedIds((prev) => new Set(prev).add(lead.id));
+  }
+
   const sources = ["all", ...Array.from(new Set(leads.map((l) => l.source)))];
 
   return (
-    <div className="min-h-screen blueprint-bg px-6 py-10">
-      <div className="max-w-5xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+    <div>
+      <div className="flex items-center justify-between mb-6">
+        <p className="font-mono text-xs text-[#8f8477]">
+          {leads.length} total · {leads.filter((l) => !l.attended).length} pending
+        </p>
+      </div>
+
+      <div className="flex flex-wrap gap-2 mb-6">
+        {sources.map((src) => (
+          <button
+            key={src}
+            onClick={() => setFilter(src)}
+            className={`px-3 py-1.5 rounded-full text-xs font-mono font-semibold transition-colors ${
+              filter === src
+                ? "bg-[#b8562f] text-white"
+                : "bg-[#211c17] text-[#8f8477] border border-[#f2ece2]/10"
+            }`}
+          >
+            {src === "all" ? "All sources" : SOURCE_LABELS[src] || src}
+          </button>
+        ))}
+
+        <span className="w-px bg-[#f2ece2]/10 mx-1" />
+
+        {["all", "pending", "attended"].map((opt) => (
+          <button
+            key={opt}
+            onClick={() => setAttendedFilter(opt)}
+            className={`px-3 py-1.5 rounded-full text-xs font-mono font-semibold transition-colors ${
+              attendedFilter === opt
+                ? "bg-[#f2ece2] text-[#16130f]"
+                : "bg-[#211c17] text-[#8f8477] border border-[#f2ece2]/10"
+            }`}
+          >
+            {opt === "all" ? "All status" : opt === "pending" ? "Pending" : "Attended"}
+          </button>
+        ))}
+      </div>
+
+      {loading ? (
+        <p className="text-[#8f8477] font-mono text-sm">Loading...</p>
+      ) : filtered.length === 0 ? (
+        <p className="text-[#8f8477] font-mono text-sm">No leads match this filter.</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {filtered.map((lead) => (
+            <div key={lead.id} className="stacked-card p-5 flex items-start gap-4">
+              <button
+                onClick={() => toggleAttended(lead)}
+                className={`flex-shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center transition-colors mt-1 ${
+                  lead.attended ? "bg-[#b8562f] border-[#b8562f]" : "border-[#f2ece2]/25"
+                }`}
+                title={lead.attended ? "Mark as pending" : "Mark as attended"}
+              >
+                {lead.attended && <span className="text-white text-xs">✓</span>}
+              </button>
+
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <p className="font-semibold text-[#f2ece2]">{lead.name}</p>
+                  <span className="tag-pill">{SOURCE_LABELS[lead.source] || lead.source}</span>
+                  <span className="font-mono text-[10px] text-[#8f8477] uppercase">
+                    {lead.language}
+                  </span>
+                </div>
+                <p className="font-mono text-sm text-[#c9c2b6]">{lead.phone}</p>
+                {lead.trailer_type && (
+                  <p className="text-xs text-[#8f8477] mt-1">Interested in: {lead.trailer_type}</p>
+                )}
+                {lead.notes && (
+                  <p className="text-xs text-[#8f8477] mt-1 italic">"{lead.notes}"</p>
+                )}
+              </div>
+
+              <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                <span className="font-mono text-[11px] text-[#8f8477]">
+                  {new Date(lead.created_at).toLocaleDateString()}
+                </span>
+                {convertedIds.has(lead.id) ? (
+                  <span className="font-mono text-[10px] text-[#4caf7d]">✓ Cliente</span>
+                ) : (
+                  <button
+                    onClick={() => convertToClient(lead)}
+                    className="px-3 py-1.5 bg-[#2b241d] border border-[#f2ece2]/15 rounded text-[10px] font-mono text-[#f2ece2] hover:border-[#b8562f] whitespace-nowrap"
+                  >
+                    Convertir en cliente
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Dashboard({ onLogout }: { onLogout: () => void }) {
+  const [tab, setTab] = useState<"pdf" | "leads" | "clients">("leads");
+
+  return (
+    <div className="min-h-screen blueprint-bg">
+      <header className="border-b border-[#f2ece2]/8 bg-[#16130f]/90 backdrop-blur-md sticky top-0 z-10">
+        <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
           <div>
-            <h1 className="font-display text-2xl font-semibold text-[#f2ece2]">
-              Leads
-            </h1>
-            <p className="font-mono text-xs text-[#8f8477] mt-1">
-              {leads.length} total · {leads.filter((l) => !l.attended).length} pending
+            <p className="font-display text-lg font-semibold text-[#f2ece2]">
+              All Custom Trailers
             </p>
+            <p className="font-mono text-[10px] text-[#8f8477] uppercase tracking-wide">Admin</p>
           </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setTab("leads")}
+              className={`px-4 py-2 rounded text-xs font-mono font-semibold transition-colors ${
+                tab === "leads"
+                  ? "bg-[#b8562f] text-white"
+                  : "text-[#8f8477] hover:text-[#f2ece2]"
+              }`}
+            >
+              Leads
+            </button>
+            <button
+              onClick={() => setTab("clients")}
+              className={`px-4 py-2 rounded text-xs font-mono font-semibold transition-colors ${
+                tab === "clients"
+                  ? "bg-[#b8562f] text-white"
+                  : "text-[#8f8477] hover:text-[#f2ece2]"
+              }`}
+            >
+              Clientes
+            </button>
+            <button
+              onClick={() => setTab("pdf")}
+              className={`px-4 py-2 rounded text-xs font-mono font-semibold transition-colors ${
+                tab === "pdf"
+                  ? "bg-[#b8562f] text-white"
+                  : "text-[#8f8477] hover:text-[#f2ece2]"
+              }`}
+            >
+              PDF Generator
+            </button>
+          </div>
+
           <button
             onClick={onLogout}
             className="px-4 py-2 text-xs font-mono border border-[#f2ece2]/15 rounded text-[#8f8477] hover:text-[#f2ece2] hover:border-[#f2ece2]/30 transition-colors"
@@ -160,88 +307,17 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
             Log out
           </button>
         </div>
+      </header>
 
-        <div className="flex flex-wrap gap-2 mb-6">
-          {sources.map((src) => (
-            <button
-              key={src}
-              onClick={() => setFilter(src)}
-              className={`px-3 py-1.5 rounded-full text-xs font-mono font-semibold transition-colors ${
-                filter === src
-                  ? "bg-[#b8562f] text-white"
-                  : "bg-[#211c17] text-[#8f8477] border border-[#f2ece2]/10"
-              }`}
-            >
-              {src === "all" ? "All sources" : SOURCE_LABELS[src] || src}
-            </button>
-          ))}
-
-          <span className="w-px bg-[#f2ece2]/10 mx-1" />
-
-          {["all", "pending", "attended"].map((opt) => (
-            <button
-              key={opt}
-              onClick={() => setAttendedFilter(opt)}
-              className={`px-3 py-1.5 rounded-full text-xs font-mono font-semibold transition-colors ${
-                attendedFilter === opt
-                  ? "bg-[#f2ece2] text-[#16130f]"
-                  : "bg-[#211c17] text-[#8f8477] border border-[#f2ece2]/10"
-              }`}
-            >
-              {opt === "all" ? "All status" : opt === "pending" ? "Pending" : "Attended"}
-            </button>
-          ))}
-        </div>
-
-        {loading ? (
-          <p className="text-[#8f8477] font-mono text-sm">Loading...</p>
-        ) : filtered.length === 0 ? (
-          <p className="text-[#8f8477] font-mono text-sm">No leads match this filter.</p>
+      <main className="max-w-5xl mx-auto px-6 py-10">
+        {tab === "pdf" ? (
+          <PdfGenerator />
+        ) : tab === "clients" ? (
+          <ClientsPanel />
         ) : (
-          <div className="flex flex-col gap-3">
-            {filtered.map((lead) => (
-              <div key={lead.id} className="stacked-card p-5 flex items-start gap-4">
-                <button
-                  onClick={() => toggleAttended(lead)}
-                  className={`flex-shrink-0 w-6 h-6 rounded border-2 flex items-center justify-center transition-colors mt-1 ${
-                    lead.attended
-                      ? "bg-[#b8562f] border-[#b8562f]"
-                      : "border-[#f2ece2]/25"
-                  }`}
-                  title={lead.attended ? "Mark as pending" : "Mark as attended"}
-                >
-                  {lead.attended && <span className="text-white text-xs">✓</span>}
-                </button>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-2 mb-1">
-                    <p className="font-semibold text-[#f2ece2]">{lead.name}</p>
-                    <span className="tag-pill">
-                      {SOURCE_LABELS[lead.source] || lead.source}
-                    </span>
-                    <span className="font-mono text-[10px] text-[#8f8477] uppercase">
-                      {lead.language}
-                    </span>
-                  </div>
-                  <p className="font-mono text-sm text-[#c9c2b6]">{lead.phone}</p>
-                  {lead.trailer_type && (
-                    <p className="text-xs text-[#8f8477] mt-1">
-                      Interested in: {lead.trailer_type}
-                    </p>
-                  )}
-                  {lead.notes && (
-                    <p className="text-xs text-[#8f8477] mt-1 italic">"{lead.notes}"</p>
-                  )}
-                </div>
-
-                <span className="font-mono text-[11px] text-[#8f8477] flex-shrink-0">
-                  {new Date(lead.created_at).toLocaleDateString()}
-                </span>
-              </div>
-            ))}
-          </div>
+          <LeadsPanel />
         )}
-      </div>
+      </main>
     </div>
   );
 }
