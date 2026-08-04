@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
-import PdfGenerator from "./PdfGenerator";
 import ClientsPanel from "./ClientsPanel";
 import LeadsPanel from "./LeadsPanel";
 
@@ -74,7 +73,7 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
 }
 
 function Dashboard({ onLogout }: { onLogout: () => void }) {
-  const [tab, setTab] = useState<"pdf" | "leads" | "clients">("clients");
+  const [tab, setTab] = useState<"leads" | "clients">("clients");
 
   return (
     <div className="min-h-screen blueprint-bg">
@@ -108,16 +107,6 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
             >
               Leads
             </button>
-            <button
-              onClick={() => setTab("pdf")}
-              className={`px-4 py-2 rounded text-xs font-mono font-semibold transition-colors ${
-                tab === "pdf"
-                  ? "bg-[#b8562f] text-white"
-                  : "text-[#8f8477] hover:text-[#f2ece2]"
-              }`}
-            >
-              PDF Generator
-            </button>
           </div>
 
           <button
@@ -130,13 +119,7 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
       </header>
 
       <main className="max-w-5xl mx-auto px-6 py-10">
-        {tab === "pdf" ? (
-          <PdfGenerator />
-        ) : tab === "clients" ? (
-          <ClientsPanel />
-        ) : (
-          <LeadsPanel />
-        )}
+        {tab === "clients" ? <ClientsPanel /> : <LeadsPanel />}
       </main>
     </div>
   );

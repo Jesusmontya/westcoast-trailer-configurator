@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
+import { generateQuotePdf, type QuoteLineItem } from "../../lib/generateQuotePdf";
 
 type Client = {
   id: string;
@@ -120,6 +121,231 @@ function NewClientModal({
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+type Quote = {
+  id: string;
+  client_id: string;
+  quote_number: string;
+  trailer_model: string | null;
+  trailer_size: string | null;
+  items: QuoteLineItem[];
+  total: number;
+  monthly_estimate: number | null;
+  notes: string | null;
+  created_at: string;
+};
+
+function QuoteSection({ client }: { client: Client }) {
+  const [quotes, setQuotes] = useState<Quote[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+
+  const [trailerModel, setTrailerModel] = useState("");
+  const [trailerSize, setTrailerSize] = useState("");
+  const [items, setItems] = useState<QuoteLineItem[]>([{ label: "", price: 0 }]);
+  const [monthlyEstimate, setMonthlyEstimate] = useState("");
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    loadQuotes();
+  }, [client.id]);
+
+  async function loadQuotes() {
+    setLoading(true);
+    const { data } = await supabase
+      .from("quotes")
+      .select("*")
+      .eq("client_id", client.id)
+      .order("created_at", { ascending: false });
+    setQuotes((data as Quote[]) || []);
+    setLoading(false);
+  }
+
+  function addItem() {
+    setItems((prev) => [...prev, { label: "", price: 0 }]);
+  }
+
+  function updateItem(index: number, field: keyof QuoteLineItem, value: string) {
+    setItems((prev) =>
+      prev.map((item, i) =>
+        i === index
+          ? { ...item, [field]: field === "price" ? parseFloat(value) || 0 : value }
+          : item
+      )
+    );
+  }
+
+  function removeItem(index: number) {
+    setItems((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function generateAndSave() {
+    setSaving(true);
+    const quoteNumber = String(quotes.length + 1).padStart(4, "0");
+
+    const total = generateQuotePdf({
+      quoteNumber,
+      clientName: client.name,
+      clientPhone: client.phone,
+      trailerModel,
+      trailerSize,
+      items,
+      monthlyEstimate: monthlyEstimate ? parseFloat(monthlyEstimate) : null,
+      notes,
+    });
+
+    await supabase.from("quotes").insert({
+      client_id: client.id,
+      quote_number: quoteNumber,
+      trailer_model: trailerModel || null,
+      trailer_size: trailerSize || null,
+      items,
+      total,
+      monthly_estimate: monthlyEstimate ? parseFloat(monthlyEstimate) : null,
+      notes: notes || null,
+    });
+
+    setSaving(false);
+    setShowForm(false);
+    setTrailerModel("");
+    setTrailerSize("");
+    setItems([{ label: "", price: 0 }]);
+    setMonthlyEstimate("");
+    setNotes("");
+    loadQuotes();
+  }
+
+  function redownload(quote: Quote) {
+    generateQuotePdf({
+      quoteNumber: quote.quote_number,
+      clientName: client.name,
+      clientPhone: client.phone,
+      trailerModel: quote.trailer_model || "",
+      trailerSize: quote.trailer_size || "",
+      items: quote.items,
+      monthlyEstimate: quote.monthly_estimate,
+      notes: quote.notes,
+    });
+  }
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <p className="font-mono text-xs uppercase tracking-wide text-[#8f8477]">
+          Cotizaciones
+        </p>
+        <button
+          onClick={() => setShowForm((v) => !v)}
+          className="font-mono text-[11px] text-[#e8794a]"
+        >
+          {showForm ? "Cancelar" : "+ Nueva cotización"}
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="mb-4 p-4 bg-[#211c17] rounded">
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <input
+              placeholder="Modelo de trailer"
+              value={trailerModel}
+              onChange={(e) => setTrailerModel(e.target.value)}
+              className="px-3 py-2 bg-[#2b241d] border border-[#f2ece2]/10 rounded text-sm text-[#f2ece2]"
+            />
+            <input
+              placeholder="Tamaño (ej. 16 ft)"
+              value={trailerSize}
+              onChange={(e) => setTrailerSize(e.target.value)}
+              className="px-3 py-2 bg-[#2b241d] border border-[#f2ece2]/10 rounded text-sm text-[#f2ece2]"
+            />
+          </div>
+
+          <div className="flex flex-col gap-2 mb-2">
+            {items.map((item, i) => (
+              <div key={i} className="flex gap-2">
+                <input
+                  placeholder="Descripción del item"
+                  value={item.label}
+                  onChange={(e) => updateItem(i, "label", e.target.value)}
+                  className="flex-1 px-3 py-2 bg-[#2b241d] border border-[#f2ece2]/10 rounded text-sm text-[#f2ece2]"
+                />
+                <input
+                  type="number"
+                  placeholder="Precio"
+                  value={item.price || ""}
+                  onChange={(e) => updateItem(i, "price", e.target.value)}
+                  className="w-28 px-3 py-2 bg-[#2b241d] border border-[#f2ece2]/10 rounded text-sm text-[#f2ece2]"
+                />
+                <button
+                  onClick={() => removeItem(i)}
+                  className="text-[#8f8477] hover:text-[#e63946] px-1"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+          <button onClick={addItem} className="font-mono text-[11px] text-[#e8794a] mb-3">
+            + Agregar item
+          </button>
+
+          <input
+            placeholder="Financiamiento mensual estimado (opcional)"
+            value={monthlyEstimate}
+            onChange={(e) => setMonthlyEstimate(e.target.value)}
+            className="w-full mb-2 px-3 py-2 bg-[#2b241d] border border-[#f2ece2]/10 rounded text-sm text-[#f2ece2]"
+          />
+          <textarea
+            placeholder="Notas (opcional)"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="w-full mb-3 px-3 py-2 bg-[#2b241d] border border-[#f2ece2]/10 rounded text-sm text-[#f2ece2] min-h-[60px]"
+          />
+
+          <button
+            onClick={generateAndSave}
+            disabled={saving}
+            className="w-full px-4 py-2.5 bg-[#b8562f] text-white rounded text-sm font-semibold disabled:opacity-60"
+          >
+            {saving ? "Generando..." : "Generar PDF y guardar →"}
+          </button>
+        </div>
+      )}
+
+      {loading ? (
+        <p className="text-xs text-[#8f8477]">Cargando...</p>
+      ) : quotes.length === 0 ? (
+        <p className="text-xs text-[#8f8477]">Sin cotizaciones generadas todavía.</p>
+      ) : (
+        <div className="flex flex-col gap-2">
+          {quotes.map((q) => (
+            <div
+              key={q.id}
+              className="flex items-center justify-between px-3 py-2 bg-[#211c17] rounded text-sm"
+            >
+              <div>
+                <p className="text-[#f2ece2]">
+                  #{q.quote_number}
+                  {q.trailer_model ? ` — ${q.trailer_model}` : ""}
+                </p>
+                <p className="font-mono text-[10px] text-[#8f8477]">
+                  {new Date(q.created_at).toLocaleDateString()} · $
+                  {q.total.toLocaleString()}
+                </p>
+              </div>
+              <button
+                onClick={() => redownload(q)}
+                className="font-mono text-[10px] text-[#e8794a] whitespace-nowrap"
+              >
+                Descargar de nuevo
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -288,6 +514,8 @@ function ClientDetail({
         >
           Guardar cambios
         </button>
+
+        <QuoteSection client={client} />
 
         {client.total_amount ? (
           <div className="flex items-center justify-between mb-4 p-4 bg-[#211c17] rounded">
