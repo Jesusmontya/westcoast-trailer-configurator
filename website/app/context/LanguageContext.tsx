@@ -210,7 +210,7 @@ const translations = {
       contactHeading: "Contacto",
       phone: "Teléfono: próximamente",
       email: "Correo: próximamente",
-      location: "Nevada, USA — we ship anywhere (shipping cost applies)",
+      location: "Nevada, USA — enviamos a cualquier lugar (costo de envío aplica)",
       copyright: "All Custom Trailers LLC. Todos los derechos reservados.",
     },
   },
