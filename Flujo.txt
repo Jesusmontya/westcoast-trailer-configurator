@@ -1,0 +1,32 @@
+El flujo de trabajo completo
+
+1. Llega un interesado
+Alguien llena el formulario en tu landing o en la galería 3D → se crea un deal nuevo, stage = Nuevo. Ya no hay "leads" por un lado y "clientes" por otro — es la misma persona, un solo registro, desde este momento hasta que se le entrega el trailer.
+
+2. Le das seguimiento
+Le hablas o le escribes. Vas moviendo su stage: Nuevo → Contactado. Cada intento de contacto lo anotas en su historial de actividad ("Le llamé, dijo que lo pensaba, volver el viernes") — ese mismo historial lo vas a seguir usando hasta el final, no solo mientras es "lead".
+
+3. Le generas la cotización
+Directo desde su página (ya no un modal dentro de otro modal — es su propia página completa), le das "Nueva cotización": modelo, tamaño, items con precio. Generas el PDF, se descarga y queda guardado en su historial. Cambias su stage a Cotizado.
+
+4. Acepta
+Cambias su stage a Aceptado. En ese momento se destapa la sección de pago en su misma página: eliges tipo de pago (contado / financiamiento / enganche+saldo) y el monto total.
+
+5. Va pagando
+Cada abono lo registras ahí mismo, con fecha y monto. Ves de un vistazo cuánto lleva pagado y cuánto falta.
+
+6. Se construye y se entrega
+Cuando arranca la construcción, cambias stage a En producción. Cuando se lo entregas, a Entregado. Con eso el ciclo de vida completo de esa persona queda documentado en un solo lugar, de principio a fin.
+
+Si en cualquier punto antes de "Aceptado" deja de responder → lo marcas como Perdido. No se borra, solo se archiva del pipeline activo.
+
+Cómo se ve organizado
+Nuevo → Contactado → Cotizado → Aceptado → En producción → Entregado
+                                                      ↘
+                                                   Perdido
+
+Cada persona = una página propia con:
+├── Info de contacto
+├── Actividad (todo el historial, desde el primer "le hablé" hasta "se entregó")
+├── Cotizaciones (generar PDF + ver las anteriores)
+└── Pago (se activa solo cuando llega a "Aceptado")
