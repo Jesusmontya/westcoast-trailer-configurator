@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "./context/LanguageContext";
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -37,11 +35,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${fraunces.variable} ${inter.variable} ${mono.variable}`}>
-        <LanguageProvider>
-          <Navbar />
-          {children}
-          <Footer />
-        </LanguageProvider>
+        <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>
   );

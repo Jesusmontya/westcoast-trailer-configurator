@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useLanguage } from "./context/LanguageContext";
+import { useLanguage } from "../context/LanguageContext";
 
 const CONFIGURATOR_URL =
   "https://3d.allcustomtrailers.com";
