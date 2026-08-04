@@ -74,7 +74,7 @@ function LoginForm({ onLogin }: { onLogin: () => void }) {
 }
 
 function Dashboard({ onLogout }: { onLogout: () => void }) {
-  const [tab, setTab] = useState<"pdf" | "leads" | "clients">("leads");
+  const [tab, setTab] = useState<"pdf" | "leads" | "clients">("clients");
 
   return (
     <div className="min-h-screen blueprint-bg">
@@ -89,16 +89,6 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setTab("leads")}
-              className={`px-4 py-2 rounded text-xs font-mono font-semibold transition-colors ${
-                tab === "leads"
-                  ? "bg-[#b8562f] text-white"
-                  : "text-[#8f8477] hover:text-[#f2ece2]"
-              }`}
-            >
-              Leads
-            </button>
-            <button
               onClick={() => setTab("clients")}
               className={`px-4 py-2 rounded text-xs font-mono font-semibold transition-colors ${
                 tab === "clients"
@@ -107,6 +97,16 @@ function Dashboard({ onLogout }: { onLogout: () => void }) {
               }`}
             >
               Clientes
+            </button>
+            <button
+              onClick={() => setTab("leads")}
+              className={`px-4 py-2 rounded text-xs font-mono font-semibold transition-colors ${
+                tab === "leads"
+                  ? "bg-[#b8562f] text-white"
+                  : "text-[#8f8477] hover:text-[#f2ece2]"
+              }`}
+            >
+              Leads
             </button>
             <button
               onClick={() => setTab("pdf")}
