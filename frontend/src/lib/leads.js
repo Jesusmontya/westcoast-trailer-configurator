@@ -2,26 +2,19 @@ import { supabase } from "./supabase";
 
 const DEDUPE_WINDOW_DAYS = 30;
 
-const SOURCE_LABELS = {
-  configurator: "configurador",
-  contact_form: "formulario de contacto",
-  gallery: "galería",
-  custom_request: "solicitud personalizada",
-};
-
 /**
- * Crea un deal nuevo (stage: "nuevo"), o si ya existe uno con el mismo
- * teléfono en los últimos 30 días, agrega el nuevo interés como actividad
- * en vez de duplicarlo.
+ * Guarda a alguien que llenó un formulario en la galería como cliente.
+ * Si ya existe uno con el mismo teléfono en los últimos 30 días, no lo
+ * duplica — agrega el nuevo interés a su historial de seguimiento.
  *
- * input: { name, phone, email?, source, trailer_type?, language, notes? }
+ * input: { name, phone, email?, interest?, notes? }
  */
 export async function submitLead(input) {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - DEDUPE_WINDOW_DAYS);
 
   const { data: existing } = await supabase
-    .from("deals")
+    .from("clients")
     .select("id")
     .eq("phone", input.phone)
     .gte("created_at", cutoff.toISOString())
@@ -29,31 +22,28 @@ export async function submitLead(input) {
     .limit(1);
 
   if (existing && existing.length > 0) {
-    const dealId = existing[0].id;
+    const clientId = existing[0].id;
 
-    const parts = [`Nuevo interés vía ${SOURCE_LABELS[input.source] || input.source}`];
-    if (input.trailer_type) parts.push(`— ${input.trailer_type}`);
+    const parts = ["Nuevo interés vía la galería 3D"];
+    if (input.interest) parts.push(`— ${input.interest}`);
     if (input.notes) parts.push(`: "${input.notes}"`);
 
-    await supabase.from("deal_activity").insert({
-      deal_id: dealId,
+    await supabase.from("client_activity").insert({
+      client_id: clientId,
       note: parts.join(" "),
     });
 
-    return { leadId: dealId, isNew: false };
+    return { leadId: clientId, isNew: false };
   }
 
   const { data: created, error } = await supabase
-    .from("deals")
+    .from("clients")
     .insert({
       name: input.name,
       phone: input.phone,
       email: input.email || null,
-      source: input.source,
-      trailer_type: input.trailer_type || null,
-      language: input.language || "en",
-      notes: input.notes || null,
-      stage: "nuevo",
+      interest: input.interest || null,
+      heard_from: "sitio_web",
     })
     .select("id")
     .single();

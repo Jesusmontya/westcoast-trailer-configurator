@@ -10,6 +10,7 @@ const HEARD_FROM_LABELS: Record<string, string> = {
   redes_sociales: "Redes sociales",
   recomendacion: "Recomendación",
   vio_trailer: "Vio un trailer en la calle",
+  sitio_web: "Formulario del sitio web",   // ← agrega esta línea
   otro: "Otro",
 };
 
