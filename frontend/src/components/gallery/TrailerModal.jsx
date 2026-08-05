@@ -1,11 +1,14 @@
 import { useState, useEffect, useRef } from 'react'
 import TrailerScanViewer from '../scan/TrailerScanViewer'
+import { submitLead } from '../../lib/leads'
 import '../../styles/gallery.css'
 
 export default function TrailerModal({ trailer, onClose }) {
   const [showSoftPrompt, setShowSoftPrompt] = useState(false)
   const [showForm, setShowForm] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const timerRef = useRef(null)
@@ -15,10 +18,23 @@ export default function TrailerModal({ trailer, onClose }) {
     return () => clearTimeout(timerRef.current)
   }, [])
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
-    // TODO: conectar a Supabase — insert en leads (source: "gallery", trailer: trailer.id)
-    setSubmitted(true)
+    setError('')
+    setSubmitting(true)
+    try {
+      await submitLead({
+        name,
+        phone,
+        interest: trailer.name,
+      })
+      setSubmitted(true)
+    } catch (err) {
+      console.error(err)
+      setError("Something went wrong. Please try again or call us directly.")
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -80,8 +96,9 @@ export default function TrailerModal({ trailer, onClose }) {
               onChange={(e) => setPhone(e.target.value)}
               className="modal-input"
             />
-            <button type="submit" className="modal-submit">
-              Send →
+            {error && <p className="modal-error">{error}</p>}
+            <button type="submit" className="modal-submit" disabled={submitting}>
+              {submitting ? 'Sending...' : 'Send →'}
             </button>
           </form>
         )}

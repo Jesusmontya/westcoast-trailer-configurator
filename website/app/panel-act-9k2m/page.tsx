@@ -121,6 +121,7 @@ export default function ClientsList() {
   const [search, setSearch] = useState("");
   const [showNew, setShowNew] = useState(false);
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "week">("all");
+  const [sourceFilter, setSourceFilter] = useState<"all" | "sitio_web" | "manual">("all");
 
   useEffect(() => {
     load();
@@ -152,6 +153,11 @@ export default function ClientsList() {
       // esta semana: últimos 7 días
       const weekAgo = new Date(now.getTime() - 7 * 864e5);
       return created >= weekAgo;
+    })
+    .filter((c) => {
+      if (sourceFilter === "all") return true;
+      if (sourceFilter === "sitio_web") return c.heard_from === "sitio_web";
+      return c.heard_from !== "sitio_web";
     });
 
   return (
@@ -189,6 +195,22 @@ export default function ClientsList() {
         ))}
       </div>
 
+      <div className="flex gap-2 mb-6">
+        {(["all", "sitio_web", "manual"] as const).map((opt) => (
+          <button
+            key={opt}
+            onClick={() => setSourceFilter(opt)}
+            className={`px-3 py-1.5 rounded-full text-xs font-mono font-semibold transition-colors ${
+              sourceFilter === opt
+                ? "bg-[#f2ece2] text-[#16130f]"
+                : "bg-[#211c17] text-[#8f8477] border border-[#f2ece2]/10"
+            }`}
+          >
+            {opt === "all" ? "Todas las fuentes" : opt === "sitio_web" ? "Desde el sitio" : "Dados de alta a mano"}
+          </button>
+        ))}
+      </div>
+
       {loading ? (
         <p className="text-[#8f8477] font-mono text-sm">Cargando...</p>
       ) : filtered.length === 0 ? (
@@ -206,6 +228,18 @@ export default function ClientsList() {
               <div>
                 <p className="font-semibold text-[#f2ece2]">{client.name}</p>
                 <p className="font-mono text-sm text-[#c9c2b6]">{client.phone}</p>
+                {(client.interest || client.heard_from === "sitio_web") && (
+                  <div className="flex items-center gap-2 mt-1.5">
+                    {client.interest && (
+                      <span className="tag-pill">{client.interest}</span>
+                    )}
+                    {client.heard_from === "sitio_web" && (
+                      <span className="font-mono text-[10px] text-[#e8794a] uppercase">
+                        Desde el sitio
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               <span className="font-mono text-[11px] text-[#8f8477]">
                 {new Date(client.created_at).toLocaleDateString()}
