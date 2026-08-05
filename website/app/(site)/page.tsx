@@ -75,14 +75,29 @@ function ClientWorkModal({
 function ContactForm() {
   const { t, lang } = useLanguage();
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [trailerType, setTrailerType] = useState(t.contact.typeOptions[0]);
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    // TODO: conectar a Supabase (insert en leads, source: "contact_form")
-    setSubmitted(true);
+    setError("");
+    setSubmitting(true);
+    try {
+      await submitLead({
+        name,
+        phone,
+        interest: trailerType,
+      });
+      setSubmitted(true);
+    } catch (err) {
+      console.error(err);
+      setError("Something went wrong. Please try again or call us directly.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   if (submitted) {
@@ -138,11 +153,14 @@ function ContactForm() {
         </select>
       </div>
 
+      {error && <p className="text-sm text-[#e63946]">{error}</p>}
+
       <button
         type="submit"
-        className="mt-2 px-6 py-3.5 bg-[#b8562f] text-white font-semibold rounded hover:bg-[#e8794a] transition-colors"
+        disabled={submitting}
+        className="mt-2 px-6 py-3.5 bg-[#b8562f] text-white font-semibold rounded hover:bg-[#e8794a] transition-colors disabled:opacity-60"
       >
-        {t.contact.submitButton}
+        {submitting ? "..." : t.contact.submitButton}
       </button>
     </form>
   );
