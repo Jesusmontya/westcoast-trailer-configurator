@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "../../../../lib/supabase";
 import { generateQuotePdf, QuoteLineItem } from "../../../../lib/generateQuotePdf";
 
@@ -42,6 +43,13 @@ export default function ClientDetailPage() {
 
   return (
     <div className="max-w-2xl">
+      <Link
+        href="/panel-act-9k2m"
+        className="inline-block mb-4 font-mono text-xs text-[#8f8477] hover:text-[#f2ece2]"
+      >
+        ← Volver a clientes
+      </Link>
+
       <div className="mb-8">
         <h1 className="font-display text-2xl font-semibold text-[#f2ece2]">{client.name}</h1>
         <p className="font-mono text-sm text-[#c9c2b6]">{client.phone}</p>

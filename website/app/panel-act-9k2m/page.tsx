@@ -66,6 +66,7 @@ export default function ClientsList() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [showNew, setShowNew] = useState(false);
+  const [dateFilter, setDateFilter] = useState<"all" | "today" | "week">("all");
 
   useEffect(() => {
     load();
@@ -81,11 +82,23 @@ export default function ClientsList() {
     setLoading(false);
   }
 
-  const filtered = clients.filter((c) => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    return c.name.toLowerCase().includes(q) || c.phone.includes(q);
-  });
+  const filtered = clients
+    .filter((c) => {
+      if (!search.trim()) return true;
+      const q = search.toLowerCase();
+      return c.name.toLowerCase().includes(q) || c.phone.includes(q);
+    })
+    .filter((c) => {
+      if (dateFilter === "all") return true;
+      const created = new Date(c.created_at);
+      const now = new Date();
+      if (dateFilter === "today") {
+        return created.toDateString() === now.toDateString();
+      }
+      // esta semana: últimos 7 días
+      const weekAgo = new Date(now.getTime() - 7 * 864e5);
+      return created >= weekAgo;
+    });
 
   return (
     <div>
@@ -103,8 +116,24 @@ export default function ClientsList() {
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         placeholder="Buscar por nombre o teléfono..."
-        className="w-full mb-6 px-4 py-2.5 bg-[#211c17] border border-[#f2ece2]/10 rounded text-sm text-[#f2ece2]"
+        className="w-full mb-3 px-4 py-2.5 bg-[#211c17] border border-[#f2ece2]/10 rounded text-sm text-[#f2ece2]"
       />
+
+      <div className="flex gap-2 mb-6">
+        {(["all", "today", "week"] as const).map((opt) => (
+          <button
+            key={opt}
+            onClick={() => setDateFilter(opt)}
+            className={`px-3 py-1.5 rounded-full text-xs font-mono font-semibold transition-colors ${
+              dateFilter === opt
+                ? "bg-[#b8562f] text-white"
+                : "bg-[#211c17] text-[#8f8477] border border-[#f2ece2]/10"
+            }`}
+          >
+            {opt === "all" ? "Todos" : opt === "today" ? "Hoy" : "Esta semana"}
+          </button>
+        ))}
+      </div>
 
       {loading ? (
         <p className="text-[#8f8477] font-mono text-sm">Cargando...</p>
