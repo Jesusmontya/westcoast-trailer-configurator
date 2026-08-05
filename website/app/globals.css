@@ -1,14 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #16130f;
-  --surface: #211c17;
-  --surface-2: #2b241d;
-  --accent: #b8562f;
-  --accent-glow: #e8794a;
-  --text: #f2ece2;
-  --text-muted: #8f8477;
-  --line: rgba(242, 236, 226, 0.08);
+  --bg: #f6eedd;
+  --surface: #ffffff;
+  --surface-2: #fbf3e2;
+  --accent: #e2a33d;
+  --accent-glow: #efc066;
+  --accent-2: #c1502d;
+  --text: #2a2118;
+  --text-muted: #7a6a55;
+  --line: rgba(42, 33, 24, 0.1);
 }
 
 body {
@@ -25,46 +26,45 @@ body {
   font-family: var(--font-mono), monospace;
 }
 
+/* Fondo cálido y limpio, sin cuadrícula — un leve viñeteado de papel en vez de líneas */
 .blueprint-bg {
   background:
-    linear-gradient(var(--line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--line) 1px, transparent 1px),
+    radial-gradient(ellipse at top, rgba(255, 255, 255, 0.5), transparent 60%),
     var(--bg);
-  background-size: 32px 32px, 32px 32px, 100% 100%;
 }
 
-/* Tarjeta con sombras apiladas, como placas de metal */
+/* Tarjeta tipo ficha de papel apilada, con sombra cálida en vez de placas oscuras */
 .stacked-card {
   position: relative;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: 4px;
+  border-radius: 6px;
   box-shadow:
-    0 1px 0 rgba(0, 0, 0, 0.4),
-    0 12px 24px -12px rgba(0, 0, 0, 0.6),
-    4px 4px 0 -2px var(--bg),
-    5px 5px 0 -2px rgba(242, 236, 226, 0.06),
-    8px 8px 0 -4px var(--bg),
-    9px 9px 0 -4px rgba(242, 236, 226, 0.04);
+    0 1px 2px rgba(42, 33, 24, 0.06),
+    0 14px 28px -16px rgba(42, 33, 24, 0.18),
+    3px 3px 0 -1px var(--bg),
+    4px 4px 0 -1px rgba(226, 163, 61, 0.35),
+    7px 7px 0 -3px var(--bg),
+    8px 8px 0 -3px rgba(226, 163, 61, 0.18);
   transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
 .stacked-card:hover {
   transform: translate(-3px, -3px);
   box-shadow:
-    0 1px 0 rgba(0, 0, 0, 0.4),
-    0 20px 32px -14px rgba(184, 86, 47, 0.35),
-    4px 4px 0 -2px var(--bg),
-    5px 5px 0 -2px rgba(242, 236, 226, 0.08),
-    8px 8px 0 -4px var(--bg),
-    9px 9px 0 -4px rgba(242, 236, 226, 0.05);
+    0 1px 2px rgba(42, 33, 24, 0.08),
+    0 20px 32px -16px rgba(193, 80, 45, 0.25),
+    3px 3px 0 -1px var(--bg),
+    4px 4px 0 -1px rgba(226, 163, 61, 0.45),
+    7px 7px 0 -3px var(--bg),
+    8px 8px 0 -3px rgba(226, 163, 61, 0.25);
 }
 
 .corner-mark {
   position: absolute;
   width: 14px;
   height: 14px;
-  border: 1px solid var(--accent-glow);
+  border: 1px solid var(--accent-2);
   opacity: 0;
   transition: opacity 0.25s ease;
   pointer-events: none;
@@ -78,8 +78,8 @@ body {
   font-size: 10px;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--accent-glow);
-  background: rgba(184, 86, 47, 0.12);
+  color: var(--accent-2);
+  background: rgba(226, 163, 61, 0.18);
   padding: 3px 8px;
   border-radius: 3px;
   display: inline-block;
