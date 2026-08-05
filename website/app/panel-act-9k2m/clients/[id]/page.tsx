@@ -10,7 +10,7 @@ const HEARD_FROM_LABELS: Record<string, string> = {
   redes_sociales: "Redes sociales",
   recomendacion: "Recomendación",
   vio_trailer: "Vio un trailer en la calle",
-  sitio_web: "Formulario del sitio web",   // ← agrega esta línea
+  sitio_web: "Formulario del sitio web",
   otro: "Otro",
 };
 
@@ -38,11 +38,23 @@ type Quote = {
   quote_number: string;
   trailer_model: string | null;
   trailer_size: string | null;
+  cover_image_url: string | null;
   items: QuoteLineItem[];
   total: number;
+  tax_rate: number | null;
   monthly_estimate: number | null;
   notes: string | null;
   created_at: string;
+};
+type TrailerSize = { id: string; label: string; image_url: string | null };
+type Category = { id: string; name: string };
+type Subcategory = { id: string; category_id: string; name: string };
+type CatalogItem = {
+  id: string;
+  subcategory_id: string;
+  name: string;
+  image_url: string | null;
+  price: number;
 };
 
 export default function ClientDetailPage() {
@@ -62,25 +74,25 @@ export default function ClientDetailPage() {
     setLoading(false);
   }
 
-  if (loading) return <p className="text-[#8f8477] font-mono text-sm">Cargando...</p>;
-  if (!client) return <p className="text-[#8f8477] font-mono text-sm">No encontrado.</p>;
+  if (loading) return <p className="text-[var(--text-muted)] font-mono text-sm">Cargando...</p>;
+  if (!client) return <p className="text-[var(--text-muted)] font-mono text-sm">No encontrado.</p>;
 
   return (
-    <div className="max-w-2xl">
+    <div className="max-w-3xl">
       <Link
         href="/panel-act-9k2m"
-        className="inline-block mb-4 font-mono text-xs text-[#8f8477] hover:text-[#f2ece2]"
+        className="inline-block mb-4 font-mono text-xs text-[var(--text-muted)] hover:text-[var(--text)]"
       >
         ← Volver a clientes
       </Link>
 
       <div className="mb-8">
-        <h1 className="font-display text-2xl font-semibold text-[#f2ece2]">{client.name}</h1>
-        <p className="font-mono text-sm text-[#c9c2b6]">{client.phone}</p>
+        <h1 className="font-display text-2xl font-semibold text-[var(--text)]">{client.name}</h1>
+        <p className="font-mono text-sm text-[var(--text-muted)]">{client.phone}</p>
         {client.email && (
-          <p className="font-mono text-sm text-[#c9c2b6]">{client.email}</p>
+          <p className="font-mono text-sm text-[var(--text-muted)]">{client.email}</p>
         )}
-        <p className="font-mono text-[11px] text-[#8f8477] mt-1">
+        <p className="font-mono text-[11px] text-[var(--text-muted)] mt-1">
           Cliente desde {new Date(client.created_at).toLocaleDateString()}
         </p>
 
@@ -104,7 +116,7 @@ export default function ClientDetailPage() {
 }
 
 // ============================================
-// SEGUIMIENTO — solo notas con fecha
+// SEGUIMIENTO
 // ============================================
 function ActivitySection({ client }: { client: Client }) {
   const [activity, setActivity] = useState<Activity[]>([]);
@@ -135,7 +147,7 @@ function ActivitySection({ client }: { client: Client }) {
 
   return (
     <div className="mb-8">
-      <p className="font-mono text-xs uppercase tracking-wide text-[#8f8477] mb-3">
+      <p className="font-mono text-xs uppercase tracking-wide text-[var(--text-muted)] mb-3">
         Seguimiento
       </p>
       <div className="flex gap-2 mb-4">
@@ -144,26 +156,26 @@ function ActivitySection({ client }: { client: Client }) {
           onChange={(e) => setNote(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && addNote()}
           placeholder="Ej. Le hablé, dijo que lo iba a pensar"
-          className="flex-1 px-3 py-2 bg-[#211c17] border border-[#f2ece2]/10 rounded text-sm text-[#f2ece2]"
+          className="flex-1 px-3 py-2 bg-[var(--surface-2)] border border-[var(--line)] rounded text-sm text-[var(--text)]"
         />
         <button
           onClick={addNote}
-          className="px-4 py-2 bg-[#2b241d] border border-[#f2ece2]/15 rounded text-sm font-mono text-[#f2ece2] hover:border-[#b8562f]"
+          className="px-4 py-2 bg-[var(--surface-2)] border border-[var(--line)] rounded text-sm font-mono text-[var(--text)] hover:border-[var(--accent-2)]"
         >
           Agregar
         </button>
       </div>
 
       {loading ? (
-        <p className="text-xs text-[#8f8477]">Cargando...</p>
+        <p className="text-xs text-[var(--text-muted)]">Cargando...</p>
       ) : activity.length === 0 ? (
-        <p className="text-xs text-[#8f8477]">Sin seguimiento registrado todavía.</p>
+        <p className="text-xs text-[var(--text-muted)]">Sin seguimiento registrado todavía.</p>
       ) : (
         <div className="flex flex-col gap-2">
           {activity.map((a) => (
-            <div key={a.id} className="text-sm bg-[#211c17] rounded px-3 py-2.5">
-              <p className="text-[#f2ece2]">{a.note}</p>
-              <p className="font-mono text-[10px] text-[#8f8477] mt-1">
+            <div key={a.id} className="text-sm bg-[var(--surface-2)] rounded px-3 py-2.5">
+              <p className="text-[var(--text)]">{a.note}</p>
+              <p className="font-mono text-[10px] text-[var(--text-muted)] mt-1">
                 {new Date(a.created_at).toLocaleString()}
               </p>
             </div>
@@ -175,18 +187,12 @@ function ActivitySection({ client }: { client: Client }) {
 }
 
 // ============================================
-// COTIZACIONES
+// COTIZACIONES — con catálogo visual (estilo AutoZone)
 // ============================================
 function QuoteSection({ client }: { client: Client }) {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [trailerModel, setTrailerModel] = useState("");
-  const [trailerSize, setTrailerSize] = useState("");
-  const [items, setItems] = useState<QuoteLineItem[]>([{ label: "", price: 0 }]);
-  const [monthlyEstimate, setMonthlyEstimate] = useState("");
-  const [notes, setNotes] = useState("");
-  const [saving, setSaving] = useState(false);
+  const [showBuilder, setShowBuilder] = useState(false);
 
   useEffect(() => {
     load();
@@ -203,68 +209,16 @@ function QuoteSection({ client }: { client: Client }) {
     setLoading(false);
   }
 
-  function addItem() {
-    setItems((prev) => [...prev, { label: "", price: 0 }]);
-  }
-
-  function updateItem(i: number, field: keyof QuoteLineItem, value: string) {
-    setItems((prev) =>
-      prev.map((item, idx) =>
-        idx === i
-          ? { ...item, [field]: field === "price" ? parseFloat(value) || 0 : value }
-          : item
-      )
-    );
-  }
-
-  function removeItem(i: number) {
-    setItems((prev) => prev.filter((_, idx) => idx !== i));
-  }
-
-  async function generateAndSave() {
-    setSaving(true);
-    const quoteNumber = String(quotes.length + 1).padStart(4, "0");
-
-    const total = generateQuotePdf({
-      quoteNumber,
-      clientName: client.name,
-      clientPhone: client.phone,
-      trailerModel,
-      trailerSize,
-      items,
-      monthlyEstimate: monthlyEstimate ? parseFloat(monthlyEstimate) : null,
-      notes,
-    });
-
-    await supabase.from("quotes").insert({
-      client_id: client.id,
-      quote_number: quoteNumber,
-      trailer_model: trailerModel || null,
-      trailer_size: trailerSize || null,
-      items,
-      total,
-      monthly_estimate: monthlyEstimate ? parseFloat(monthlyEstimate) : null,
-      notes: notes || null,
-    });
-
-    setSaving(false);
-    setShowForm(false);
-    setTrailerModel("");
-    setTrailerSize("");
-    setItems([{ label: "", price: 0 }]);
-    setMonthlyEstimate("");
-    setNotes("");
-    load();
-  }
-
-  function redownload(q: Quote) {
-    generateQuotePdf({
+  async function redownload(q: Quote) {
+    await generateQuotePdf({
       quoteNumber: q.quote_number,
       clientName: client.name,
       clientPhone: client.phone,
       trailerModel: q.trailer_model || "",
       trailerSize: q.trailer_size || "",
+      coverImageUrl: q.cover_image_url,
       items: q.items,
+      taxRate: q.tax_rate || 0,
       monthlyEstimate: q.monthly_estimate,
       notes: q.notes,
     });
@@ -273,110 +227,58 @@ function QuoteSection({ client }: { client: Client }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <p className="font-mono text-xs uppercase tracking-wide text-[#8f8477]">
+        <p className="font-mono text-xs uppercase tracking-wide text-[var(--text-muted)]">
           Cotizaciones
         </p>
         <button
-          onClick={() => setShowForm((v) => !v)}
-          className="font-mono text-[11px] text-[#e8794a]"
+          onClick={() => setShowBuilder((v) => !v)}
+          className="font-mono text-[11px] text-[var(--accent-2)]"
         >
-          {showForm ? "Cancelar" : "+ Nueva cotización"}
+          {showBuilder ? "Cerrar" : "+ Nueva cotización"}
         </button>
       </div>
 
-      {showForm && (
-        <div className="mb-4 p-4 bg-[#211c17] rounded">
-          <div className="grid grid-cols-2 gap-2 mb-3">
-            <input
-              placeholder="Modelo de trailer"
-              value={trailerModel}
-              onChange={(e) => setTrailerModel(e.target.value)}
-              className="px-3 py-2 bg-[#2b241d] border border-[#f2ece2]/10 rounded text-sm text-[#f2ece2]"
-            />
-            <input
-              placeholder="Tamaño (ej. 16 ft)"
-              value={trailerSize}
-              onChange={(e) => setTrailerSize(e.target.value)}
-              className="px-3 py-2 bg-[#2b241d] border border-[#f2ece2]/10 rounded text-sm text-[#f2ece2]"
-            />
-          </div>
-
-          <div className="flex flex-col gap-2 mb-2">
-            {items.map((item, i) => (
-              <div key={i} className="flex gap-2">
-                <input
-                  placeholder="Descripción del item"
-                  value={item.label}
-                  onChange={(e) => updateItem(i, "label", e.target.value)}
-                  className="flex-1 px-3 py-2 bg-[#2b241d] border border-[#f2ece2]/10 rounded text-sm text-[#f2ece2]"
-                />
-                <input
-                  type="number"
-                  placeholder="Precio"
-                  value={item.price || ""}
-                  onChange={(e) => updateItem(i, "price", e.target.value)}
-                  className="w-28 px-3 py-2 bg-[#2b241d] border border-[#f2ece2]/10 rounded text-sm text-[#f2ece2]"
-                />
-                <button
-                  onClick={() => removeItem(i)}
-                  className="text-[#8f8477] hover:text-[#e63946] px-1"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
-          </div>
-          <button onClick={addItem} className="font-mono text-[11px] text-[#e8794a] mb-3">
-            + Agregar item
-          </button>
-
-          <input
-            placeholder="Financiamiento mensual estimado (opcional)"
-            value={monthlyEstimate}
-            onChange={(e) => setMonthlyEstimate(e.target.value)}
-            className="w-full mb-2 px-3 py-2 bg-[#2b241d] border border-[#f2ece2]/10 rounded text-sm text-[#f2ece2]"
-          />
-          <textarea
-            placeholder="Notas (opcional)"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="w-full mb-3 px-3 py-2 bg-[#2b241d] border border-[#f2ece2]/10 rounded text-sm text-[#f2ece2] min-h-[60px]"
-          />
-
-          <button
-            onClick={generateAndSave}
-            disabled={saving}
-            className="w-full px-4 py-2.5 bg-[#b8562f] text-white rounded text-sm font-semibold disabled:opacity-60"
-          >
-            {saving ? "Generando..." : "Generar PDF y guardar →"}
-          </button>
-        </div>
+      {showBuilder && (
+        <QuoteBuilder
+          client={client}
+          onDone={() => {
+            setShowBuilder(false);
+            load();
+          }}
+        />
       )}
 
       {loading ? (
-        <p className="text-xs text-[#8f8477]">Cargando...</p>
+        <p className="text-xs text-[var(--text-muted)]">Cargando...</p>
       ) : quotes.length === 0 ? (
-        <p className="text-xs text-[#8f8477]">Sin cotizaciones generadas todavía.</p>
+        <p className="text-xs text-[var(--text-muted)]">Sin cotizaciones generadas todavía.</p>
       ) : (
         <div className="flex flex-col gap-2">
           {quotes.map((q) => (
             <div
               key={q.id}
-              className="flex items-center justify-between px-3 py-2 bg-[#211c17] rounded text-sm"
+              className="flex items-center gap-3 px-3 py-2 bg-[var(--surface-2)] rounded text-sm"
             >
-              <div>
-                <p className="text-[#f2ece2]">
+              {q.cover_image_url && (
+                <img
+                  src={q.cover_image_url}
+                  alt=""
+                  className="w-10 h-10 rounded object-cover flex-shrink-0"
+                />
+              )}
+              <div className="flex-1">
+                <p className="text-[var(--text)]">
                   #{q.quote_number}
-                  {q.trailer_model ? ` — ${q.trailer_model}` : ""}
+                  {q.trailer_size ? ` — ${q.trailer_size}` : ""}
                 </p>
-                <p className="font-mono text-[10px] text-[#8f8477]">
+                <p className="font-mono text-[10px] text-[var(--text-muted)]">
                   {new Date(q.created_at).toLocaleDateString()} · $
                   {q.total.toLocaleString()}
                 </p>
               </div>
               <button
                 onClick={() => redownload(q)}
-                className="font-mono text-[10px] text-[#e8794a] whitespace-nowrap"
+                className="font-mono text-[10px] text-[var(--accent-2)] whitespace-nowrap"
               >
                 Descargar de nuevo
               </button>
@@ -384,6 +286,290 @@ function QuoteSection({ client }: { client: Client }) {
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }) {
+  const [sizes, setSizes] = useState<TrailerSize[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
+  const [taxRate, setTaxRate] = useState(0);
+
+  const [sizeId, setSizeId] = useState("");
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
+  const [items, setItems] = useState<QuoteLineItem[]>([]);
+  const [monthlyEstimate, setMonthlyEstimate] = useState("");
+  const [notes, setNotes] = useState("");
+  const [manualLabel, setManualLabel] = useState("");
+  const [manualPrice, setManualPrice] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    loadCatalog();
+  }, []);
+
+  async function loadCatalog() {
+    const [s, c, sc, ci, settings] = await Promise.all([
+      supabase.from("trailer_sizes").select("*").order("sort_order"),
+      supabase.from("catalog_categories").select("*").order("sort_order"),
+      supabase.from("catalog_subcategories").select("*").order("sort_order"),
+      supabase.from("catalog_items").select("id,subcategory_id,name,image_url,price"),
+      supabase.from("business_settings").select("*").eq("id", 1).single(),
+    ]);
+    setSizes((s.data as TrailerSize[]) || []);
+    setCategories((c.data as Category[]) || []);
+    setSubcategories((sc.data as Subcategory[]) || []);
+    setCatalogItems((ci.data as CatalogItem[]) || []);
+    setTaxRate(settings.data?.tax_rate || 0);
+  }
+
+  function addCatalogItem(item: CatalogItem) {
+    setItems((prev) => [...prev, { label: item.name, price: item.price, image_url: item.image_url }]);
+  }
+
+  function addManualItem() {
+    if (!manualLabel || !manualPrice) return;
+    setItems((prev) => [...prev, { label: manualLabel, price: parseFloat(manualPrice) || 0 }]);
+    setManualLabel("");
+    setManualPrice("");
+  }
+
+  function removeItem(i: number) {
+    setItems((prev) => prev.filter((_, idx) => idx !== i));
+  }
+
+  const subtotal = items.reduce((sum, i) => sum + (i.price || 0), 0);
+  const taxAmount = subtotal * (taxRate / 100);
+  const total = subtotal + taxAmount;
+
+  const selectedSize = sizes.find((s) => s.id === sizeId);
+  const visibleSubcategories = subcategories.filter((s) => s.category_id === activeCategory);
+  const visibleItems = catalogItems.filter((i) => i.subcategory_id === activeSubcategory);
+
+  async function generateAndSave() {
+    if (items.length === 0) return;
+    setSaving(true);
+
+    // número de cotización: cuenta cuántas ya tiene este cliente
+    const { count } = await supabase
+      .from("quotes")
+      .select("id", { count: "exact", head: true })
+      .eq("client_id", client.id);
+    const quoteNumber = String((count || 0) + 1).padStart(4, "0");
+
+    const totals = await generateQuotePdf({
+      quoteNumber,
+      clientName: client.name,
+      clientPhone: client.phone,
+      trailerSize: selectedSize?.label || "",
+      coverImageUrl: selectedSize?.image_url || null,
+      items,
+      taxRate,
+      monthlyEstimate: monthlyEstimate ? parseFloat(monthlyEstimate) : null,
+      notes,
+    });
+
+    await supabase.from("quotes").insert({
+      client_id: client.id,
+      quote_number: quoteNumber,
+      trailer_size: selectedSize?.label || null,
+      cover_image_url: selectedSize?.image_url || null,
+      items,
+      subtotal: totals.subtotal,
+      tax_rate: taxRate,
+      tax_amount: totals.taxAmount,
+      total: totals.total,
+      monthly_estimate: monthlyEstimate ? parseFloat(monthlyEstimate) : null,
+      notes: notes || null,
+    });
+
+    setSaving(false);
+    onDone();
+  }
+
+  return (
+    <div className="mb-6 p-4 bg-[var(--surface-2)] rounded-lg">
+      {/* Tamaño */}
+      <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--text-muted)] mb-1.5">
+        Tamaño del trailer
+      </label>
+      <div className="flex flex-wrap gap-2 mb-5">
+        {sizes.map((s) => (
+          <button
+            key={s.id}
+            onClick={() => setSizeId(s.id)}
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono font-semibold ${
+              sizeId === s.id
+                ? "bg-[var(--accent-2)] text-white"
+                : "bg-[var(--surface)] text-[var(--text-muted)] border border-[var(--line)]"
+            }`}
+          >
+            {s.image_url && (
+              <img src={s.image_url} alt="" className="w-5 h-5 rounded-full object-cover" />
+            )}
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Navegación del catálogo */}
+      <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--text-muted)] mb-1.5">
+        Catálogo
+      </label>
+      <div className="flex flex-wrap gap-2 mb-2">
+        {categories.map((c) => (
+          <button
+            key={c.id}
+            onClick={() => {
+              setActiveCategory(c.id);
+              setActiveSubcategory(null);
+            }}
+            className={`px-3 py-1.5 rounded-full text-xs font-mono font-semibold ${
+              activeCategory === c.id
+                ? "bg-[var(--text)] text-[var(--surface)]"
+                : "bg-[var(--surface)] text-[var(--text-muted)] border border-[var(--line)]"
+            }`}
+          >
+            {c.name}
+          </button>
+        ))}
+      </div>
+
+      {activeCategory && (
+        <div className="flex flex-wrap gap-2 mb-4">
+          {visibleSubcategories.map((sc) => (
+            <button
+              key={sc.id}
+              onClick={() => setActiveSubcategory(sc.id)}
+              className={`px-3 py-1 rounded-full text-[11px] font-mono ${
+                activeSubcategory === sc.id
+                  ? "bg-[var(--accent-2)] text-white"
+                  : "bg-[var(--surface)] text-[var(--text-muted)] border border-[var(--line)]"
+              }`}
+            >
+              {sc.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {activeSubcategory && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
+          {visibleItems.map((item) => (
+            <button
+              key={item.id}
+              onClick={() => addCatalogItem(item)}
+              className="stacked-card overflow-hidden text-left"
+            >
+              {item.image_url ? (
+                <img src={item.image_url} alt={item.name} className="w-full h-20 object-cover" />
+              ) : (
+                <div className="w-full h-20 bg-[var(--bg)] flex items-center justify-center text-[10px] font-mono text-[var(--text-muted)]">
+                  Sin foto
+                </div>
+              )}
+              <div className="p-2">
+                <p className="text-xs font-semibold text-[var(--text)] leading-tight">{item.name}</p>
+                <p className="font-mono text-xs text-[var(--accent-2)] mt-1">
+                  ${item.price.toLocaleString()}
+                </p>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Agregar algo suelto, fuera de catálogo */}
+      <div className="flex gap-2 mb-5">
+        <input
+          placeholder="Item suelto (no está en catálogo)"
+          value={manualLabel}
+          onChange={(e) => setManualLabel(e.target.value)}
+          className="flex-1 px-3 py-2 bg-[var(--surface)] border border-[var(--line)] rounded text-sm text-[var(--text)]"
+        />
+        <input
+          type="number"
+          placeholder="Precio"
+          value={manualPrice}
+          onChange={(e) => setManualPrice(e.target.value)}
+          className="w-24 px-3 py-2 bg-[var(--surface)] border border-[var(--line)] rounded text-sm text-[var(--text)]"
+        />
+        <button
+          onClick={addManualItem}
+          className="px-3 py-2 bg-[var(--surface)] border border-[var(--line)] rounded text-xs font-mono text-[var(--text)]"
+        >
+          Agregar
+        </button>
+      </div>
+
+      {/* Lista de items agregados — esto es lo que ve el cliente en vivo */}
+      <p className="font-mono text-[10px] uppercase tracking-wide text-[var(--text-muted)] mb-2">
+        En la cotización ({items.length})
+      </p>
+      {items.length === 0 ? (
+        <p className="text-xs text-[var(--text-muted)] mb-5">Todavía no has agregado nada.</p>
+      ) : (
+        <div className="flex flex-col gap-2 mb-5">
+          {items.map((item, i) => (
+            <div
+              key={i}
+              className="flex items-center gap-3 bg-[var(--surface)] rounded px-3 py-2"
+            >
+              {item.image_url ? (
+                <img src={item.image_url} alt="" className="w-9 h-9 rounded object-cover" />
+              ) : (
+                <div className="w-9 h-9 rounded bg-[var(--surface-2)]" />
+              )}
+              <p className="flex-1 text-sm text-[var(--text)]">{item.label}</p>
+              <p className="font-mono text-sm text-[var(--accent-2)]">
+                ${item.price.toLocaleString()}
+              </p>
+              <button
+                onClick={() => removeItem(i)}
+                className="text-[var(--text-muted)] hover:text-[var(--accent-2)] text-xs"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="flex flex-col items-end gap-1 mb-5 font-mono text-sm">
+        <p className="text-[var(--text-muted)]">Subtotal: ${subtotal.toLocaleString()}</p>
+        {taxRate > 0 && (
+          <p className="text-[var(--text-muted)]">
+            Tax ({taxRate}%): ${taxAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+          </p>
+        )}
+        <p className="text-[var(--text)] font-semibold text-base">
+          Total: ${total.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+        </p>
+      </div>
+
+      <input
+        placeholder="Financiamiento mensual estimado (opcional)"
+        value={monthlyEstimate}
+        onChange={(e) => setMonthlyEstimate(e.target.value)}
+        className="w-full mb-2 px-3 py-2 bg-[var(--surface)] border border-[var(--line)] rounded text-sm text-[var(--text)]"
+      />
+      <textarea
+        placeholder="Notas (opcional)"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        className="w-full mb-4 px-3 py-2 bg-[var(--surface)] border border-[var(--line)] rounded text-sm text-[var(--text)] min-h-[60px]"
+      />
+
+      <button
+        onClick={generateAndSave}
+        disabled={saving || items.length === 0}
+        className="w-full px-4 py-2.5 bg-[var(--accent-2)] text-white rounded text-sm font-semibold disabled:opacity-60"
+      >
+        {saving ? "Generando..." : "Generar PDF y guardar →"}
+      </button>
     </div>
   );
 }

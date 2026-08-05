@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-export type QuoteLineItem = { label: string; price: number };
+export type QuoteLineItem = { label: string; price: number; image_url?: string | null };
 
 export type QuotePdfInput = {
   quoteNumber: string;
@@ -9,39 +9,74 @@ export type QuotePdfInput = {
   clientPhone: string;
   trailerModel?: string;
   trailerSize?: string;
+  coverImageUrl?: string | null;
   items: QuoteLineItem[];
+  taxRate?: number;
   monthlyEstimate?: number | null;
   notes?: string | null;
 };
 
-export function generateQuotePdf(input: QuotePdfInput) {
+export type QuoteTotals = { subtotal: number; taxAmount: number; total: number };
+
+async function loadImageAsDataUrl(url: string): Promise<string | null> {
+  try {
+    const res = await fetch(url);
+    const blob = await res.blob();
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+export async function generateQuotePdf(input: QuotePdfInput): Promise<QuoteTotals> {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
 
+  let y = 0;
+
+  // Foto de portada (del tamaño de trailer elegido), si hay
+  if (input.coverImageUrl) {
+    const dataUrl = await loadImageAsDataUrl(input.coverImageUrl);
+    if (dataUrl) {
+      try {
+        doc.addImage(dataUrl, "JPEG", 0, 0, pageWidth, 70);
+        y = 70;
+      } catch {
+        // si la imagen no carga, seguimos sin portada
+      }
+    }
+  }
+
+  // Franja de marca
   doc.setFillColor(184, 86, 47);
-  doc.rect(0, 0, pageWidth, 32, "F");
+  doc.rect(0, y, pageWidth, 28, "F");
 
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
+  doc.setFontSize(17);
   doc.setFont("helvetica", "bold");
-  doc.text("ALL CUSTOM TRAILERS", 14, 15);
+  doc.text("ALL CUSTOM TRAILERS", 14, y + 13);
 
-  doc.setFontSize(9);
+  doc.setFontSize(8.5);
   doc.setFont("helvetica", "normal");
-  doc.text("Custom Food Trailers — Nevada", 14, 22);
+  doc.text("Custom Food Trailers — Nevada", 14, y + 20);
 
-  doc.setFontSize(11);
+  doc.setFontSize(10.5);
   doc.setFont("helvetica", "bold");
-  doc.text(`QUOTE #${input.quoteNumber}`, pageWidth - 14, 15, { align: "right" });
+  doc.text(`QUOTE #${input.quoteNumber}`, pageWidth - 14, y + 13, { align: "right" });
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 14, 22, {
+  doc.setFontSize(8.5);
+  doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 14, y + 20, {
     align: "right",
   });
 
-  doc.setTextColor(20, 20, 20);
-  let y = 46;
+  y += 42;
 
+  doc.setTextColor(20, 20, 20);
   doc.setFontSize(10);
   doc.setFont("helvetica", "bold");
   doc.text("PREPARED FOR", 14, y);
@@ -76,17 +111,40 @@ export function generateQuotePdf(input: QuotePdfInput) {
   });
 
   // @ts-expect-error - lastAutoTable no está tipado en jsPDF por default
-  const afterTableY = doc.lastAutoTable.finalY + 10;
+  let afterTableY = doc.lastAutoTable.finalY + 8;
 
-  const total = input.items.reduce((sum, item) => sum + (item.price || 0), 0);
+  const subtotal = input.items.reduce((sum, item) => sum + (item.price || 0), 0);
+  const taxRate = input.taxRate || 0;
+  const taxAmount = subtotal * (taxRate / 100);
+  const total = subtotal + taxAmount;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.text(`Subtotal: $${subtotal.toLocaleString()}`, pageWidth - 14, afterTableY, {
+    align: "right",
+  });
+  afterTableY += 6;
+
+  if (taxRate > 0) {
+    doc.text(
+      `Tax (${taxRate}%): $${taxAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+      pageWidth - 14,
+      afterTableY,
+      { align: "right" }
+    );
+    afterTableY += 6;
+  }
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
-  doc.text(`TOTAL: $${total.toLocaleString()}`, pageWidth - 14, afterTableY, {
-    align: "right",
-  });
+  doc.text(
+    `TOTAL: $${total.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
+    pageWidth - 14,
+    afterTableY + 2,
+    { align: "right" }
+  );
 
-  let footerY = afterTableY + 10;
+  let footerY = afterTableY + 14;
 
   if (input.monthlyEstimate) {
     doc.setFont("helvetica", "normal");
@@ -105,13 +163,13 @@ export function generateQuotePdf(input: QuotePdfInput) {
   }
 
   doc.setDrawColor(220, 220, 220);
-  doc.line(14, 280, pageWidth - 14, 280);
+  doc.line(14, 285, pageWidth - 14, 285);
   doc.setFontSize(8);
   doc.setTextColor(120, 120, 120);
-  doc.text("This quote is valid for 30 days.", 14, 286);
-  doc.text("allcustomtrailers.com", pageWidth - 14, 286, { align: "right" });
+  doc.text("This quote is valid for 30 days.", 14, 291);
+  doc.text("allcustomtrailers.com", pageWidth - 14, 291, { align: "right" });
 
   doc.save(`quote-${input.quoteNumber}-${input.clientName || "client"}.pdf`);
 
-  return total;
+  return { subtotal, taxAmount, total };
 }
