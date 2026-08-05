@@ -9,21 +9,16 @@ type SubmitContactInput = {
 
 /**
  * Guarda a alguien que llenó un formulario en el sitio como cliente nuevo.
+ * No pide la fila de vuelta (evita necesitar permiso de lectura pública).
  */
 export async function submitLead(input: SubmitContactInput) {
-  const { data, error } = await supabase
-    .from("clients")
-    .insert({
-      name: input.name,
-      phone: input.phone,
-      email: input.email || null,
-      interest: input.interest || null,
-      heard_from: "sitio_web",
-    })
-    .select("id")
-    .single();
+  const { error } = await supabase.from("clients").insert({
+    name: input.name,
+    phone: input.phone,
+    email: input.email || null,
+    interest: input.interest || null,
+    heard_from: "sitio_web",
+  });
 
   if (error) throw error;
-
-  return { leadId: data.id as string };
 }
