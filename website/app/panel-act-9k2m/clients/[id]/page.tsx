@@ -6,7 +6,30 @@ import Link from "next/link";
 import { supabase } from "../../../../lib/supabase";
 import { generateQuotePdf, QuoteLineItem } from "../../../../lib/generateQuotePdf";
 
-type Client = { id: string; name: string; phone: string; created_at: string };
+const HEARD_FROM_LABELS: Record<string, string> = {
+  redes_sociales: "Redes sociales",
+  recomendacion: "Recomendación",
+  vio_trailer: "Vio un trailer en la calle",
+  otro: "Otro",
+};
+
+const TIMELINE_LABELS: Record<string, string> = {
+  lo_antes_posible: "Lo antes posible",
+  este_mes: "Este mes",
+  este_trimestre: "Este trimestre",
+  solo_viendo: "Solo viendo opciones",
+};
+
+type Client = {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  interest: string | null;
+  heard_from: string | null;
+  timeline: string | null;
+  created_at: string;
+};
 type Activity = { id: string; client_id: string; note: string; created_at: string };
 type Quote = {
   id: string;
@@ -53,9 +76,24 @@ export default function ClientDetailPage() {
       <div className="mb-8">
         <h1 className="font-display text-2xl font-semibold text-[#f2ece2]">{client.name}</h1>
         <p className="font-mono text-sm text-[#c9c2b6]">{client.phone}</p>
+        {client.email && (
+          <p className="font-mono text-sm text-[#c9c2b6]">{client.email}</p>
+        )}
         <p className="font-mono text-[11px] text-[#8f8477] mt-1">
           Cliente desde {new Date(client.created_at).toLocaleDateString()}
         </p>
+
+        {(client.interest || client.heard_from || client.timeline) && (
+          <div className="flex flex-wrap gap-2 mt-3">
+            {client.interest && <span className="tag-pill">{client.interest}</span>}
+            {client.heard_from && (
+              <span className="tag-pill">{HEARD_FROM_LABELS[client.heard_from] || client.heard_from}</span>
+            )}
+            {client.timeline && (
+              <span className="tag-pill">{TIMELINE_LABELS[client.timeline] || client.timeline}</span>
+            )}
+          </div>
+        )}
       </div>
 
       <ActivitySection client={client} />

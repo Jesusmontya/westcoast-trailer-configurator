@@ -4,17 +4,37 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { supabase } from "../../lib/supabase";
 
-type Client = { id: string; name: string; phone: string; created_at: string };
+type Client = {
+  id: string;
+  name: string;
+  phone: string;
+  email: string | null;
+  interest: string | null;
+  heard_from: string | null;
+  timeline: string | null;
+  created_at: string;
+};
 
 function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [interest, setInterest] = useState("");
+  const [heardFrom, setHeardFrom] = useState("");
+  const [timeline, setTimeline] = useState("");
   const [saving, setSaving] = useState(false);
 
   async function handleSave() {
     if (!name || !phone) return;
     setSaving(true);
-    await supabase.from("clients").insert({ name, phone });
+    await supabase.from("clients").insert({
+      name,
+      phone,
+      email: email || null,
+      interest: interest || null,
+      heard_from: heardFrom || null,
+      timeline: timeline || null,
+    });
     setSaving(false);
     onCreated();
     onClose();
@@ -40,6 +60,40 @@ function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
             onChange={(e) => setPhone(e.target.value)}
             className="w-full px-4 py-2.5 bg-[#211c17] border border-[#f2ece2]/10 rounded text-sm text-[#f2ece2]"
           />
+          <input
+            placeholder="Email (opcional)"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-4 py-2.5 bg-[#211c17] border border-[#f2ece2]/10 rounded text-sm text-[#f2ece2]"
+          />
+          <input
+            placeholder="¿Qué le interesa? (ej. trailer de tacos)"
+            value={interest}
+            onChange={(e) => setInterest(e.target.value)}
+            className="w-full px-4 py-2.5 bg-[#211c17] border border-[#f2ece2]/10 rounded text-sm text-[#f2ece2]"
+          />
+          <select
+            value={heardFrom}
+            onChange={(e) => setHeardFrom(e.target.value)}
+            className="w-full px-4 py-2.5 bg-[#211c17] border border-[#f2ece2]/10 rounded text-sm text-[#f2ece2]"
+          >
+            <option value="">¿Cómo te conoció? (opcional)</option>
+            <option value="redes_sociales">Redes sociales</option>
+            <option value="recomendacion">Recomendación</option>
+            <option value="vio_trailer">Vio un trailer en la calle</option>
+            <option value="otro">Otro</option>
+          </select>
+          <select
+            value={timeline}
+            onChange={(e) => setTimeline(e.target.value)}
+            className="w-full px-4 py-2.5 bg-[#211c17] border border-[#f2ece2]/10 rounded text-sm text-[#f2ece2]"
+          >
+            <option value="">¿Para cuándo lo necesita? (opcional)</option>
+            <option value="lo_antes_posible">Lo antes posible</option>
+            <option value="este_mes">Este mes</option>
+            <option value="este_trimestre">Este trimestre</option>
+            <option value="solo_viendo">Solo viendo opciones</option>
+          </select>
         </div>
         <div className="flex gap-2">
           <button
