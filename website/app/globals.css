@@ -26,14 +26,13 @@ body {
   font-family: var(--font-mono), monospace;
 }
 
-/* Fondo cálido y limpio, sin cuadrícula — un leve viñeteado de papel en vez de líneas */
 .blueprint-bg {
   background:
     radial-gradient(ellipse at top, rgba(255, 255, 255, 0.5), transparent 60%),
     var(--bg);
 }
 
-/* Tarjeta tipo ficha de papel apilada, con sombra cálida en vez de placas oscuras */
+/* Tarjeta base tipo ficha de papel apilada */
 .stacked-card {
   position: relative;
   background: var(--surface);
@@ -83,6 +82,69 @@ body {
   padding: 3px 8px;
   border-radius: 3px;
   display: inline-block;
+}
+
+/* ============================================
+   NUEVO: motivo de "ticket de cocina"
+   ============================================ */
+
+/* Borde superior perforado, como el talón que se arranca de una comanda */
+.ticket-notch {
+  position: relative;
+}
+.ticket-notch::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 9px;
+  background-image: radial-gradient(circle at 9px 0, transparent 8px, var(--bg) 8.5px);
+  background-size: 18px 18px;
+  background-repeat: repeat-x;
+  background-position: top left;
+}
+
+/* Etiqueta de esquina tipo boleto, para fotos/hero */
+.corner-ticket {
+  font-family: var(--font-mono), monospace;
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: 8px 14px;
+  border-radius: 4px;
+  box-shadow: 0 8px 20px -8px rgba(42, 33, 24, 0.3);
+}
+
+/* Línea punteada entre pasos del proceso, como perforado de hoja */
+.perforated-line {
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--line) 0,
+    var(--line) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+  height: 1px;
+}
+
+/* Punto de "tachuela" para la nota de testimonio */
+.pin-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, var(--accent-glow), var(--accent-2));
+  box-shadow: 0 2px 4px rgba(42, 33, 24, 0.3);
+}
+
+/* Tira de recibo térmico para el marquee de clientes */
+.receipt-strip {
+  background: var(--surface-2);
+  border-top: 1px dashed var(--line);
+  border-bottom: 1px dashed var(--line);
 }
 
 @keyframes marquee-left {
