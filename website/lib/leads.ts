@@ -1,12 +1,12 @@
 import { supabase } from "./supabase";
 
-type LeadSource = "configurator" | "contact_form" | "gallery" | "custom_request";
+type DealSource = "configurator" | "contact_form" | "gallery" | "custom_request";
 
-type SubmitLeadInput = {
+type SubmitDealInput = {
   name: string;
   phone: string;
   email?: string | null;
-  source: LeadSource;
+  source: DealSource;
   trailer_type?: string | null;
   language: string;
   notes?: string | null;
@@ -14,7 +14,7 @@ type SubmitLeadInput = {
 
 const DEDUPE_WINDOW_DAYS = 30;
 
-const SOURCE_LABELS: Record<LeadSource, string> = {
+const SOURCE_LABELS: Record<DealSource, string> = {
   configurator: "configurador",
   contact_form: "formulario de contacto",
   gallery: "galería",
@@ -22,15 +22,16 @@ const SOURCE_LABELS: Record<LeadSource, string> = {
 };
 
 /**
- * Crea un lead, o si ya existe uno con el mismo teléfono en los últimos
- * 30 días, agrega el nuevo interés como actividad en vez de duplicarlo.
+ * Crea un deal nuevo (stage: "nuevo"), o si ya existe uno con el mismo
+ * teléfono en los últimos 30 días, agrega el nuevo interés como actividad
+ * en vez de duplicarlo.
  */
-export async function submitLead(input: SubmitLeadInput) {
+export async function submitLead(input: SubmitDealInput) {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - DEDUPE_WINDOW_DAYS);
 
   const { data: existing } = await supabase
-    .from("leads")
+    .from("deals")
     .select("id")
     .eq("phone", input.phone)
     .gte("created_at", cutoff.toISOString())
@@ -38,22 +39,22 @@ export async function submitLead(input: SubmitLeadInput) {
     .limit(1);
 
   if (existing && existing.length > 0) {
-    const leadId = existing[0].id;
+    const dealId = existing[0].id;
 
     const parts = [`Nuevo interés vía ${SOURCE_LABELS[input.source]}`];
     if (input.trailer_type) parts.push(`— ${input.trailer_type}`);
     if (input.notes) parts.push(`: "${input.notes}"`);
 
-    await supabase.from("lead_activity").insert({
-      lead_id: leadId,
+    await supabase.from("deal_activity").insert({
+      deal_id: dealId,
       note: parts.join(" "),
     });
 
-    return { leadId, isNew: false as const };
+    return { leadId: dealId, isNew: false as const };
   }
 
   const { data: created, error } = await supabase
-    .from("leads")
+    .from("deals")
     .insert({
       name: input.name,
       phone: input.phone,
@@ -62,6 +63,7 @@ export async function submitLead(input: SubmitLeadInput) {
       trailer_type: input.trailer_type || null,
       language: input.language,
       notes: input.notes || null,
+      stage: "nuevo",
     })
     .select("id")
     .single();
