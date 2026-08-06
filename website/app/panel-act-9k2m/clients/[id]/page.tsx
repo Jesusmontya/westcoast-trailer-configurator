@@ -83,6 +83,7 @@ export default function ClientDetailPage() {
   const [editHeardFrom, setEditHeardFrom] = useState("");
   const [editTimeline, setEditTimeline] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const [confirmTrash, setConfirmTrash] = useState(false);
 
   useEffect(() => {
     load();
@@ -132,7 +133,6 @@ export default function ClientDetailPage() {
 
   async function moveToTrash() {
     if (!client) return;
-    if (!confirm(`¿Mover a ${client.name} a la papelera? Puedes restaurarlo después.`)) return;
     await supabase.from("clients").update({ deleted_at: new Date().toISOString() }).eq("id", client.id);
     router.push("/panel-act-9k2m");
   }
@@ -253,9 +253,21 @@ export default function ClientDetailPage() {
               >
                 {client.status === "activo" ? "Activo" : "Perdido"} · cambiar
               </button>
-              <button onClick={moveToTrash} className="admin-btn-ghost danger">
-                🗑 Mover a la papelera
-              </button>
+              {confirmTrash ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="font-mono text-[11px] text-[var(--a-text)]">¿Seguro?</span>
+                  <button onClick={moveToTrash} className="admin-btn-ghost danger">
+                    Sí
+                  </button>
+                  <button onClick={() => setConfirmTrash(false)} className="admin-btn-ghost">
+                    No
+                  </button>
+                </div>
+              ) : (
+                <button onClick={() => setConfirmTrash(true)} className="admin-btn-ghost danger">
+                  🗑 Mover a la papelera
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -288,6 +300,7 @@ function ActivitySection({ client }: { client: Client }) {
   const [note, setNote] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const [confirmDeleteNoteId, setConfirmDeleteNoteId] = useState<string | null>(null);
 
   useEffect(() => {
     load();
@@ -324,8 +337,8 @@ function ActivitySection({ client }: { client: Client }) {
   }
 
   async function deleteNote(id: string) {
-    if (!confirm("¿Borrar esta nota de seguimiento?")) return;
     await supabase.from("client_activity").delete().eq("id", id);
+    setConfirmDeleteNoteId(null);
     load();
   }
 
@@ -388,9 +401,27 @@ function ActivitySection({ client }: { client: Client }) {
                   <button onClick={() => startEdit(a)} className="admin-btn-ghost">
                     Editar
                   </button>
-                  <button onClick={() => deleteNote(a.id)} className="admin-btn-ghost danger">
-                    Borrar
-                  </button>
+                  {confirmDeleteNoteId === a.id ? (
+                    <>
+                      <span className="font-mono text-[11px] text-[var(--a-text)]">¿Seguro?</span>
+                      <button onClick={() => deleteNote(a.id)} className="admin-btn-ghost danger">
+                        Sí
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteNoteId(null)}
+                        className="admin-btn-ghost"
+                      >
+                        No
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeleteNoteId(a.id)}
+                      className="admin-btn-ghost danger"
+                    >
+                      Borrar
+                    </button>
+                  )}
                 </div>
               </div>
             )
@@ -458,13 +489,17 @@ function QuoteSection({ client }: { client: Client }) {
     await supabase.from("quotes").update({ status }).eq("id", q.id);
   }
 
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleteErrorId, setDeleteErrorId] = useState<string | null>(null);
+
   async function deleteQuote(id: string) {
-    if (!confirm("¿Borrar esta cotización? No se puede deshacer.")) return;
+    setDeleteErrorId(null);
     const { error } = await supabase.from("quotes").delete().eq("id", id);
     if (error) {
-      alert("No se pudo borrar (¿tu usuario tiene rol admin?).");
+      setDeleteErrorId(id);
       return;
     }
+    setConfirmDeleteId(null);
     load();
   }
 
@@ -548,9 +583,35 @@ function QuoteSection({ client }: { client: Client }) {
               <button onClick={() => redownload(q)} className="admin-btn-ghost">
                 Descargar
               </button>
-              <button onClick={() => deleteQuote(q.id)} className="admin-btn-ghost danger">
-                Borrar
-              </button>
+              {confirmDeleteId === q.id ? (
+                <div className="flex items-center gap-1.5">
+                  {deleteErrorId === q.id && (
+                    <span className="font-mono text-[10px] text-[var(--a-danger)]">
+                      No se pudo (¿eres admin?)
+                    </span>
+                  )}
+                  <span className="font-mono text-[11px] text-[var(--a-text)]">¿Seguro?</span>
+                  <button
+                    onClick={() => deleteQuote(q.id)}
+                    className="admin-btn-ghost danger"
+                  >
+                    Sí, borrar
+                  </button>
+                  <button
+                    onClick={() => setConfirmDeleteId(null)}
+                    className="admin-btn-ghost"
+                  >
+                    No
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDeleteId(q.id)}
+                  className="admin-btn-ghost danger"
+                >
+                  Borrar
+                </button>
+              )}
             </div>
           ))}
         </div>
