@@ -68,6 +68,8 @@ type CatalogItem = {
   price: number;
   cost: number | null;
 };
+type Preset = { id: string; name: string };
+type PresetItem = { id: string; preset_id: string; catalog_item_id: string };
 
 export default function ClientDetailPage() {
   const params = useParams();
@@ -632,6 +634,8 @@ function QuoteBuilder({
   const [sizes, setSizes] = useState<TrailerSize[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
+  const [presets, setPresets] = useState<Preset[]>([]);
+  const [presetItems, setPresetItems] = useState<PresetItem[]>([]);
   const [taxRate, setTaxRate] = useState(0);
 
   const [sizeId, setSizeId] = useState(duplicateFrom?.trailer_size_id || "");
@@ -655,15 +659,19 @@ function QuoteBuilder({
   }, []);
 
   async function loadCatalog() {
-    const [s, c, ci, settings] = await Promise.all([
+    const [s, c, ci, settings, p, pi] = await Promise.all([
       supabase.from("trailer_sizes").select("*").order("sort_order"),
       supabase.from("catalog_categories").select("*").order("sort_order"),
       supabase.from("catalog_items").select("id,category_id,name,image_url,price,cost"),
       supabase.from("business_settings").select("*").eq("id", 1).single(),
+      supabase.from("catalog_presets").select("*").order("created_at", { ascending: false }),
+      supabase.from("catalog_preset_items").select("*"),
     ]);
     setSizes((s.data as TrailerSize[]) || []);
     setCategories((c.data as Category[]) || []);
     setCatalogItems((ci.data as CatalogItem[]) || []);
+    setPresets((p.data as Preset[]) || []);
+    setPresetItems((pi.data as PresetItem[]) || []);
     setTaxRate(duplicateFrom?.tax_rate ?? settings.data?.tax_rate ?? 0);
   }
 
@@ -671,6 +679,22 @@ function QuoteBuilder({
     setItems((prev) => [
       ...prev,
       { label: item.name, price: item.price, image_url: item.image_url, cost: item.cost || 0 },
+    ]);
+  }
+
+  function addPreset(preset: Preset) {
+    const itemIds = presetItems
+      .filter((pi) => pi.preset_id === preset.id)
+      .map((pi) => pi.catalog_item_id);
+    const itemsToAdd = catalogItems.filter((ci) => itemIds.includes(ci.id));
+    setItems((prev) => [
+      ...prev,
+      ...itemsToAdd.map((item) => ({
+        label: item.name,
+        price: item.price,
+        image_url: item.image_url,
+        cost: item.cost || 0,
+      })),
     ]);
   }
 
@@ -777,6 +801,25 @@ function QuoteBuilder({
           </button>
         ))}
       </div>
+
+      {presets.length > 0 && (
+        <>
+          <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)] mb-1.5">
+            Presets — agregar varias piezas de un clic
+          </label>
+          <div className="flex flex-wrap gap-2 mb-5">
+            {presets.map((preset) => (
+              <button
+                key={preset.id}
+                onClick={() => addPreset(preset)}
+                className="px-3 py-1.5 rounded-full text-xs font-mono font-semibold bg-[var(--a-accent)]/10 text-[var(--a-accent)] border border-[var(--a-accent)]/30"
+              >
+                + {preset.name}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
 
       {/* Navegación del catálogo */}
       <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)] mb-1.5">

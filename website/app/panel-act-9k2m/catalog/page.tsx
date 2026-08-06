@@ -512,8 +512,189 @@ function SettingsTab() {
 }
 
 // ============================================
+// PRESETS (paquetes de piezas)
+// ============================================
+type Preset = { id: string; name: string; created_at: string };
+type PresetItem = { id: string; preset_id: string; catalog_item_id: string };
+
+function PresetsTab() {
+  const [presets, setPresets] = useState<Preset[]>([]);
+  const [presetItems, setPresetItems] = useState<PresetItem[]>([]);
+  const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const [showForm, setShowForm] = useState(false);
+  const [presetName, setPresetName] = useState("");
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function load() {
+    setLoading(true);
+    const [p, pi, ci, c] = await Promise.all([
+      supabase.from("catalog_presets").select("*").order("created_at", { ascending: false }),
+      supabase.from("catalog_preset_items").select("*"),
+      supabase.from("catalog_items").select("*"),
+      supabase.from("catalog_categories").select("*").order("sort_order"),
+    ]);
+    setPresets((p.data as Preset[]) || []);
+    setPresetItems((pi.data as PresetItem[]) || []);
+    setCatalogItems((ci.data as CatalogItem[]) || []);
+    setCategories((c.data as Category[]) || []);
+    setLoading(false);
+  }
+
+  function toggleItem(id: string) {
+    setSelectedItemIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  }
+
+  async function savePreset() {
+    if (!presetName || selectedItemIds.length === 0) return;
+    setSaving(true);
+    const { data: preset } = await supabase
+      .from("catalog_presets")
+      .insert({ name: presetName })
+      .select("id")
+      .single();
+
+    if (preset) {
+      await supabase.from("catalog_preset_items").insert(
+        selectedItemIds.map((catalog_item_id) => ({ preset_id: preset.id, catalog_item_id }))
+      );
+    }
+
+    setPresetName("");
+    setSelectedItemIds([]);
+    setShowForm(false);
+    setSaving(false);
+    load();
+  }
+
+  async function deletePreset(id: string) {
+    await supabase.from("catalog_presets").delete().eq("id", id);
+    load();
+  }
+
+  function itemsForPreset(presetId: string) {
+    const ids = presetItems.filter((pi) => pi.preset_id === presetId).map((pi) => pi.catalog_item_id);
+    return catalogItems.filter((ci) => ids.includes(ci.id));
+  }
+
+  if (loading) return <p className="text-xs text-[var(--a-text-muted)]">Cargando...</p>;
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <p className="admin-label">Paquetes de piezas para agregar de un clic a la cotización</p>
+        <button
+          onClick={() => setShowForm((v) => !v)}
+          className="px-4 py-2 bg-[var(--a-accent)] text-white rounded text-xs font-mono font-semibold whitespace-nowrap"
+        >
+          {showForm ? "Cancelar" : "+ Nuevo preset"}
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="admin-card p-5 mb-6">
+          <label className="admin-label block mb-1">Nombre del preset</label>
+          <input
+            placeholder="Ej. Taco Trailer Básico"
+            value={presetName}
+            onChange={(e) => setPresetName(e.target.value)}
+            className="admin-input w-full mb-4"
+          />
+
+          <label className="admin-label block mb-2">Elige las piezas que incluye</label>
+          <div className="flex flex-col gap-4 mb-4 max-h-80 overflow-y-auto">
+            {categories.map((cat) => {
+              const itemsInCat = catalogItems.filter((ci) => ci.category_id === cat.id);
+              if (itemsInCat.length === 0) return null;
+              return (
+                <div key={cat.id}>
+                  <p className="font-mono text-[10px] uppercase text-[var(--a-text-muted)] mb-1.5">
+                    {cat.name}
+                  </p>
+                  <div className="flex flex-col gap-1">
+                    {itemsInCat.map((item) => (
+                      <label
+                        key={item.id}
+                        className="flex items-center gap-2 text-sm text-[var(--a-text)] cursor-pointer"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedItemIds.includes(item.id)}
+                          onChange={() => toggleItem(item.id)}
+                        />
+                        {item.name}
+                        <span className="font-mono text-xs text-[var(--a-text-muted)]">
+                          ${item.price.toLocaleString()}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={savePreset}
+            disabled={saving || !presetName || selectedItemIds.length === 0}
+            className="w-full admin-btn-primary"
+          >
+            {saving ? "Guardando..." : `Guardar preset (${selectedItemIds.length} piezas)`}
+          </button>
+        </div>
+      )}
+
+      {presets.length === 0 ? (
+        <p className="text-xs text-[var(--a-text-muted)]">Sin presets todavía.</p>
+      ) : (
+        <div className="flex flex-col gap-3">
+          {presets.map((preset) => {
+            const items = itemsForPreset(preset.id);
+            const total = items.reduce((sum, i) => sum + i.price, 0);
+            return (
+              <div key={preset.id} className="admin-card p-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="font-semibold text-[var(--a-text)]">{preset.name}</p>
+                  <button
+                    onClick={() => deletePreset(preset.id)}
+                    className="admin-btn-ghost danger"
+                  >
+                    Borrar
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5 mb-1">
+                  {items.map((i) => (
+                    <span key={i.id} className="admin-badge">
+                      {i.name}
+                    </span>
+                  ))}
+                </div>
+                <p className="font-mono text-xs text-[var(--a-text-muted)]">
+                  Total: ${total.toLocaleString()}
+                </p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================
 export default function CatalogPage() {
-  const [tab, setTab] = useState<"sizes" | "categories" | "items" | "settings">("sizes");
+  const [tab, setTab] = useState<"sizes" | "categories" | "items" | "presets" | "settings">(
+    "sizes"
+  );
 
   return (
     <div>
@@ -527,7 +708,7 @@ export default function CatalogPage() {
       <h1 className="text-2xl font-semibold text-[var(--a-text)] mb-6">Catálogo</h1>
 
       <div className="flex gap-2 mb-8 flex-wrap">
-        {(["sizes", "categories", "items", "settings"] as const).map((t) => (
+        {(["sizes", "categories", "items", "presets", "settings"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -543,6 +724,8 @@ export default function CatalogPage() {
               ? "Categorías"
               : t === "items"
               ? "Piezas"
+              : t === "presets"
+              ? "Presets"
               : "Configuración"}
           </button>
         ))}
@@ -551,6 +734,7 @@ export default function CatalogPage() {
       {tab === "sizes" && <SizesTab />}
       {tab === "categories" && <CategoriesTab />}
       {tab === "items" && <ItemsTab />}
+      {tab === "presets" && <PresetsTab />}
       {tab === "settings" && <SettingsTab />}
     </div>
   );
