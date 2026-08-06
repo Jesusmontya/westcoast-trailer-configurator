@@ -311,6 +311,7 @@ function ItemsTab() {
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterCat, setFilterCat] = useState<string>("all");
+  const [search, setSearch] = useState("");
 
   const [showForm, setShowForm] = useState(false);
   const [subcategoryId, setSubcategoryId] = useState("");
@@ -375,18 +376,26 @@ function ItemsTab() {
     return `${cat?.name || "?"} → ${sub.name}`;
   }
 
-  const filtered =
+  const filtered = (
     filterCat === "all"
       ? items
       : items.filter((i) => {
           const sub = subcategories.find((s) => s.id === i.subcategory_id);
           return sub?.category_id === filterCat;
-        });
+        })
+  ).filter((i) => i.name.toLowerCase().includes(search.toLowerCase()));
 
   if (loading) return <p className="text-xs text-[var(--a-text-muted)]">Cargando...</p>;
 
   return (
     <div>
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Buscar pieza por nombre..."
+        className="admin-input w-full mb-4"
+      />
+
       <div className="flex items-center justify-between mb-4">
         <div className="flex flex-wrap gap-2">
           <button

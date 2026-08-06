@@ -40,6 +40,7 @@ type Quote = {
   quote_number: string;
   trailer_model: string | null;
   trailer_size: string | null;
+  trailer_size_id: string | null;
   cover_image_url: string | null;
   items: QuoteLineItem[];
   total: number;
@@ -166,6 +167,8 @@ function ActivitySection({ client }: { client: Client }) {
   const [activity, setActivity] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [note, setNote] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
 
   useEffect(() => {
     load();
@@ -186,6 +189,24 @@ function ActivitySection({ client }: { client: Client }) {
     if (!note.trim()) return;
     await supabase.from("client_activity").insert({ client_id: client.id, note });
     setNote("");
+    load();
+  }
+
+  function startEdit(a: Activity) {
+    setEditingId(a.id);
+    setEditText(a.note);
+  }
+
+  async function saveEdit(id: string) {
+    if (!editText.trim()) return;
+    await supabase.from("client_activity").update({ note: editText }).eq("id", id);
+    setEditingId(null);
+    load();
+  }
+
+  async function deleteNote(id: string) {
+    if (!confirm("¿Borrar esta nota de seguimiento?")) return;
+    await supabase.from("client_activity").delete().eq("id", id);
     load();
   }
 
@@ -216,14 +237,57 @@ function ActivitySection({ client }: { client: Client }) {
         <p className="text-xs text-[var(--a-text-muted)]">Sin seguimiento registrado todavía.</p>
       ) : (
         <div className="flex flex-col gap-2">
-          {activity.map((a) => (
-            <div key={a.id} className="text-sm bg-[var(--a-surface-2)] rounded px-3 py-2.5">
-              <p className="text-[var(--a-text)]">{a.note}</p>
-              <p className="font-mono text-[10px] text-[var(--a-text-muted)] mt-1">
-                {new Date(a.created_at).toLocaleString()}
-              </p>
-            </div>
-          ))}
+          {activity.map((a) =>
+            editingId === a.id ? (
+              <div key={a.id} className="flex gap-2 bg-[var(--a-surface-2)] rounded px-3 py-2.5">
+                <input
+                  value={editText}
+                  onChange={(e) => setEditText(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && saveEdit(a.id)}
+                  autoFocus
+                  className="flex-1 px-2 py-1 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
+                />
+                <button
+                  onClick={() => saveEdit(a.id)}
+                  className="font-mono text-[11px] text-[var(--a-accent)]"
+                >
+                  Guardar
+                </button>
+                <button
+                  onClick={() => setEditingId(null)}
+                  className="font-mono text-[11px] text-[var(--a-text-muted)]"
+                >
+                  Cancelar
+                </button>
+              </div>
+            ) : (
+              <div
+                key={a.id}
+                className="text-sm bg-[var(--a-surface-2)] rounded px-3 py-2.5 flex items-start justify-between gap-2"
+              >
+                <div>
+                  <p className="text-[var(--a-text)]">{a.note}</p>
+                  <p className="font-mono text-[10px] text-[var(--a-text-muted)] mt-1">
+                    {new Date(a.created_at).toLocaleString()}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <button
+                    onClick={() => startEdit(a)}
+                    className="font-mono text-[10px] text-[var(--a-text-muted)] hover:text-[var(--a-accent)]"
+                  >
+                    Editar
+                  </button>
+                  <button
+                    onClick={() => deleteNote(a.id)}
+                    className="font-mono text-[10px] text-[var(--a-text-muted)] hover:text-[var(--a-danger)]"
+                  >
+                    Borrar
+                  </button>
+                </div>
+              </div>
+            )
+          )}
         </div>
       )}
     </div>
@@ -237,6 +301,7 @@ function QuoteSection({ client }: { client: Client }) {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [loading, setLoading] = useState(true);
   const [showBuilder, setShowBuilder] = useState(false);
+  const [duplicateFrom, setDuplicateFrom] = useState<Quote | null>(null);
 
   useEffect(() => {
     load();
@@ -273,6 +338,11 @@ function QuoteSection({ client }: { client: Client }) {
     await supabase.from("quotes").update({ status }).eq("id", q.id);
   }
 
+  function startDuplicate(q: Quote) {
+    setDuplicateFrom(q);
+    setShowBuilder(true);
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
@@ -280,7 +350,10 @@ function QuoteSection({ client }: { client: Client }) {
           Cotizaciones
         </p>
         <button
-          onClick={() => setShowBuilder((v) => !v)}
+          onClick={() => {
+            if (showBuilder) setDuplicateFrom(null);
+            setShowBuilder((v) => !v);
+          }}
           className="font-mono text-[11px] text-[var(--a-accent)]"
         >
           {showBuilder ? "Cerrar" : "+ Nueva cotización"}
@@ -290,8 +363,10 @@ function QuoteSection({ client }: { client: Client }) {
       {showBuilder && (
         <QuoteBuilder
           client={client}
+          duplicateFrom={duplicateFrom}
           onDone={() => {
             setShowBuilder(false);
+            setDuplicateFrom(null);
             load();
           }}
         />
@@ -337,10 +412,16 @@ function QuoteSection({ client }: { client: Client }) {
                 <option value="rechazada">Rechazada</option>
               </select>
               <button
+                onClick={() => startDuplicate(q)}
+                className="font-mono text-[10px] text-[var(--a-text-muted)] hover:text-[var(--a-accent)] whitespace-nowrap"
+              >
+                Duplicar y editar
+              </button>
+              <button
                 onClick={() => redownload(q)}
                 className="font-mono text-[10px] text-[var(--a-accent)] whitespace-nowrap"
               >
-                Descargar de nuevo
+                Descargar
               </button>
             </div>
           ))}
@@ -350,19 +431,33 @@ function QuoteSection({ client }: { client: Client }) {
   );
 }
 
-function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }) {
+function QuoteBuilder({
+  client,
+  duplicateFrom,
+  onDone,
+}: {
+  client: Client;
+  duplicateFrom: Quote | null;
+  onDone: () => void;
+}) {
   const [sizes, setSizes] = useState<TrailerSize[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
   const [taxRate, setTaxRate] = useState(0);
 
-  const [sizeId, setSizeId] = useState("");
+  const [sizeId, setSizeId] = useState(duplicateFrom?.trailer_size_id || "");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
-  const [items, setItems] = useState<QuoteLineItem[]>([]);
-  const [monthlyEstimate, setMonthlyEstimate] = useState("");
-  const [notes, setNotes] = useState("");
+  const [items, setItems] = useState<QuoteLineItem[]>(
+    duplicateFrom
+      ? duplicateFrom.items.filter((i) => !i.label.startsWith("Trailer base — "))
+      : []
+  );
+  const [monthlyEstimate, setMonthlyEstimate] = useState(
+    duplicateFrom?.monthly_estimate ? String(duplicateFrom.monthly_estimate) : ""
+  );
+  const [notes, setNotes] = useState(duplicateFrom?.notes || "");
   const [manualLabel, setManualLabel] = useState("");
   const [manualPrice, setManualPrice] = useState("");
   const [saving, setSaving] = useState(false);
@@ -383,7 +478,7 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
     setCategories((c.data as Category[]) || []);
     setSubcategories((sc.data as Subcategory[]) || []);
     setCatalogItems((ci.data as CatalogItem[]) || []);
-    setTaxRate(settings.data?.tax_rate || 0);
+    setTaxRate(duplicateFrom?.tax_rate ?? settings.data?.tax_rate ?? 0);
   }
 
   function addCatalogItem(item: CatalogItem) {
@@ -448,6 +543,7 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
       client_id: client.id,
       quote_number: quoteNumber,
       trailer_size: selectedSize?.label || null,
+      trailer_size_id: selectedSize?.id || null,
       cover_image_url: selectedSize?.image_url || null,
       items: combinedItems,
       subtotal: totals.subtotal,
@@ -625,6 +721,17 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
           ))}
         </div>
       )}
+
+      <div className="flex items-center justify-end gap-2 mb-3">
+        <label className="admin-label">Tax para esta cotización (%)</label>
+        <input
+          type="number"
+          step="0.001"
+          value={taxRate}
+          onChange={(e) => setTaxRate(parseFloat(e.target.value) || 0)}
+          className="w-24 px-2 py-1 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
+        />
+      </div>
 
       <div className="flex flex-col items-end gap-1 mb-5 font-mono text-sm">
         <p className="text-[var(--a-text-muted)]">Subtotal: ${subtotal.toLocaleString()}</p>
