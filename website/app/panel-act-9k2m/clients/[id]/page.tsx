@@ -75,6 +75,14 @@ export default function ClientDetailPage() {
   const clientId = params.id as string;
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editInterest, setEditInterest] = useState("");
+  const [editHeardFrom, setEditHeardFrom] = useState("");
+  const [editTimeline, setEditTimeline] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   useEffect(() => {
     load();
@@ -85,6 +93,34 @@ export default function ClientDetailPage() {
     const { data } = await supabase.from("clients").select("*").eq("id", clientId).single();
     setClient(data as Client);
     setLoading(false);
+  }
+
+  function startEditClient() {
+    if (!client) return;
+    setEditName(client.name);
+    setEditPhone(client.phone);
+    setEditEmail(client.email || "");
+    setEditInterest(client.interest || "");
+    setEditHeardFrom(client.heard_from || "");
+    setEditTimeline(client.timeline || "");
+    setIsEditing(true);
+  }
+
+  async function saveClientEdit() {
+    if (!client || !editName || !editPhone) return;
+    setSavingEdit(true);
+    const updates = {
+      name: editName,
+      phone: editPhone,
+      email: editEmail || null,
+      interest: editInterest || null,
+      heard_from: editHeardFrom || null,
+      timeline: editTimeline || null,
+    };
+    await supabase.from("clients").update(updates).eq("id", client.id);
+    setClient({ ...client, ...updates });
+    setSavingEdit(false);
+    setIsEditing(false);
   }
 
   async function toggleStatus() {
@@ -114,34 +150,117 @@ export default function ClientDetailPage() {
       </Link>
 
       <div className="mb-8">
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-[var(--a-text)]">{client.name}</h1>
-            <p className="font-mono text-sm text-[var(--a-text-muted)]">{client.phone}</p>
-            {client.email && (
-              <p className="font-mono text-sm text-[var(--a-text-muted)]">{client.email}</p>
-            )}
-            <p className="font-mono text-[11px] text-[var(--a-text-muted)] mt-1">
-              Cliente desde {new Date(client.created_at).toLocaleDateString()}
-            </p>
+        {isEditing ? (
+          <div className="admin-card p-5">
+            <div className="grid grid-cols-2 gap-2 mb-2">
+              <div>
+                <label className="admin-label block mb-1">Nombre</label>
+                <input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="admin-input w-full"
+                />
+              </div>
+              <div>
+                <label className="admin-label block mb-1">Teléfono</label>
+                <input
+                  value={editPhone}
+                  onChange={(e) => setEditPhone(e.target.value)}
+                  className="admin-input w-full"
+                />
+              </div>
+            </div>
+            <label className="admin-label block mb-1">Email</label>
+            <input
+              value={editEmail}
+              onChange={(e) => setEditEmail(e.target.value)}
+              className="admin-input w-full mb-2"
+            />
+            <label className="admin-label block mb-1">¿Qué le interesa?</label>
+            <input
+              value={editInterest}
+              onChange={(e) => setEditInterest(e.target.value)}
+              className="admin-input w-full mb-2"
+            />
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              <div>
+                <label className="admin-label block mb-1">Cómo te conoció</label>
+                <select
+                  value={editHeardFrom}
+                  onChange={(e) => setEditHeardFrom(e.target.value)}
+                  className="admin-input w-full"
+                >
+                  <option value="">—</option>
+                  <option value="redes_sociales">Redes sociales</option>
+                  <option value="recomendacion">Recomendación</option>
+                  <option value="vio_trailer">Vio un trailer en la calle</option>
+                  <option value="sitio_web">Formulario del sitio web</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+              <div>
+                <label className="admin-label block mb-1">Para cuándo</label>
+                <select
+                  value={editTimeline}
+                  onChange={(e) => setEditTimeline(e.target.value)}
+                  className="admin-input w-full"
+                >
+                  <option value="">—</option>
+                  <option value="lo_antes_posible">Lo antes posible</option>
+                  <option value="este_mes">Este mes</option>
+                  <option value="este_trimestre">Este trimestre</option>
+                  <option value="solo_viendo">Solo viendo opciones</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setIsEditing(false)}
+                className="flex-1 admin-btn-secondary"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={saveClientEdit}
+                disabled={savingEdit || !editName || !editPhone}
+                className="flex-1 admin-btn-primary"
+              >
+                {savingEdit ? "Guardando..." : "Guardar"}
+              </button>
+            </div>
           </div>
-          <div className="flex flex-col items-end gap-2">
-            <button
-              onClick={toggleStatus}
-              className={`admin-badge ${client.status === "activo" ? "success" : "danger"}`}
-            >
-              {client.status === "activo" ? "Activo" : "Perdido"} · cambiar
-            </button>
-            <button
-              onClick={moveToTrash}
-              className="admin-btn-ghost danger"
-            >
-              🗑 Mover a la papelera
-            </button>
+        ) : (
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-semibold text-[var(--a-text)]">{client.name}</h1>
+                <button onClick={startEditClient} className="admin-btn-ghost">
+                  Editar
+                </button>
+              </div>
+              <p className="font-mono text-sm text-[var(--a-text-muted)]">{client.phone}</p>
+              {client.email && (
+                <p className="font-mono text-sm text-[var(--a-text-muted)]">{client.email}</p>
+              )}
+              <p className="font-mono text-[11px] text-[var(--a-text-muted)] mt-1">
+                Cliente desde {new Date(client.created_at).toLocaleDateString()}
+              </p>
+            </div>
+            <div className="flex flex-col items-end gap-2">
+              <button
+                onClick={toggleStatus}
+                className={`admin-badge ${client.status === "activo" ? "success" : "danger"}`}
+              >
+                {client.status === "activo" ? "Activo" : "Perdido"} · cambiar
+              </button>
+              <button onClick={moveToTrash} className="admin-btn-ghost danger">
+                🗑 Mover a la papelera
+              </button>
+            </div>
           </div>
-        </div>
+        )}
 
-        {(client.interest || client.heard_from || client.timeline) && (
+        {!isEditing && (client.interest || client.heard_from || client.timeline) && (
           <div className="flex flex-wrap gap-2 mt-3">
             {client.interest && <span className="admin-badge">{client.interest}</span>}
             {client.heard_from && (
@@ -339,6 +458,16 @@ function QuoteSection({ client }: { client: Client }) {
     await supabase.from("quotes").update({ status }).eq("id", q.id);
   }
 
+  async function deleteQuote(id: string) {
+    if (!confirm("¿Borrar esta cotización? No se puede deshacer.")) return;
+    const { error } = await supabase.from("quotes").delete().eq("id", id);
+    if (error) {
+      alert("No se pudo borrar (¿tu usuario tiene rol admin?).");
+      return;
+    }
+    load();
+  }
+
   function startDuplicate(q: Quote) {
     setDuplicateFrom(q);
     setShowBuilder(true);
@@ -418,6 +547,9 @@ function QuoteSection({ client }: { client: Client }) {
               </button>
               <button onClick={() => redownload(q)} className="admin-btn-ghost">
                 Descargar
+              </button>
+              <button onClick={() => deleteQuote(q.id)} className="admin-btn-ghost danger">
+                Borrar
               </button>
             </div>
           ))}
