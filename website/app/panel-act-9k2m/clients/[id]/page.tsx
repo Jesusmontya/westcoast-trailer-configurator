@@ -46,7 +46,7 @@ type Quote = {
   notes: string | null;
   created_at: string;
 };
-type TrailerSize = { id: string; label: string; image_url: string | null };
+type TrailerSize = { id: string; label: string; image_url: string | null; price: number };
 type Category = { id: string; name: string };
 type Subcategory = { id: string; category_id: string; name: string };
 type CatalogItem = {
@@ -341,16 +341,20 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
     setItems((prev) => prev.filter((_, idx) => idx !== i));
   }
 
-  const subtotal = items.reduce((sum, i) => sum + (i.price || 0), 0);
+  const selectedSize = sizes.find((s) => s.id === sizeId);
+  const baseItem: QuoteLineItem | null = selectedSize
+    ? { label: `Trailer base — ${selectedSize.label}`, price: selectedSize.price }
+    : null;
+  const combinedItems = baseItem ? [baseItem, ...items] : items;
+  const subtotal = combinedItems.reduce((sum, i) => sum + (i.price || 0), 0);
   const taxAmount = subtotal * (taxRate / 100);
   const total = subtotal + taxAmount;
 
-  const selectedSize = sizes.find((s) => s.id === sizeId);
   const visibleSubcategories = subcategories.filter((s) => s.category_id === activeCategory);
   const visibleItems = catalogItems.filter((i) => i.subcategory_id === activeSubcategory);
 
   async function generateAndSave() {
-    if (items.length === 0) return;
+    if (combinedItems.length === 0) return;
     setSaving(true);
 
     // número de cotización: cuenta cuántas ya tiene este cliente
@@ -366,7 +370,7 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
       clientPhone: client.phone,
       trailerSize: selectedSize?.label || "",
       coverImageUrl: selectedSize?.image_url || null,
-      items,
+      items: combinedItems,
       taxRate,
       monthlyEstimate: monthlyEstimate ? parseFloat(monthlyEstimate) : null,
       notes,
@@ -377,7 +381,7 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
       quote_number: quoteNumber,
       trailer_size: selectedSize?.label || null,
       cover_image_url: selectedSize?.image_url || null,
-      items,
+      items: combinedItems,
       subtotal: totals.subtotal,
       tax_rate: taxRate,
       tax_amount: totals.taxAmount,
@@ -507,12 +511,27 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
 
       {/* Lista de items agregados — esto es lo que ve el cliente en vivo */}
       <p className="font-mono text-[10px] uppercase tracking-wide text-[var(--text-muted)] mb-2">
-        En la cotización ({items.length})
+        En la cotización ({combinedItems.length})
       </p>
-      {items.length === 0 ? (
-        <p className="text-xs text-[var(--text-muted)] mb-5">Todavía no has agregado nada.</p>
+      {combinedItems.length === 0 ? (
+        <p className="text-xs text-[var(--text-muted)] mb-5">
+          Elige un tamaño o agrega algo del catálogo.
+        </p>
       ) : (
         <div className="flex flex-col gap-2 mb-5">
+          {baseItem && (
+            <div className="flex items-center gap-3 bg-[var(--surface)] rounded px-3 py-2 border border-[var(--accent-2)]/30">
+              {selectedSize?.image_url ? (
+                <img src={selectedSize.image_url} alt="" className="w-9 h-9 rounded object-cover" />
+              ) : (
+                <div className="w-9 h-9 rounded bg-[var(--surface-2)]" />
+              )}
+              <p className="flex-1 text-sm text-[var(--text)]">{baseItem.label}</p>
+              <p className="font-mono text-sm text-[var(--accent-2)]">
+                ${baseItem.price.toLocaleString()}
+              </p>
+            </div>
+          )}
           {items.map((item, i) => (
             <div
               key={i}
@@ -565,7 +584,7 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
 
       <button
         onClick={generateAndSave}
-        disabled={saving || items.length === 0}
+        disabled={saving || combinedItems.length === 0}
         className="w-full px-4 py-2.5 bg-[var(--accent-2)] text-white rounded text-sm font-semibold disabled:opacity-60"
       >
         {saving ? "Generando..." : "Generar PDF y guardar →"}

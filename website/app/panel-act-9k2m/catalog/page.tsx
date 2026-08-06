@@ -5,7 +5,14 @@ import Link from "next/link";
 import { supabase } from "../../../lib/supabase";
 import { uploadCatalogImage } from "../../../lib/imageUpload";
 
-type TrailerSize = { id: string; label: string; sort_order: number; image_url: string | null };
+type TrailerSize = {
+  id: string;
+  label: string;
+  sort_order: number;
+  image_url: string | null;
+  cost: number | null;
+  price: number;
+};
 type Category = { id: string; name: string; sort_order: number };
 type Subcategory = { id: string; category_id: string; name: string; sort_order: number };
 type CatalogItem = {
@@ -24,6 +31,8 @@ function SizesTab() {
   const [sizes, setSizes] = useState<TrailerSize[]>([]);
   const [loading, setLoading] = useState(true);
   const [label, setLabel] = useState("");
+  const [cost, setCost] = useState("");
+  const [price, setPrice] = useState("");
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -40,14 +49,22 @@ function SizesTab() {
   }
 
   async function addSize() {
-    if (!label) return;
+    if (!label || !price) return;
     setUploading(true);
     let image_url: string | null = null;
     if (pendingFile) {
       image_url = await uploadCatalogImage(pendingFile);
     }
-    await supabase.from("trailer_sizes").insert({ label, image_url, sort_order: sizes.length });
+    await supabase.from("trailer_sizes").insert({
+      label,
+      image_url,
+      cost: cost ? parseFloat(cost) : null,
+      price: parseFloat(price),
+      sort_order: sizes.length,
+    });
     setLabel("");
+    setCost("");
+    setPrice("");
     setPendingFile(null);
     if (fileRef.current) fileRef.current.value = "";
     setUploading(false);
@@ -65,13 +82,29 @@ function SizesTab() {
         <p className="font-mono text-xs uppercase tracking-wide text-[var(--text-muted)] mb-3">
           Nuevo tamaño
         </p>
-        <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex flex-col sm:flex-row gap-2 mb-2">
           <input
             placeholder="Ej. 16 ft"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
             className="flex-1 px-3 py-2 bg-[var(--surface-2)] border border-[var(--line)] rounded text-sm text-[var(--text)]"
           />
+          <input
+            type="number"
+            placeholder="Costo (privado)"
+            value={cost}
+            onChange={(e) => setCost(e.target.value)}
+            className="w-36 px-3 py-2 bg-[var(--surface-2)] border border-[var(--line)] rounded text-sm text-[var(--text)]"
+          />
+          <input
+            type="number"
+            placeholder="Precio al cliente"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            className="w-36 px-3 py-2 bg-[var(--surface-2)] border border-[var(--line)] rounded text-sm text-[var(--text)]"
+          />
+        </div>
+        <div className="flex flex-col sm:flex-row gap-2">
           <input
             ref={fileRef}
             type="file"
@@ -81,7 +114,7 @@ function SizesTab() {
           />
           <button
             onClick={addSize}
-            disabled={!label || uploading}
+            disabled={!label || !price || uploading}
             className="px-4 py-2 bg-[var(--accent-2)] text-white rounded text-sm font-semibold disabled:opacity-60"
           >
             {uploading ? "Subiendo..." : "Agregar"}
@@ -102,14 +135,25 @@ function SizesTab() {
                   Sin foto
                 </div>
               )}
-              <div className="p-3 flex items-center justify-between">
-                <p className="font-semibold text-sm text-[var(--text)]">{s.label}</p>
-                <button
-                  onClick={() => deleteSize(s.id)}
-                  className="text-[var(--text-muted)] hover:text-[var(--accent-2)] text-xs"
-                >
-                  ✕
-                </button>
+              <div className="p-3">
+                <div className="flex items-center justify-between">
+                  <p className="font-semibold text-sm text-[var(--text)]">{s.label}</p>
+                  <button
+                    onClick={() => deleteSize(s.id)}
+                    className="text-[var(--text-muted)] hover:text-[var(--accent-2)] text-xs"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <p className="font-mono text-sm text-[var(--accent-2)] font-semibold mt-1">
+                  ${s.price.toLocaleString()}
+                </p>
+                {s.cost != null && (
+                  <p className="font-mono text-[10px] text-[var(--text-muted)] mt-0.5">
+                    Costo ${s.cost.toLocaleString()} · Margen $
+                    {(s.price - s.cost).toLocaleString()}
+                  </p>
+                )}
               </div>
             </div>
           ))}
