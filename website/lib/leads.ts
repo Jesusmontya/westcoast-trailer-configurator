@@ -8,16 +8,16 @@ type SubmitContactInput = {
 };
 
 /**
- * Guarda a alguien que llenó un formulario en el sitio como cliente nuevo.
- * No pide la fila de vuelta (evita necesitar permiso de lectura pública).
+ * Guarda a alguien que llenó un formulario en el sitio como cliente.
+ * Usa una función de base de datos (no un insert directo) para poder
+ * revisar duplicados sin darle permiso de lectura al público.
  */
 export async function submitLead(input: SubmitContactInput) {
-  const { error } = await supabase.from("clients").insert({
-    name: input.name,
-    phone: input.phone,
-    email: input.email || null,
-    interest: input.interest || null,
-    heard_from: "sitio_web",
+  const { error } = await supabase.rpc("submit_client_lead", {
+    p_name: input.name,
+    p_phone: input.phone,
+    p_email: input.email || null,
+    p_interest: input.interest || null,
   });
 
   if (error) throw error;

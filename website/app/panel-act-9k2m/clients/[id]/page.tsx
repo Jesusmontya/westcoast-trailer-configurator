@@ -29,6 +29,7 @@ type Client = {
   interest: string | null;
   heard_from: string | null;
   timeline: string | null;
+  status: "activo" | "perdido";
   created_at: string;
 };
 type Activity = { id: string; client_id: string; note: string; created_at: string };
@@ -42,11 +43,19 @@ type Quote = {
   items: QuoteLineItem[];
   total: number;
   tax_rate: number | null;
+  margin: number | null;
+  status: "enviada" | "aceptada" | "rechazada";
   monthly_estimate: number | null;
   notes: string | null;
   created_at: string;
 };
-type TrailerSize = { id: string; label: string; image_url: string | null; price: number };
+type TrailerSize = {
+  id: string;
+  label: string;
+  image_url: string | null;
+  price: number;
+  cost: number | null;
+};
 type Category = { id: string; name: string };
 type Subcategory = { id: string; category_id: string; name: string };
 type CatalogItem = {
@@ -55,6 +64,7 @@ type CatalogItem = {
   name: string;
   image_url: string | null;
   price: number;
+  cost: number | null;
 };
 
 export default function ClientDetailPage() {
@@ -74,6 +84,13 @@ export default function ClientDetailPage() {
     setLoading(false);
   }
 
+  async function toggleStatus() {
+    if (!client) return;
+    const newStatus = client.status === "activo" ? "perdido" : "activo";
+    await supabase.from("clients").update({ status: newStatus }).eq("id", client.id);
+    setClient({ ...client, status: newStatus });
+  }
+
   if (loading) return <p className="text-[var(--a-text-muted)] font-mono text-sm">Cargando...</p>;
   if (!client) return <p className="text-[var(--a-text-muted)] font-mono text-sm">No encontrado.</p>;
 
@@ -87,14 +104,24 @@ export default function ClientDetailPage() {
       </Link>
 
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold text-[var(--a-text)]">{client.name}</h1>
-        <p className="font-mono text-sm text-[var(--a-text-muted)]">{client.phone}</p>
-        {client.email && (
-          <p className="font-mono text-sm text-[var(--a-text-muted)]">{client.email}</p>
-        )}
-        <p className="font-mono text-[11px] text-[var(--a-text-muted)] mt-1">
-          Cliente desde {new Date(client.created_at).toLocaleDateString()}
-        </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold text-[var(--a-text)]">{client.name}</h1>
+            <p className="font-mono text-sm text-[var(--a-text-muted)]">{client.phone}</p>
+            {client.email && (
+              <p className="font-mono text-sm text-[var(--a-text-muted)]">{client.email}</p>
+            )}
+            <p className="font-mono text-[11px] text-[var(--a-text-muted)] mt-1">
+              Cliente desde {new Date(client.created_at).toLocaleDateString()}
+            </p>
+          </div>
+          <button
+            onClick={toggleStatus}
+            className={`admin-badge ${client.status === "activo" ? "success" : "danger"}`}
+          >
+            {client.status === "activo" ? "Activo" : "Perdido"} · cambiar
+          </button>
+        </div>
 
         {(client.interest || client.heard_from || client.timeline) && (
           <div className="flex flex-wrap gap-2 mt-3">
@@ -224,6 +251,11 @@ function QuoteSection({ client }: { client: Client }) {
     });
   }
 
+  async function updateQuoteStatus(q: Quote, status: Quote["status"]) {
+    setQuotes((prev) => prev.map((x) => (x.id === q.id ? { ...x, status } : x)));
+    await supabase.from("quotes").update({ status }).eq("id", q.id);
+  }
+
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
@@ -276,6 +308,17 @@ function QuoteSection({ client }: { client: Client }) {
                   {q.total.toLocaleString()}
                 </p>
               </div>
+              <select
+                value={q.status}
+                onChange={(e) => updateQuoteStatus(q, e.target.value as Quote["status"])}
+                className={`admin-badge ${
+                  q.status === "aceptada" ? "success" : q.status === "rechazada" ? "danger" : "accent"
+                }`}
+              >
+                <option value="enviada">Enviada</option>
+                <option value="aceptada">Aceptada</option>
+                <option value="rechazada">Rechazada</option>
+              </select>
               <button
                 onClick={() => redownload(q)}
                 className="font-mono text-[10px] text-[var(--a-accent)] whitespace-nowrap"
@@ -316,7 +359,7 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
       supabase.from("trailer_sizes").select("*").order("sort_order"),
       supabase.from("catalog_categories").select("*").order("sort_order"),
       supabase.from("catalog_subcategories").select("*").order("sort_order"),
-      supabase.from("catalog_items").select("id,subcategory_id,name,image_url,price"),
+      supabase.from("catalog_items").select("id,subcategory_id,name,image_url,price,cost"),
       supabase.from("business_settings").select("*").eq("id", 1).single(),
     ]);
     setSizes((s.data as TrailerSize[]) || []);
@@ -327,12 +370,15 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
   }
 
   function addCatalogItem(item: CatalogItem) {
-    setItems((prev) => [...prev, { label: item.name, price: item.price, image_url: item.image_url }]);
+    setItems((prev) => [
+      ...prev,
+      { label: item.name, price: item.price, image_url: item.image_url, cost: item.cost || 0 },
+    ]);
   }
 
   function addManualItem() {
     if (!manualLabel || !manualPrice) return;
-    setItems((prev) => [...prev, { label: manualLabel, price: parseFloat(manualPrice) || 0 }]);
+    setItems((prev) => [...prev, { label: manualLabel, price: parseFloat(manualPrice) || 0, cost: 0 }]);
     setManualLabel("");
     setManualPrice("");
   }
@@ -343,12 +389,17 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
 
   const selectedSize = sizes.find((s) => s.id === sizeId);
   const baseItem: QuoteLineItem | null = selectedSize
-    ? { label: `Trailer base — ${selectedSize.label}`, price: selectedSize.price }
+    ? {
+        label: `Trailer base — ${selectedSize.label}`,
+        price: selectedSize.price,
+        cost: selectedSize.cost || 0,
+      }
     : null;
   const combinedItems = baseItem ? [baseItem, ...items] : items;
   const subtotal = combinedItems.reduce((sum, i) => sum + (i.price || 0), 0);
   const taxAmount = subtotal * (taxRate / 100);
   const total = subtotal + taxAmount;
+  const margin = combinedItems.reduce((sum, i) => sum + ((i.price || 0) - (i.cost || 0)), 0);
 
   const visibleSubcategories = subcategories.filter((s) => s.category_id === activeCategory);
   const visibleItems = catalogItems.filter((i) => i.subcategory_id === activeSubcategory);
@@ -386,6 +437,7 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
       tax_rate: taxRate,
       tax_amount: totals.taxAmount,
       total: totals.total,
+      margin,
       monthly_estimate: monthlyEstimate ? parseFloat(monthlyEstimate) : null,
       notes: notes || null,
     });

@@ -12,6 +12,7 @@ type Client = {
   interest: string | null;
   heard_from: string | null;
   timeline: string | null;
+  status: "activo" | "perdido";
   created_at: string;
 };
 
@@ -115,6 +116,74 @@ function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
   );
 }
 
+function DashboardStats({ clients }: { clients: Client[] }) {
+  const [stats, setStats] = useState({
+    cotizadoMes: 0,
+    aceptadoMes: 0,
+    margenMes: 0,
+    clientesNuevosMes: 0,
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function load() {
+    setLoading(true);
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+    const { data: quotesData } = await supabase
+      .from("quotes")
+      .select("total, margin, status, created_at")
+      .gte("created_at", startOfMonth);
+
+    const { count: clientsCount } = await supabase
+      .from("clients")
+      .select("id", { count: "exact", head: true })
+      .gte("created_at", startOfMonth);
+
+    const quotes = quotesData || [];
+    const cotizadoMes = quotes.reduce((sum, q) => sum + (q.total || 0), 0);
+    const aceptadas = quotes.filter((q) => q.status === "aceptada");
+    const aceptadoMes = aceptadas.reduce((sum, q) => sum + (q.total || 0), 0);
+    const margenMes = aceptadas.reduce((sum, q) => sum + (q.margin || 0), 0);
+
+    setStats({
+      cotizadoMes,
+      aceptadoMes,
+      margenMes,
+      clientesNuevosMes: clientsCount || 0,
+    });
+    setLoading(false);
+  }
+
+  const items = [
+    { label: "Cotizado este mes", value: stats.cotizadoMes },
+    { label: "Aceptado este mes", value: stats.aceptadoMes },
+    { label: "Margen (aceptado)", value: stats.margenMes },
+    { label: "Clientes nuevos", value: stats.clientesNuevosMes, isCount: true },
+  ];
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
+      {items.map((item) => (
+        <div key={item.label} className="admin-card p-4">
+          <p className="admin-label mb-1">{item.label}</p>
+          <p className="text-xl font-semibold text-[var(--a-text)]">
+            {loading
+              ? "..."
+              : item.isCount
+              ? item.value
+              : `$${item.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+          </p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export default function ClientsList() {
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,6 +191,7 @@ export default function ClientsList() {
   const [showNew, setShowNew] = useState(false);
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "week">("all");
   const [sourceFilter, setSourceFilter] = useState<"all" | "sitio_web" | "manual">("all");
+  const [statusFilter, setStatusFilter] = useState<"activo" | "perdido" | "all">("activo");
 
   useEffect(() => {
     load();
@@ -158,10 +228,16 @@ export default function ClientsList() {
       if (sourceFilter === "all") return true;
       if (sourceFilter === "sitio_web") return c.heard_from === "sitio_web";
       return c.heard_from !== "sitio_web";
+    })
+    .filter((c) => {
+      if (statusFilter === "all") return true;
+      return c.status === statusFilter;
     });
 
   return (
     <div>
+      <DashboardStats clients={clients} />
+
       <div className="flex items-center justify-between mb-6">
         <p className="font-mono text-xs text-[var(--a-text-muted)]">{clients.length} clientes</p>
         <button
@@ -178,6 +254,18 @@ export default function ClientsList() {
         placeholder="Buscar por nombre o teléfono..."
         className="w-full mb-3 px-4 py-2.5 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
       />
+
+      <div className="flex gap-2 mb-3">
+        {(["activo", "perdido", "all"] as const).map((opt) => (
+          <button
+            key={opt}
+            onClick={() => setStatusFilter(opt)}
+            className={`admin-pill ${statusFilter === opt ? "active" : ""}`}
+          >
+            {opt === "activo" ? "Activos" : opt === "perdido" ? "Perdidos" : "Todos"}
+          </button>
+        ))}
+      </div>
 
       <div className="flex gap-2 mb-6">
         {(["all", "today", "week"] as const).map((opt) => (
