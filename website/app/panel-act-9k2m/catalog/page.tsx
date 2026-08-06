@@ -245,7 +245,7 @@ function CategoriesTab() {
               <p className="font-semibold text-[var(--a-text)]">{cat.name}</p>
               <button
                 onClick={() => deleteCategory(cat.id)}
-                className="text-xs text-[var(--a-text-muted)] hover:text-[var(--a-accent)]"
+                className="admin-btn-ghost danger"
               >
                 Borrar categoría
               </button>
@@ -290,7 +290,7 @@ function CategoriesTab() {
             ) : (
               <button
                 onClick={() => setNewSubFor(cat.id)}
-                className="font-mono text-[11px] text-[var(--a-accent)] mt-1"
+                className="admin-btn-ghost mt-1"
               >
                 + Agregar subcategoría
               </button>

@@ -260,7 +260,7 @@ export default function ClientsList() {
           </p>
           <button
             onClick={() => setShowTrash((v) => !v)}
-            className="font-mono text-[11px] text-[var(--a-text-muted)] hover:text-[var(--a-text)] underline"
+            className="admin-btn-ghost"
           >
             {showTrash ? "← Volver a clientes" : "🗑 Papelera"}
           </button>
@@ -353,7 +353,7 @@ export default function ClientsList() {
                   </button>
                   <button
                     onClick={() => deleteForever(client.id)}
-                    className="font-mono text-[11px] text-[var(--a-danger)]"
+                    className="admin-btn-ghost danger"
                   >
                     Borrar para siempre
                   </button>

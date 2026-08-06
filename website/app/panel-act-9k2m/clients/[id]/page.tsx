@@ -134,7 +134,7 @@ export default function ClientDetailPage() {
             </button>
             <button
               onClick={moveToTrash}
-              className="font-mono text-[10px] text-[var(--a-text-muted)] hover:text-[var(--a-danger)]"
+              className="admin-btn-ghost danger"
             >
               🗑 Mover a la papelera
             </button>
@@ -247,16 +247,10 @@ function ActivitySection({ client }: { client: Client }) {
                   autoFocus
                   className="flex-1 px-2 py-1 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
                 />
-                <button
-                  onClick={() => saveEdit(a.id)}
-                  className="font-mono text-[11px] text-[var(--a-accent)]"
-                >
+                <button onClick={() => saveEdit(a.id)} className="admin-btn-ghost">
                   Guardar
                 </button>
-                <button
-                  onClick={() => setEditingId(null)}
-                  className="font-mono text-[11px] text-[var(--a-text-muted)]"
-                >
+                <button onClick={() => setEditingId(null)} className="admin-btn-ghost">
                   Cancelar
                 </button>
               </div>
@@ -272,16 +266,10 @@ function ActivitySection({ client }: { client: Client }) {
                   </p>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <button
-                    onClick={() => startEdit(a)}
-                    className="font-mono text-[10px] text-[var(--a-text-muted)] hover:text-[var(--a-accent)]"
-                  >
+                  <button onClick={() => startEdit(a)} className="admin-btn-ghost">
                     Editar
                   </button>
-                  <button
-                    onClick={() => deleteNote(a.id)}
-                    className="font-mono text-[10px] text-[var(--a-text-muted)] hover:text-[var(--a-danger)]"
-                  >
+                  <button onClick={() => deleteNote(a.id)} className="admin-btn-ghost danger">
                     Borrar
                   </button>
                 </div>
@@ -354,7 +342,7 @@ function QuoteSection({ client }: { client: Client }) {
             if (showBuilder) setDuplicateFrom(null);
             setShowBuilder((v) => !v);
           }}
-          className="font-mono text-[11px] text-[var(--a-accent)]"
+          className="admin-btn-secondary"
         >
           {showBuilder ? "Cerrar" : "+ Nueva cotización"}
         </button>
@@ -406,21 +394,16 @@ function QuoteSection({ client }: { client: Client }) {
                 className={`admin-badge ${
                   q.status === "aceptada" ? "success" : q.status === "rechazada" ? "danger" : "accent"
                 }`}
+                style={{ fontSize: "0.75rem", padding: "6px 10px" }}
               >
                 <option value="enviada">Enviada</option>
                 <option value="aceptada">Aceptada</option>
                 <option value="rechazada">Rechazada</option>
               </select>
-              <button
-                onClick={() => startDuplicate(q)}
-                className="font-mono text-[10px] text-[var(--a-text-muted)] hover:text-[var(--a-accent)] whitespace-nowrap"
-              >
+              <button onClick={() => startDuplicate(q)} className="admin-btn-ghost">
                 Duplicar y editar
               </button>
-              <button
-                onClick={() => redownload(q)}
-                className="font-mono text-[10px] text-[var(--a-accent)] whitespace-nowrap"
-              >
+              <button onClick={() => redownload(q)} className="admin-btn-ghost">
                 Descargar
               </button>
             </div>
@@ -668,7 +651,7 @@ function QuoteBuilder({
         />
         <button
           onClick={addManualItem}
-          className="px-3 py-2 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-xs font-mono text-[var(--a-text)]"
+          className="admin-btn-ghost"
         >
           Agregar
         </button>

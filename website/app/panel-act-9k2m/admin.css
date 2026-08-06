@@ -112,3 +112,19 @@ a.admin-card:hover {
   letter-spacing: 0.04em;
   color: var(--a-text-muted);
 }
+
+.admin-btn-ghost {
+  display: inline-block;
+  background: var(--a-surface-2);
+  border: 1px solid var(--a-border);
+  color: var(--a-text);
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.8125rem;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.admin-btn-ghost:hover { border-color: var(--a-accent); color: var(--a-accent); }
+.admin-btn-ghost.danger { color: var(--a-danger); }
+.admin-btn-ghost.danger:hover { border-color: var(--a-danger); }
