@@ -16,7 +16,7 @@ export type QuotePdfInput = {
   notes?: string | null;
 };
 
-export type QuoteTotals = { subtotal: number; taxAmount: number; total: number };
+export type QuoteTotals = { subtotal: number; taxAmount: number; total: number; blob: Blob };
 
 async function loadImageAsDataUrl(url: string): Promise<string | null> {
   try {
@@ -171,5 +171,7 @@ export async function generateQuotePdf(input: QuotePdfInput): Promise<QuoteTotal
 
   doc.save(`quote-${input.quoteNumber}-${input.clientName || "client"}.pdf`);
 
-  return { subtotal, taxAmount, total };
+  const blob = doc.output("blob");
+
+  return { subtotal, taxAmount, total, blob };
 }

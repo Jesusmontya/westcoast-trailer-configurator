@@ -46,6 +46,7 @@ type Quote = {
   total: number;
   tax_rate: number | null;
   margin: number | null;
+  pdf_url: string | null;
   status: "enviada" | "aceptada" | "rechazada";
   monthly_estimate: number | null;
   notes: string | null;
@@ -307,6 +308,19 @@ function QuoteSection({ client }: { client: Client }) {
   }
 
   async function redownload(q: Quote) {
+    if (q.pdf_url) {
+      // pdf_url guarda la ruta dentro del bucket privado — generamos un
+      // link temporal para abrir el archivo real que se le mandó al cliente.
+      const { data, error } = await supabase.storage
+        .from("quote-pdfs")
+        .createSignedUrl(q.pdf_url, 60);
+      if (!error && data) {
+        window.open(data.signedUrl, "_blank");
+        return;
+      }
+    }
+
+    // Cotizaciones de antes de este cambio no tienen PDF guardado — se recrea.
     await generateQuotePdf({
       quoteNumber: q.quote_number,
       clientName: client.name,
@@ -522,6 +536,14 @@ function QuoteBuilder({
       notes,
     });
 
+    // Guardamos el PDF real generado, para que "Descargar" siempre abra
+    // exactamente el documento que se le mandó al cliente, sin importar
+    // si el diseño del generador cambia después.
+    const pdfPath = `${client.id}/${quoteNumber}-${Date.now()}.pdf`;
+    const { error: uploadError } = await supabase.storage
+      .from("quote-pdfs")
+      .upload(pdfPath, totals.blob, { contentType: "application/pdf" });
+
     await supabase.from("quotes").insert({
       client_id: client.id,
       quote_number: quoteNumber,
@@ -534,6 +556,7 @@ function QuoteBuilder({
       tax_amount: totals.taxAmount,
       total: totals.total,
       margin,
+      pdf_url: uploadError ? null : pdfPath,
       monthly_estimate: monthlyEstimate ? parseFloat(monthlyEstimate) : null,
       notes: notes || null,
     });
