@@ -74,36 +74,36 @@ export default function ClientDetailPage() {
     setLoading(false);
   }
 
-  if (loading) return <p className="text-[var(--text-muted)] font-mono text-sm">Cargando...</p>;
-  if (!client) return <p className="text-[var(--text-muted)] font-mono text-sm">No encontrado.</p>;
+  if (loading) return <p className="text-[var(--a-text-muted)] font-mono text-sm">Cargando...</p>;
+  if (!client) return <p className="text-[var(--a-text-muted)] font-mono text-sm">No encontrado.</p>;
 
   return (
     <div className="max-w-3xl">
       <Link
         href="/panel-act-9k2m"
-        className="inline-block mb-4 font-mono text-xs text-[var(--text-muted)] hover:text-[var(--text)]"
+        className="inline-block mb-4 font-mono text-xs text-[var(--a-text-muted)] hover:text-[var(--a-text)]"
       >
         ← Volver a clientes
       </Link>
 
       <div className="mb-8">
-        <h1 className="font-display text-2xl font-semibold text-[var(--text)]">{client.name}</h1>
-        <p className="font-mono text-sm text-[var(--text-muted)]">{client.phone}</p>
+        <h1 className="text-2xl font-semibold text-[var(--a-text)]">{client.name}</h1>
+        <p className="font-mono text-sm text-[var(--a-text-muted)]">{client.phone}</p>
         {client.email && (
-          <p className="font-mono text-sm text-[var(--text-muted)]">{client.email}</p>
+          <p className="font-mono text-sm text-[var(--a-text-muted)]">{client.email}</p>
         )}
-        <p className="font-mono text-[11px] text-[var(--text-muted)] mt-1">
+        <p className="font-mono text-[11px] text-[var(--a-text-muted)] mt-1">
           Cliente desde {new Date(client.created_at).toLocaleDateString()}
         </p>
 
         {(client.interest || client.heard_from || client.timeline) && (
           <div className="flex flex-wrap gap-2 mt-3">
-            {client.interest && <span className="tag-pill">{client.interest}</span>}
+            {client.interest && <span className="admin-badge">{client.interest}</span>}
             {client.heard_from && (
-              <span className="tag-pill">{HEARD_FROM_LABELS[client.heard_from] || client.heard_from}</span>
+              <span className="admin-badge">{HEARD_FROM_LABELS[client.heard_from] || client.heard_from}</span>
             )}
             {client.timeline && (
-              <span className="tag-pill">{TIMELINE_LABELS[client.timeline] || client.timeline}</span>
+              <span className="admin-badge">{TIMELINE_LABELS[client.timeline] || client.timeline}</span>
             )}
           </div>
         )}
@@ -147,7 +147,7 @@ function ActivitySection({ client }: { client: Client }) {
 
   return (
     <div className="mb-8">
-      <p className="font-mono text-xs uppercase tracking-wide text-[var(--text-muted)] mb-3">
+      <p className="font-mono text-xs uppercase tracking-wide text-[var(--a-text-muted)] mb-3">
         Seguimiento
       </p>
       <div className="flex gap-2 mb-4">
@@ -156,26 +156,26 @@ function ActivitySection({ client }: { client: Client }) {
           onChange={(e) => setNote(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && addNote()}
           placeholder="Ej. Le hablé, dijo que lo iba a pensar"
-          className="flex-1 px-3 py-2 bg-[var(--surface-2)] border border-[var(--line)] rounded text-sm text-[var(--text)]"
+          className="flex-1 px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
         />
         <button
           onClick={addNote}
-          className="px-4 py-2 bg-[var(--surface-2)] border border-[var(--line)] rounded text-sm font-mono text-[var(--text)] hover:border-[var(--accent-2)]"
+          className="px-4 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm font-mono text-[var(--a-text)] hover:border-[var(--a-accent)]"
         >
           Agregar
         </button>
       </div>
 
       {loading ? (
-        <p className="text-xs text-[var(--text-muted)]">Cargando...</p>
+        <p className="text-xs text-[var(--a-text-muted)]">Cargando...</p>
       ) : activity.length === 0 ? (
-        <p className="text-xs text-[var(--text-muted)]">Sin seguimiento registrado todavía.</p>
+        <p className="text-xs text-[var(--a-text-muted)]">Sin seguimiento registrado todavía.</p>
       ) : (
         <div className="flex flex-col gap-2">
           {activity.map((a) => (
-            <div key={a.id} className="text-sm bg-[var(--surface-2)] rounded px-3 py-2.5">
-              <p className="text-[var(--text)]">{a.note}</p>
-              <p className="font-mono text-[10px] text-[var(--text-muted)] mt-1">
+            <div key={a.id} className="text-sm bg-[var(--a-surface-2)] rounded px-3 py-2.5">
+              <p className="text-[var(--a-text)]">{a.note}</p>
+              <p className="font-mono text-[10px] text-[var(--a-text-muted)] mt-1">
                 {new Date(a.created_at).toLocaleString()}
               </p>
             </div>
@@ -227,12 +227,12 @@ function QuoteSection({ client }: { client: Client }) {
   return (
     <div>
       <div className="flex items-center justify-between mb-3">
-        <p className="font-mono text-xs uppercase tracking-wide text-[var(--text-muted)]">
+        <p className="font-mono text-xs uppercase tracking-wide text-[var(--a-text-muted)]">
           Cotizaciones
         </p>
         <button
           onClick={() => setShowBuilder((v) => !v)}
-          className="font-mono text-[11px] text-[var(--accent-2)]"
+          className="font-mono text-[11px] text-[var(--a-accent)]"
         >
           {showBuilder ? "Cerrar" : "+ Nueva cotización"}
         </button>
@@ -249,15 +249,15 @@ function QuoteSection({ client }: { client: Client }) {
       )}
 
       {loading ? (
-        <p className="text-xs text-[var(--text-muted)]">Cargando...</p>
+        <p className="text-xs text-[var(--a-text-muted)]">Cargando...</p>
       ) : quotes.length === 0 ? (
-        <p className="text-xs text-[var(--text-muted)]">Sin cotizaciones generadas todavía.</p>
+        <p className="text-xs text-[var(--a-text-muted)]">Sin cotizaciones generadas todavía.</p>
       ) : (
         <div className="flex flex-col gap-2">
           {quotes.map((q) => (
             <div
               key={q.id}
-              className="flex items-center gap-3 px-3 py-2 bg-[var(--surface-2)] rounded text-sm"
+              className="flex items-center gap-3 px-3 py-2 bg-[var(--a-surface-2)] rounded text-sm"
             >
               {q.cover_image_url && (
                 <img
@@ -267,18 +267,18 @@ function QuoteSection({ client }: { client: Client }) {
                 />
               )}
               <div className="flex-1">
-                <p className="text-[var(--text)]">
+                <p className="text-[var(--a-text)]">
                   #{q.quote_number}
                   {q.trailer_size ? ` — ${q.trailer_size}` : ""}
                 </p>
-                <p className="font-mono text-[10px] text-[var(--text-muted)]">
+                <p className="font-mono text-[10px] text-[var(--a-text-muted)]">
                   {new Date(q.created_at).toLocaleDateString()} · $
                   {q.total.toLocaleString()}
                 </p>
               </div>
               <button
                 onClick={() => redownload(q)}
-                className="font-mono text-[10px] text-[var(--accent-2)] whitespace-nowrap"
+                className="font-mono text-[10px] text-[var(--a-accent)] whitespace-nowrap"
               >
                 Descargar de nuevo
               </button>
@@ -395,9 +395,9 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
   }
 
   return (
-    <div className="mb-6 p-4 bg-[var(--surface-2)] rounded-lg">
+    <div className="mb-6 p-4 bg-[var(--a-surface-2)] rounded-lg">
       {/* Tamaño */}
-      <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--text-muted)] mb-1.5">
+      <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)] mb-1.5">
         Tamaño del trailer
       </label>
       <div className="flex flex-wrap gap-2 mb-5">
@@ -407,8 +407,8 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
             onClick={() => setSizeId(s.id)}
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-mono font-semibold ${
               sizeId === s.id
-                ? "bg-[var(--accent-2)] text-white"
-                : "bg-[var(--surface)] text-[var(--text-muted)] border border-[var(--line)]"
+                ? "bg-[var(--a-accent)] text-white"
+                : "bg-[var(--a-surface)] text-[var(--a-text-muted)] border border-[var(--a-border)]"
             }`}
           >
             {s.image_url && (
@@ -420,7 +420,7 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
       </div>
 
       {/* Navegación del catálogo */}
-      <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--text-muted)] mb-1.5">
+      <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)] mb-1.5">
         Catálogo
       </label>
       <div className="flex flex-wrap gap-2 mb-2">
@@ -433,8 +433,8 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
             }}
             className={`px-3 py-1.5 rounded-full text-xs font-mono font-semibold ${
               activeCategory === c.id
-                ? "bg-[var(--text)] text-[var(--surface)]"
-                : "bg-[var(--surface)] text-[var(--text-muted)] border border-[var(--line)]"
+                ? "bg-[var(--a-text)] text-[var(--a-surface)]"
+                : "bg-[var(--a-surface)] text-[var(--a-text-muted)] border border-[var(--a-border)]"
             }`}
           >
             {c.name}
@@ -450,8 +450,8 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
               onClick={() => setActiveSubcategory(sc.id)}
               className={`px-3 py-1 rounded-full text-[11px] font-mono ${
                 activeSubcategory === sc.id
-                  ? "bg-[var(--accent-2)] text-white"
-                  : "bg-[var(--surface)] text-[var(--text-muted)] border border-[var(--line)]"
+                  ? "bg-[var(--a-accent)] text-white"
+                  : "bg-[var(--a-surface)] text-[var(--a-text-muted)] border border-[var(--a-border)]"
               }`}
             >
               {sc.name}
@@ -466,18 +466,18 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
             <button
               key={item.id}
               onClick={() => addCatalogItem(item)}
-              className="stacked-card overflow-hidden text-left"
+              className="admin-card overflow-hidden text-left"
             >
               {item.image_url ? (
                 <img src={item.image_url} alt={item.name} className="w-full h-20 object-cover" />
               ) : (
-                <div className="w-full h-20 bg-[var(--bg)] flex items-center justify-center text-[10px] font-mono text-[var(--text-muted)]">
+                <div className="w-full h-20 bg-[var(--a-bg)] flex items-center justify-center text-[10px] font-mono text-[var(--a-text-muted)]">
                   Sin foto
                 </div>
               )}
               <div className="p-2">
-                <p className="text-xs font-semibold text-[var(--text)] leading-tight">{item.name}</p>
-                <p className="font-mono text-xs text-[var(--accent-2)] mt-1">
+                <p className="text-xs font-semibold text-[var(--a-text)] leading-tight">{item.name}</p>
+                <p className="font-mono text-xs text-[var(--a-accent)] mt-1">
                   ${item.price.toLocaleString()}
                 </p>
               </div>
@@ -492,42 +492,42 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
           placeholder="Item suelto (no está en catálogo)"
           value={manualLabel}
           onChange={(e) => setManualLabel(e.target.value)}
-          className="flex-1 px-3 py-2 bg-[var(--surface)] border border-[var(--line)] rounded text-sm text-[var(--text)]"
+          className="flex-1 px-3 py-2 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
         />
         <input
           type="number"
           placeholder="Precio"
           value={manualPrice}
           onChange={(e) => setManualPrice(e.target.value)}
-          className="w-24 px-3 py-2 bg-[var(--surface)] border border-[var(--line)] rounded text-sm text-[var(--text)]"
+          className="w-24 px-3 py-2 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
         />
         <button
           onClick={addManualItem}
-          className="px-3 py-2 bg-[var(--surface)] border border-[var(--line)] rounded text-xs font-mono text-[var(--text)]"
+          className="px-3 py-2 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-xs font-mono text-[var(--a-text)]"
         >
           Agregar
         </button>
       </div>
 
       {/* Lista de items agregados — esto es lo que ve el cliente en vivo */}
-      <p className="font-mono text-[10px] uppercase tracking-wide text-[var(--text-muted)] mb-2">
+      <p className="font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)] mb-2">
         En la cotización ({combinedItems.length})
       </p>
       {combinedItems.length === 0 ? (
-        <p className="text-xs text-[var(--text-muted)] mb-5">
+        <p className="text-xs text-[var(--a-text-muted)] mb-5">
           Elige un tamaño o agrega algo del catálogo.
         </p>
       ) : (
         <div className="flex flex-col gap-2 mb-5">
           {baseItem && (
-            <div className="flex items-center gap-3 bg-[var(--surface)] rounded px-3 py-2 border border-[var(--accent-2)]/30">
+            <div className="flex items-center gap-3 bg-[var(--a-surface)] rounded px-3 py-2 border border-[var(--a-accent)]/30">
               {selectedSize?.image_url ? (
                 <img src={selectedSize.image_url} alt="" className="w-9 h-9 rounded object-cover" />
               ) : (
-                <div className="w-9 h-9 rounded bg-[var(--surface-2)]" />
+                <div className="w-9 h-9 rounded bg-[var(--a-surface-2)]" />
               )}
-              <p className="flex-1 text-sm text-[var(--text)]">{baseItem.label}</p>
-              <p className="font-mono text-sm text-[var(--accent-2)]">
+              <p className="flex-1 text-sm text-[var(--a-text)]">{baseItem.label}</p>
+              <p className="font-mono text-sm text-[var(--a-accent)]">
                 ${baseItem.price.toLocaleString()}
               </p>
             </div>
@@ -535,20 +535,20 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
           {items.map((item, i) => (
             <div
               key={i}
-              className="flex items-center gap-3 bg-[var(--surface)] rounded px-3 py-2"
+              className="flex items-center gap-3 bg-[var(--a-surface)] rounded px-3 py-2"
             >
               {item.image_url ? (
                 <img src={item.image_url} alt="" className="w-9 h-9 rounded object-cover" />
               ) : (
-                <div className="w-9 h-9 rounded bg-[var(--surface-2)]" />
+                <div className="w-9 h-9 rounded bg-[var(--a-surface-2)]" />
               )}
-              <p className="flex-1 text-sm text-[var(--text)]">{item.label}</p>
-              <p className="font-mono text-sm text-[var(--accent-2)]">
+              <p className="flex-1 text-sm text-[var(--a-text)]">{item.label}</p>
+              <p className="font-mono text-sm text-[var(--a-accent)]">
                 ${item.price.toLocaleString()}
               </p>
               <button
                 onClick={() => removeItem(i)}
-                className="text-[var(--text-muted)] hover:text-[var(--accent-2)] text-xs"
+                className="text-[var(--a-text-muted)] hover:text-[var(--a-accent)] text-xs"
               >
                 ✕
               </button>
@@ -558,13 +558,13 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
       )}
 
       <div className="flex flex-col items-end gap-1 mb-5 font-mono text-sm">
-        <p className="text-[var(--text-muted)]">Subtotal: ${subtotal.toLocaleString()}</p>
+        <p className="text-[var(--a-text-muted)]">Subtotal: ${subtotal.toLocaleString()}</p>
         {taxRate > 0 && (
-          <p className="text-[var(--text-muted)]">
+          <p className="text-[var(--a-text-muted)]">
             Tax ({taxRate}%): ${taxAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
           </p>
         )}
-        <p className="text-[var(--text)] font-semibold text-base">
+        <p className="text-[var(--a-text)] font-semibold text-base">
           Total: ${total.toLocaleString(undefined, { maximumFractionDigits: 2 })}
         </p>
       </div>
@@ -573,19 +573,19 @@ function QuoteBuilder({ client, onDone }: { client: Client; onDone: () => void }
         placeholder="Financiamiento mensual estimado (opcional)"
         value={monthlyEstimate}
         onChange={(e) => setMonthlyEstimate(e.target.value)}
-        className="w-full mb-2 px-3 py-2 bg-[var(--surface)] border border-[var(--line)] rounded text-sm text-[var(--text)]"
+        className="w-full mb-2 px-3 py-2 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
       />
       <textarea
         placeholder="Notas (opcional)"
         value={notes}
         onChange={(e) => setNotes(e.target.value)}
-        className="w-full mb-4 px-3 py-2 bg-[var(--surface)] border border-[var(--line)] rounded text-sm text-[var(--text)] min-h-[60px]"
+        className="w-full mb-4 px-3 py-2 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)] min-h-[60px]"
       />
 
       <button
         onClick={generateAndSave}
         disabled={saving || combinedItems.length === 0}
-        className="w-full px-4 py-2.5 bg-[var(--accent-2)] text-white rounded text-sm font-semibold disabled:opacity-60"
+        className="w-full px-4 py-2.5 bg-[var(--a-accent)] text-white rounded text-sm font-semibold disabled:opacity-60"
       >
         {saving ? "Generando..." : "Generar PDF y guardar →"}
       </button>

@@ -78,8 +78,8 @@ function SizesTab() {
 
   return (
     <div>
-      <div className="stacked-card p-5 mb-6">
-        <p className="font-mono text-xs uppercase tracking-wide text-[var(--text-muted)] mb-3">
+      <div className="admin-card p-5 mb-6">
+        <p className="font-mono text-xs uppercase tracking-wide text-[var(--a-text-muted)] mb-3">
           Nuevo tamaño
         </p>
         <div className="flex flex-col sm:flex-row gap-2 mb-2">
@@ -87,21 +87,21 @@ function SizesTab() {
             placeholder="Ej. 16 ft"
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            className="flex-1 px-3 py-2 bg-[var(--surface-2)] border border-[var(--line)] rounded text-sm text-[var(--text)]"
+            className="flex-1 px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
           />
           <input
             type="number"
             placeholder="Costo (privado)"
             value={cost}
             onChange={(e) => setCost(e.target.value)}
-            className="w-36 px-3 py-2 bg-[var(--surface-2)] border border-[var(--line)] rounded text-sm text-[var(--text)]"
+            className="w-36 px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
           />
           <input
             type="number"
             placeholder="Precio al cliente"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
-            className="w-36 px-3 py-2 bg-[var(--surface-2)] border border-[var(--line)] rounded text-sm text-[var(--text)]"
+            className="w-36 px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
           />
         </div>
         <div className="flex flex-col sm:flex-row gap-2">
@@ -110,12 +110,12 @@ function SizesTab() {
             type="file"
             accept="image/*"
             onChange={(e) => setPendingFile(e.target.files?.[0] || null)}
-            className="text-xs font-mono text-[var(--text-muted)]"
+            className="text-xs font-mono text-[var(--a-text-muted)]"
           />
           <button
             onClick={addSize}
             disabled={!label || !price || uploading}
-            className="px-4 py-2 bg-[var(--accent-2)] text-white rounded text-sm font-semibold disabled:opacity-60"
+            className="px-4 py-2 bg-[var(--a-accent)] text-white rounded text-sm font-semibold disabled:opacity-60"
           >
             {uploading ? "Subiendo..." : "Agregar"}
           </button>
@@ -123,33 +123,33 @@ function SizesTab() {
       </div>
 
       {loading ? (
-        <p className="text-xs text-[var(--text-muted)]">Cargando...</p>
+        <p className="text-xs text-[var(--a-text-muted)]">Cargando...</p>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
           {sizes.map((s) => (
-            <div key={s.id} className="stacked-card overflow-hidden">
+            <div key={s.id} className="admin-card overflow-hidden">
               {s.image_url ? (
                 <img src={s.image_url} alt={s.label} className="w-full h-28 object-cover" />
               ) : (
-                <div className="w-full h-28 bg-[var(--surface-2)] flex items-center justify-center text-xs font-mono text-[var(--text-muted)]">
+                <div className="w-full h-28 bg-[var(--a-surface-2)] flex items-center justify-center text-xs font-mono text-[var(--a-text-muted)]">
                   Sin foto
                 </div>
               )}
               <div className="p-3">
                 <div className="flex items-center justify-between">
-                  <p className="font-semibold text-sm text-[var(--text)]">{s.label}</p>
+                  <p className="font-semibold text-sm text-[var(--a-text)]">{s.label}</p>
                   <button
                     onClick={() => deleteSize(s.id)}
-                    className="text-[var(--text-muted)] hover:text-[var(--accent-2)] text-xs"
+                    className="text-[var(--a-text-muted)] hover:text-[var(--a-accent)] text-xs"
                   >
                     ✕
                   </button>
                 </div>
-                <p className="font-mono text-sm text-[var(--accent-2)] font-semibold mt-1">
+                <p className="font-mono text-sm text-[var(--a-accent)] font-semibold mt-1">
                   ${s.price.toLocaleString()}
                 </p>
                 {s.cost != null && (
-                  <p className="font-mono text-[10px] text-[var(--text-muted)] mt-0.5">
+                  <p className="font-mono text-[10px] text-[var(--a-text-muted)] mt-0.5">
                     Costo ${s.cost.toLocaleString()} · Margen $
                     {(s.price - s.cost).toLocaleString()}
                   </p>
@@ -219,20 +219,20 @@ function CategoriesTab() {
     load();
   }
 
-  if (loading) return <p className="text-xs text-[var(--text-muted)]">Cargando...</p>;
+  if (loading) return <p className="text-xs text-[var(--a-text-muted)]">Cargando...</p>;
 
   return (
     <div>
-      <div className="stacked-card p-5 mb-6 flex gap-2">
+      <div className="admin-card p-5 mb-6 flex gap-2">
         <input
           placeholder="Nueva categoría (ej. Cocina)"
           value={newCategory}
           onChange={(e) => setNewCategory(e.target.value)}
-          className="flex-1 px-3 py-2 bg-[var(--surface-2)] border border-[var(--line)] rounded text-sm text-[var(--text)]"
+          className="flex-1 px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
         />
         <button
           onClick={addCategory}
-          className="px-4 py-2 bg-[var(--accent-2)] text-white rounded text-sm font-semibold"
+          className="px-4 py-2 bg-[var(--a-accent)] text-white rounded text-sm font-semibold"
         >
           Agregar
         </button>
@@ -240,12 +240,12 @@ function CategoriesTab() {
 
       <div className="flex flex-col gap-4">
         {categories.map((cat) => (
-          <div key={cat.id} className="stacked-card p-5">
+          <div key={cat.id} className="admin-card p-5">
             <div className="flex items-center justify-between mb-3">
-              <p className="font-semibold text-[var(--text)]">{cat.name}</p>
+              <p className="font-semibold text-[var(--a-text)]">{cat.name}</p>
               <button
                 onClick={() => deleteCategory(cat.id)}
-                className="text-xs text-[var(--text-muted)] hover:text-[var(--accent-2)]"
+                className="text-xs text-[var(--a-text-muted)] hover:text-[var(--a-accent)]"
               >
                 Borrar categoría
               </button>
@@ -257,12 +257,12 @@ function CategoriesTab() {
                 .map((sub) => (
                   <span
                     key={sub.id}
-                    className="tag-pill flex items-center gap-1.5 normal-case text-[11px]"
+                    className="admin-badge flex items-center gap-1.5 normal-case text-[11px]"
                   >
                     {sub.name}
                     <button
                       onClick={() => deleteSubcategory(sub.id)}
-                      className="hover:text-[var(--accent-2)]"
+                      className="hover:text-[var(--a-accent)]"
                     >
                       ✕
                     </button>
@@ -278,11 +278,11 @@ function CategoriesTab() {
                   value={newSubName}
                   onChange={(e) => setNewSubName(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && addSubcategory(cat.id)}
-                  className="flex-1 px-3 py-1.5 bg-[var(--surface-2)] border border-[var(--line)] rounded text-xs text-[var(--text)]"
+                  className="flex-1 px-3 py-1.5 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-xs text-[var(--a-text)]"
                 />
                 <button
                   onClick={() => addSubcategory(cat.id)}
-                  className="px-3 py-1.5 bg-[var(--accent-2)] text-white rounded text-xs font-semibold"
+                  className="px-3 py-1.5 bg-[var(--a-accent)] text-white rounded text-xs font-semibold"
                 >
                   OK
                 </button>
@@ -290,7 +290,7 @@ function CategoriesTab() {
             ) : (
               <button
                 onClick={() => setNewSubFor(cat.id)}
-                className="font-mono text-[11px] text-[var(--accent-2)] mt-1"
+                className="font-mono text-[11px] text-[var(--a-accent)] mt-1"
               >
                 + Agregar subcategoría
               </button>
@@ -383,7 +383,7 @@ function ItemsTab() {
           return sub?.category_id === filterCat;
         });
 
-  if (loading) return <p className="text-xs text-[var(--text-muted)]">Cargando...</p>;
+  if (loading) return <p className="text-xs text-[var(--a-text-muted)]">Cargando...</p>;
 
   return (
     <div>
@@ -393,8 +393,8 @@ function ItemsTab() {
             onClick={() => setFilterCat("all")}
             className={`px-3 py-1.5 rounded-full text-xs font-mono font-semibold ${
               filterCat === "all"
-                ? "bg-[var(--accent-2)] text-white"
-                : "bg-[var(--surface-2)] text-[var(--text-muted)] border border-[var(--line)]"
+                ? "bg-[var(--a-accent)] text-white"
+                : "bg-[var(--a-surface-2)] text-[var(--a-text-muted)] border border-[var(--a-border)]"
             }`}
           >
             Todas
@@ -405,8 +405,8 @@ function ItemsTab() {
               onClick={() => setFilterCat(c.id)}
               className={`px-3 py-1.5 rounded-full text-xs font-mono font-semibold ${
                 filterCat === c.id
-                  ? "bg-[var(--accent-2)] text-white"
-                  : "bg-[var(--surface-2)] text-[var(--text-muted)] border border-[var(--line)]"
+                  ? "bg-[var(--a-accent)] text-white"
+                  : "bg-[var(--a-surface-2)] text-[var(--a-text-muted)] border border-[var(--a-border)]"
               }`}
             >
               {c.name}
@@ -415,18 +415,18 @@ function ItemsTab() {
         </div>
         <button
           onClick={() => setShowForm((v) => !v)}
-          className="px-4 py-2 bg-[var(--accent-2)] text-white rounded text-xs font-mono font-semibold whitespace-nowrap"
+          className="px-4 py-2 bg-[var(--a-accent)] text-white rounded text-xs font-mono font-semibold whitespace-nowrap"
         >
           {showForm ? "Cancelar" : "+ Nueva pieza"}
         </button>
       </div>
 
       {showForm && (
-        <div className="stacked-card p-5 mb-6">
+        <div className="admin-card p-5 mb-6">
           <select
             value={subcategoryId}
             onChange={(e) => setSubcategoryId(e.target.value)}
-            className="w-full mb-2 px-3 py-2 bg-[var(--surface-2)] border border-[var(--line)] rounded text-sm text-[var(--text)]"
+            className="w-full mb-2 px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
           >
             <option value="">Elige categoría → subcategoría</option>
             {subcategories.map((s) => (
@@ -439,11 +439,11 @@ function ItemsTab() {
             placeholder="Nombre de la pieza"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full mb-2 px-3 py-2 bg-[var(--surface-2)] border border-[var(--line)] rounded text-sm text-[var(--text)]"
+            className="w-full mb-2 px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
           />
           <div className="grid grid-cols-2 gap-2 mb-2">
             <div>
-              <label className="block font-mono text-[10px] text-[var(--text-muted)] mb-1">
+              <label className="block font-mono text-[10px] text-[var(--a-text-muted)] mb-1">
                 Costo (privado)
               </label>
               <input
@@ -451,11 +451,11 @@ function ItemsTab() {
                 placeholder="0"
                 value={cost}
                 onChange={(e) => setCost(e.target.value)}
-                className="w-full px-3 py-2 bg-[var(--surface-2)] border border-[var(--line)] rounded text-sm text-[var(--text)]"
+                className="w-full px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
               />
             </div>
             <div>
-              <label className="block font-mono text-[10px] text-[var(--text-muted)] mb-1">
+              <label className="block font-mono text-[10px] text-[var(--a-text-muted)] mb-1">
                 Precio al cliente
               </label>
               <input
@@ -463,12 +463,12 @@ function ItemsTab() {
                 placeholder="0"
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
-                className="w-full px-3 py-2 bg-[var(--surface-2)] border border-[var(--line)] rounded text-sm text-[var(--text)]"
+                className="w-full px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
               />
             </div>
           </div>
           {cost && price && (
-            <p className="font-mono text-[11px] text-[var(--accent-2)] mb-2">
+            <p className="font-mono text-[11px] text-[var(--a-accent)] mb-2">
               Margen: ${(parseFloat(price) - parseFloat(cost)).toLocaleString()}
             </p>
           )}
@@ -477,12 +477,12 @@ function ItemsTab() {
             type="file"
             accept="image/*"
             onChange={(e) => setPendingFile(e.target.files?.[0] || null)}
-            className="w-full mb-3 text-xs font-mono text-[var(--text-muted)]"
+            className="w-full mb-3 text-xs font-mono text-[var(--a-text-muted)]"
           />
           <button
             onClick={saveItem}
             disabled={saving || !subcategoryId || !name || !price}
-            className="w-full px-4 py-2.5 bg-[var(--accent-2)] text-white rounded text-sm font-semibold disabled:opacity-60"
+            className="w-full px-4 py-2.5 bg-[var(--a-accent)] text-white rounded text-sm font-semibold disabled:opacity-60"
           >
             {saving ? "Guardando..." : "Guardar pieza"}
           </button>
@@ -491,32 +491,32 @@ function ItemsTab() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {filtered.map((item) => (
-          <div key={item.id} className="stacked-card overflow-hidden">
+          <div key={item.id} className="admin-card overflow-hidden">
             {item.image_url ? (
               <img src={item.image_url} alt={item.name} className="w-full h-28 object-cover" />
             ) : (
-              <div className="w-full h-28 bg-[var(--surface-2)] flex items-center justify-center text-xs font-mono text-[var(--text-muted)]">
+              <div className="w-full h-28 bg-[var(--a-surface-2)] flex items-center justify-center text-xs font-mono text-[var(--a-text-muted)]">
                 Sin foto
               </div>
             )}
             <div className="p-3">
-              <p className="font-semibold text-sm text-[var(--text)]">{item.name}</p>
-              <p className="font-mono text-xs text-[var(--text-muted)] mt-1">
+              <p className="font-semibold text-sm text-[var(--a-text)]">{item.name}</p>
+              <p className="font-mono text-xs text-[var(--a-text-muted)] mt-1">
                 {subcategoryLabel(item.subcategory_id)}
               </p>
               <div className="flex items-center justify-between mt-2">
-                <p className="font-mono text-sm text-[var(--accent-2)] font-semibold">
+                <p className="font-mono text-sm text-[var(--a-accent)] font-semibold">
                   ${item.price.toLocaleString()}
                 </p>
                 <button
                   onClick={() => deleteItem(item.id)}
-                  className="text-[var(--text-muted)] hover:text-[var(--accent-2)] text-xs"
+                  className="text-[var(--a-text-muted)] hover:text-[var(--a-accent)] text-xs"
                 >
                   ✕
                 </button>
               </div>
               {item.cost != null && (
-                <p className="font-mono text-[10px] text-[var(--text-muted)] mt-1">
+                <p className="font-mono text-[10px] text-[var(--a-text-muted)] mt-1">
                   Costo ${item.cost.toLocaleString()} · Margen $
                   {(item.price - item.cost).toLocaleString()}
                 </p>
@@ -557,11 +557,11 @@ function SettingsTab() {
     setTimeout(() => setSaved(false), 2000);
   }
 
-  if (loading) return <p className="text-xs text-[var(--text-muted)]">Cargando...</p>;
+  if (loading) return <p className="text-xs text-[var(--a-text-muted)]">Cargando...</p>;
 
   return (
-    <div className="stacked-card p-6 max-w-sm">
-      <label className="block font-mono text-xs uppercase tracking-wide text-[var(--text-muted)] mb-2">
+    <div className="admin-card p-6 max-w-sm">
+      <label className="block font-mono text-xs uppercase tracking-wide text-[var(--a-text-muted)] mb-2">
         Tax (%)
       </label>
       <div className="flex gap-2">
@@ -570,16 +570,16 @@ function SettingsTab() {
           step="0.001"
           value={taxRate}
           onChange={(e) => setTaxRate(e.target.value)}
-          className="flex-1 px-3 py-2 bg-[var(--surface-2)] border border-[var(--line)] rounded text-sm text-[var(--text)]"
+          className="flex-1 px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
         />
         <button
           onClick={save}
-          className="px-4 py-2 bg-[var(--accent-2)] text-white rounded text-sm font-semibold"
+          className="px-4 py-2 bg-[var(--a-accent)] text-white rounded text-sm font-semibold"
         >
           {saved ? "✓ Guardado" : "Guardar"}
         </button>
       </div>
-      <p className="text-xs text-[var(--text-muted)] mt-2">
+      <p className="text-xs text-[var(--a-text-muted)] mt-2">
         Se aplica automático a cada cotización nueva.
       </p>
     </div>
@@ -594,12 +594,12 @@ export default function CatalogPage() {
     <div>
       <Link
         href="/panel-act-9k2m"
-        className="inline-block mb-4 font-mono text-xs text-[var(--text-muted)] hover:text-[var(--text)]"
+        className="inline-block mb-4 font-mono text-xs text-[var(--a-text-muted)] hover:text-[var(--a-text)]"
       >
         ← Volver a clientes
       </Link>
 
-      <h1 className="font-display text-2xl font-semibold text-[var(--text)] mb-6">Catálogo</h1>
+      <h1 className="text-2xl font-semibold text-[var(--a-text)] mb-6">Catálogo</h1>
 
       <div className="flex gap-2 mb-8 flex-wrap">
         {(["sizes", "categories", "items", "settings"] as const).map((t) => (
@@ -608,8 +608,8 @@ export default function CatalogPage() {
             onClick={() => setTab(t)}
             className={`px-4 py-2 rounded text-xs font-mono font-semibold ${
               tab === t
-                ? "bg-[var(--accent-2)] text-white"
-                : "bg-[var(--surface-2)] text-[var(--text-muted)] border border-[var(--line)]"
+                ? "bg-[var(--a-accent)] text-white"
+                : "bg-[var(--a-surface-2)] text-[var(--a-text-muted)] border border-[var(--a-border)]"
             }`}
           >
             {t === "sizes"
