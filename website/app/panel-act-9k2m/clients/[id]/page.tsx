@@ -60,10 +60,9 @@ type TrailerSize = {
   cost: number | null;
 };
 type Category = { id: string; name: string };
-type Subcategory = { id: string; category_id: string; name: string };
 type CatalogItem = {
   id: string;
-  subcategory_id: string;
+  category_id: string;
   name: string;
   image_url: string | null;
   price: number;
@@ -439,13 +438,11 @@ function QuoteBuilder({
 }) {
   const [sizes, setSizes] = useState<TrailerSize[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
-  const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
   const [taxRate, setTaxRate] = useState(0);
 
   const [sizeId, setSizeId] = useState(duplicateFrom?.trailer_size_id || "");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [activeSubcategory, setActiveSubcategory] = useState<string | null>(null);
   const [items, setItems] = useState<QuoteLineItem[]>(
     duplicateFrom
       ? duplicateFrom.items.filter((i) => !i.label.startsWith("Trailer base — "))
@@ -458,22 +455,21 @@ function QuoteBuilder({
   const [manualLabel, setManualLabel] = useState("");
   const [manualPrice, setManualPrice] = useState("");
   const [saving, setSaving] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     loadCatalog();
   }, []);
 
   async function loadCatalog() {
-    const [s, c, sc, ci, settings] = await Promise.all([
+    const [s, c, ci, settings] = await Promise.all([
       supabase.from("trailer_sizes").select("*").order("sort_order"),
       supabase.from("catalog_categories").select("*").order("sort_order"),
-      supabase.from("catalog_subcategories").select("*").order("sort_order"),
-      supabase.from("catalog_items").select("id,subcategory_id,name,image_url,price,cost"),
+      supabase.from("catalog_items").select("id,category_id,name,image_url,price,cost"),
       supabase.from("business_settings").select("*").eq("id", 1).single(),
     ]);
     setSizes((s.data as TrailerSize[]) || []);
     setCategories((c.data as Category[]) || []);
-    setSubcategories((sc.data as Subcategory[]) || []);
     setCatalogItems((ci.data as CatalogItem[]) || []);
     setTaxRate(duplicateFrom?.tax_rate ?? settings.data?.tax_rate ?? 0);
   }
@@ -510,8 +506,7 @@ function QuoteBuilder({
   const total = subtotal + taxAmount;
   const margin = combinedItems.reduce((sum, i) => sum + ((i.price || 0) - (i.cost || 0)), 0);
 
-  const visibleSubcategories = subcategories.filter((s) => s.category_id === activeCategory);
-  const visibleItems = catalogItems.filter((i) => i.subcategory_id === activeSubcategory);
+  const visibleItems = catalogItems.filter((i) => i.category_id === activeCategory);
 
   async function generateAndSave() {
     if (combinedItems.length === 0) return;
@@ -598,10 +593,7 @@ function QuoteBuilder({
         {categories.map((c) => (
           <button
             key={c.id}
-            onClick={() => {
-              setActiveCategory(c.id);
-              setActiveSubcategory(null);
-            }}
+            onClick={() => setActiveCategory(c.id)}
             className={`px-3 py-1.5 rounded-full text-xs font-mono font-semibold ${
               activeCategory === c.id
                 ? "bg-[var(--a-text)] text-[var(--a-surface)]"
@@ -614,24 +606,6 @@ function QuoteBuilder({
       </div>
 
       {activeCategory && (
-        <div className="flex flex-wrap gap-2 mb-4">
-          {visibleSubcategories.map((sc) => (
-            <button
-              key={sc.id}
-              onClick={() => setActiveSubcategory(sc.id)}
-              className={`px-3 py-1 rounded-full text-[11px] font-mono ${
-                activeSubcategory === sc.id
-                  ? "bg-[var(--a-accent)] text-white"
-                  : "bg-[var(--a-surface)] text-[var(--a-text-muted)] border border-[var(--a-border)]"
-              }`}
-            >
-              {sc.name}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {activeSubcategory && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
           {visibleItems.map((item) => (
             <button
@@ -765,12 +739,71 @@ function QuoteBuilder({
       />
 
       <button
-        onClick={generateAndSave}
-        disabled={saving || combinedItems.length === 0}
+        onClick={() => setShowPreview(true)}
+        disabled={combinedItems.length === 0}
         className="w-full px-4 py-2.5 bg-[var(--a-accent)] text-white rounded text-sm font-semibold disabled:opacity-60"
       >
-        {saving ? "Generando..." : "Generar PDF y guardar →"}
+        Vista previa →
       </button>
+
+      {showPreview && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-6 py-10 overflow-y-auto">
+          <div className="admin-card bg-[var(--a-surface)] w-full max-w-lg overflow-hidden">
+            {selectedSize?.image_url && (
+              <img src={selectedSize.image_url} alt="" className="w-full h-40 object-cover" />
+            )}
+            <div className="p-6">
+              <p className="admin-label mb-1">Vista previa — no se ha guardado todavía</p>
+              <h3 className="text-lg font-semibold text-[var(--a-text)] mb-4">
+                Cotización para {client.name}
+              </h3>
+
+              <div className="flex flex-col gap-1.5 mb-4">
+                {combinedItems.map((item, i) => (
+                  <div key={i} className="flex items-center justify-between text-sm">
+                    <p className="text-[var(--a-text)]">{item.label}</p>
+                    <p className="font-mono text-[var(--a-text-muted)]">
+                      ${item.price.toLocaleString()}
+                    </p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col items-end gap-1 mb-5 font-mono text-sm border-t border-[var(--a-border)] pt-3">
+                <p className="text-[var(--a-text-muted)]">Subtotal: ${subtotal.toLocaleString()}</p>
+                {taxRate > 0 && (
+                  <p className="text-[var(--a-text-muted)]">
+                    Tax ({taxRate}%): $
+                    {taxAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                  </p>
+                )}
+                <p className="text-[var(--a-text)] font-semibold text-base">
+                  Total: ${total.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                </p>
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="flex-1 admin-btn-secondary"
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={async () => {
+                    await generateAndSave();
+                    setShowPreview(false);
+                  }}
+                  disabled={saving}
+                  className="flex-1 px-4 py-2.5 bg-[var(--a-accent)] text-white rounded text-sm font-semibold disabled:opacity-60"
+                >
+                  {saving ? "Guardando..." : "Confirmar y descargar"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
