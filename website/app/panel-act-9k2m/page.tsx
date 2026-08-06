@@ -13,6 +13,7 @@ type Client = {
   heard_from: string | null;
   timeline: string | null;
   status: "activo" | "perdido";
+  deleted_at: string | null;
   created_at: string;
 };
 
@@ -192,19 +193,33 @@ export default function ClientsList() {
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "week">("all");
   const [sourceFilter, setSourceFilter] = useState<"all" | "sitio_web" | "manual">("all");
   const [statusFilter, setStatusFilter] = useState<"activo" | "perdido" | "all">("activo");
+  const [showTrash, setShowTrash] = useState(false);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [showTrash]);
 
   async function load() {
     setLoading(true);
-    const { data } = await supabase
-      .from("clients")
-      .select("*")
-      .order("created_at", { ascending: false });
+    const query = supabase.from("clients").select("*").order("created_at", { ascending: false });
+    const { data } = showTrash
+      ? await query.not("deleted_at", "is", null)
+      : await query.is("deleted_at", null);
     setClients((data as Client[]) || []);
     setLoading(false);
+  }
+
+  async function restoreClient(id: string) {
+    await supabase.from("clients").update({ deleted_at: null }).eq("id", id);
+    load();
+  }
+
+  async function deleteForever(id: string) {
+    if (!confirm("Esto borra al cliente para siempre, incluyendo su historial y cotizaciones. ¿Seguro?")) {
+      return;
+    }
+    await supabase.from("clients").delete().eq("id", id);
+    load();
   }
 
   const filtered = clients
@@ -236,16 +251,28 @@ export default function ClientsList() {
 
   return (
     <div>
-      <DashboardStats clients={clients} />
+      {!showTrash && <DashboardStats clients={clients} />}
 
       <div className="flex items-center justify-between mb-6">
-        <p className="font-mono text-xs text-[var(--a-text-muted)]">{clients.length} clientes</p>
-        <button
-          onClick={() => setShowNew(true)}
-          className="px-4 py-2 bg-[var(--a-accent)] text-white rounded text-xs font-mono font-semibold"
-        >
-          + Nuevo cliente
-        </button>
+        <div className="flex items-center gap-3">
+          <p className="font-mono text-xs text-[var(--a-text-muted)]">
+            {clients.length} {showTrash ? "en la papelera" : "clientes"}
+          </p>
+          <button
+            onClick={() => setShowTrash((v) => !v)}
+            className="font-mono text-[11px] text-[var(--a-text-muted)] hover:text-[var(--a-text)] underline"
+          >
+            {showTrash ? "← Volver a clientes" : "🗑 Papelera"}
+          </button>
+        </div>
+        {!showTrash && (
+          <button
+            onClick={() => setShowNew(true)}
+            className="px-4 py-2 bg-[var(--a-accent)] text-white rounded text-xs font-mono font-semibold"
+          >
+            + Nuevo cliente
+          </button>
+        )}
       </div>
 
       <input
@@ -307,33 +334,59 @@ export default function ClientsList() {
         </p>
       ) : (
         <div className="flex flex-col gap-3">
-          {filtered.map((client) => (
-            <Link
-              key={client.id}
-              href={`/panel-act-9k2m/clients/${client.id}`}
-              className="admin-card p-5 flex items-center justify-between"
-            >
-              <div>
-                <p className="font-semibold text-[var(--a-text)]">{client.name}</p>
-                <p className="font-mono text-sm text-[var(--a-text-muted)]">{client.phone}</p>
-                {(client.interest || client.heard_from === "sitio_web") && (
-                  <div className="flex items-center gap-2 mt-1.5">
-                    {client.interest && (
-                      <span className="admin-badge">{client.interest}</span>
-                    )}
-                    {client.heard_from === "sitio_web" && (
-                      <span className="font-mono text-[10px] text-[var(--a-accent)] uppercase">
-                        Desde el sitio
-                      </span>
-                    )}
-                  </div>
-                )}
+          {filtered.map((client) =>
+            showTrash ? (
+              <div
+                key={client.id}
+                className="admin-card p-5 flex items-center justify-between"
+              >
+                <div>
+                  <p className="font-semibold text-[var(--a-text)]">{client.name}</p>
+                  <p className="font-mono text-sm text-[var(--a-text-muted)]">{client.phone}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => restoreClient(client.id)}
+                    className="admin-btn-secondary text-xs"
+                  >
+                    Restaurar
+                  </button>
+                  <button
+                    onClick={() => deleteForever(client.id)}
+                    className="font-mono text-[11px] text-[var(--a-danger)]"
+                  >
+                    Borrar para siempre
+                  </button>
+                </div>
               </div>
-              <span className="font-mono text-[11px] text-[var(--a-text-muted)]">
-                {new Date(client.created_at).toLocaleDateString()}
-              </span>
-            </Link>
-          ))}
+            ) : (
+              <Link
+                key={client.id}
+                href={`/panel-act-9k2m/clients/${client.id}`}
+                className="admin-card p-5 flex items-center justify-between"
+              >
+                <div>
+                  <p className="font-semibold text-[var(--a-text)]">{client.name}</p>
+                  <p className="font-mono text-sm text-[var(--a-text-muted)]">{client.phone}</p>
+                  {(client.interest || client.heard_from === "sitio_web") && (
+                    <div className="flex items-center gap-2 mt-1.5">
+                      {client.interest && (
+                        <span className="admin-badge">{client.interest}</span>
+                      )}
+                      {client.heard_from === "sitio_web" && (
+                        <span className="font-mono text-[10px] text-[var(--a-accent)] uppercase">
+                          Desde el sitio
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <span className="font-mono text-[11px] text-[var(--a-text-muted)]">
+                  {new Date(client.created_at).toLocaleDateString()}
+                </span>
+              </Link>
+            )
+          )}
         </div>
       )}
 

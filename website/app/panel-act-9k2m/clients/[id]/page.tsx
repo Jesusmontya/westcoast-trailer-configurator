@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../../../lib/supabase";
 import { generateQuotePdf, QuoteLineItem } from "../../../../lib/generateQuotePdf";
@@ -30,6 +30,7 @@ type Client = {
   heard_from: string | null;
   timeline: string | null;
   status: "activo" | "perdido";
+  deleted_at: string | null;
   created_at: string;
 };
 type Activity = { id: string; client_id: string; note: string; created_at: string };
@@ -69,6 +70,7 @@ type CatalogItem = {
 
 export default function ClientDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const clientId = params.id as string;
   const [client, setClient] = useState<Client | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,6 +91,13 @@ export default function ClientDetailPage() {
     const newStatus = client.status === "activo" ? "perdido" : "activo";
     await supabase.from("clients").update({ status: newStatus }).eq("id", client.id);
     setClient({ ...client, status: newStatus });
+  }
+
+  async function moveToTrash() {
+    if (!client) return;
+    if (!confirm(`¿Mover a ${client.name} a la papelera? Puedes restaurarlo después.`)) return;
+    await supabase.from("clients").update({ deleted_at: new Date().toISOString() }).eq("id", client.id);
+    router.push("/panel-act-9k2m");
   }
 
   if (loading) return <p className="text-[var(--a-text-muted)] font-mono text-sm">Cargando...</p>;
@@ -115,12 +124,20 @@ export default function ClientDetailPage() {
               Cliente desde {new Date(client.created_at).toLocaleDateString()}
             </p>
           </div>
-          <button
-            onClick={toggleStatus}
-            className={`admin-badge ${client.status === "activo" ? "success" : "danger"}`}
-          >
-            {client.status === "activo" ? "Activo" : "Perdido"} · cambiar
-          </button>
+          <div className="flex flex-col items-end gap-2">
+            <button
+              onClick={toggleStatus}
+              className={`admin-badge ${client.status === "activo" ? "success" : "danger"}`}
+            >
+              {client.status === "activo" ? "Activo" : "Perdido"} · cambiar
+            </button>
+            <button
+              onClick={moveToTrash}
+              className="font-mono text-[10px] text-[var(--a-text-muted)] hover:text-[var(--a-danger)]"
+            >
+              🗑 Mover a la papelera
+            </button>
+          </div>
         </div>
 
         {(client.interest || client.heard_from || client.timeline) && (
