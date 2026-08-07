@@ -86,6 +86,9 @@ export default function PanelLayout({ children }: { children: React.ReactNode })
           </Link>
 
           <div className="flex items-center gap-2">
+            <Link href="/panel-act-9k2m/quotes" className="admin-btn-secondary">
+              Aceptadas
+            </Link>
             <Link href="/panel-act-9k2m/catalog" className="admin-btn-secondary">
               Catálogo
             </Link>
