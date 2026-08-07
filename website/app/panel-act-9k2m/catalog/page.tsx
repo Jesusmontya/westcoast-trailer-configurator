@@ -35,6 +35,7 @@ function SizesTab() {
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     load();
@@ -71,7 +72,16 @@ function SizesTab() {
   }
 
   async function deleteSize(id: string) {
-    await supabase.from("trailer_sizes").delete().eq("id", id);
+    setDeleteError(null);
+    const { error } = await supabase.from("trailer_sizes").delete().eq("id", id);
+    if (error) {
+      setDeleteError(
+        error.code === "23503"
+          ? "No se puede borrar: ya se usó en alguna cotización."
+          : "No se pudo borrar."
+      );
+      return;
+    }
     load();
   }
 
@@ -121,6 +131,10 @@ function SizesTab() {
         </div>
       </div>
 
+      {deleteError && (
+        <p className="text-sm text-[var(--a-danger)] mb-4">{deleteError}</p>
+      )}
+
       {loading ? (
         <p className="text-xs text-[var(--a-text-muted)]">Cargando...</p>
       ) : (
@@ -169,6 +183,7 @@ function CategoriesTab() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [newCategory, setNewCategory] = useState("");
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     load();
@@ -191,7 +206,16 @@ function CategoriesTab() {
   }
 
   async function deleteCategory(id: string) {
-    await supabase.from("catalog_categories").delete().eq("id", id);
+    setDeleteError(null);
+    const { error } = await supabase.from("catalog_categories").delete().eq("id", id);
+    if (error) {
+      setDeleteError(
+        error.code === "23503"
+          ? "No se puede borrar: todavía tiene piezas asignadas. Muévelas o bórralas primero."
+          : "No se pudo borrar."
+      );
+      return;
+    }
     load();
   }
 
@@ -199,6 +223,7 @@ function CategoriesTab() {
 
   return (
     <div>
+      {deleteError && <p className="text-sm text-[var(--a-danger)] mb-4">{deleteError}</p>}
       <div className="admin-card p-5 mb-6 flex gap-2">
         <input
           placeholder="Nueva categoría (ej. Cocina)"

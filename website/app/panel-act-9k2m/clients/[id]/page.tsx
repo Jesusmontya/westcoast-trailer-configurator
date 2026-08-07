@@ -11,6 +11,8 @@ const HEARD_FROM_LABELS: Record<string, string> = {
   recomendacion: "Recomendación",
   vio_trailer: "Vio un trailer en la calle",
   sitio_web: "Formulario del sitio web",
+  sitio_web_contacto: "Formulario de contacto",
+  sitio_web_galeria: "Galería 3D",
   otro: "Otro",
 };
 
@@ -197,6 +199,8 @@ export default function ClientDetailPage() {
                   <option value="recomendacion">Recomendación</option>
                   <option value="vio_trailer">Vio un trailer en la calle</option>
                   <option value="sitio_web">Formulario del sitio web</option>
+                  <option value="sitio_web_contacto">Formulario de contacto</option>
+                  <option value="sitio_web_galeria">Galería 3D</option>
                   <option value="otro">Otro</option>
                 </select>
               </div>

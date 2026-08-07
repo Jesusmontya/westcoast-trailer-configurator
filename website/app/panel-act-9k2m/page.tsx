@@ -25,10 +25,36 @@ function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
   const [heardFrom, setHeardFrom] = useState("");
   const [timeline, setTimeline] = useState("");
   const [saving, setSaving] = useState(false);
+  const [duplicateWarning, setDuplicateWarning] = useState(false);
 
   async function handleSave() {
     if (!name || !phone) return;
     setSaving(true);
+    setDuplicateWarning(false);
+
+    // revisa si ya existe alguien con este teléfono en los últimos 30 días
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 30);
+    const { data: existing } = await supabase
+      .from("clients")
+      .select("id")
+      .eq("phone", phone)
+      .gte("created_at", cutoff.toISOString())
+      .is("deleted_at", null)
+      .limit(1);
+
+    if (existing && existing.length > 0) {
+      // ya existe — en vez de duplicar, se agrega como nota a su ficha
+      await supabase.from("client_activity").insert({
+        client_id: existing[0].id,
+        note: `Se intentó dar de alta de nuevo a mano${interest ? ` — interés: ${interest}` : ""}`,
+      });
+      setSaving(false);
+      setDuplicateWarning(true);
+      onCreated();
+      return;
+    }
+
     await supabase.from("clients").insert({
       name,
       phone,
@@ -48,6 +74,12 @@ function NewClientModal({ onClose, onCreated }: { onClose: () => void; onCreated
         <h3 className="text-lg font-semibold text-[var(--a-text)] mb-4">
           Nuevo cliente
         </h3>
+        {duplicateWarning && (
+          <div className="mb-3 px-3 py-2 bg-[var(--a-warning-bg)] rounded text-sm text-[var(--a-warning)]">
+            Ya existe un cliente con ese teléfono (de los últimos 30 días) — no se duplicó,
+            se agregó una nota a su ficha en vez de crear uno nuevo.
+          </div>
+        )}
         <div className="flex flex-col gap-3 mb-5">
           <input
             placeholder="Nombre"
@@ -214,11 +246,17 @@ export default function ClientsList() {
     load();
   }
 
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   async function deleteForever(id: string) {
-    if (!confirm("Esto borra al cliente para siempre, incluyendo su historial y cotizaciones. ¿Seguro?")) {
+    setDeleteError(null);
+    const { error } = await supabase.from("clients").delete().eq("id", id);
+    if (error) {
+      setDeleteError(id);
       return;
     }
-    await supabase.from("clients").delete().eq("id", id);
+    setConfirmDeleteId(null);
     load();
   }
 
@@ -241,8 +279,8 @@ export default function ClientsList() {
     })
     .filter((c) => {
       if (sourceFilter === "all") return true;
-      if (sourceFilter === "sitio_web") return c.heard_from === "sitio_web";
-      return c.heard_from !== "sitio_web";
+      if (sourceFilter === "sitio_web") return c.heard_from?.startsWith("sitio_web") ?? false;
+      return !c.heard_from?.startsWith("sitio_web");
     })
     .filter((c) => {
       if (statusFilter === "all") return true;
@@ -351,12 +389,35 @@ export default function ClientsList() {
                   >
                     Restaurar
                   </button>
-                  <button
-                    onClick={() => deleteForever(client.id)}
-                    className="admin-btn-ghost danger"
-                  >
-                    Borrar para siempre
-                  </button>
+                  {confirmDeleteId === client.id ? (
+                    <>
+                      {deleteError === client.id && (
+                        <span className="font-mono text-[10px] text-[var(--a-danger)]">
+                          No se pudo borrar
+                        </span>
+                      )}
+                      <span className="font-mono text-[11px] text-[var(--a-text)]">¿Seguro?</span>
+                      <button
+                        onClick={() => deleteForever(client.id)}
+                        className="admin-btn-ghost danger"
+                      >
+                        Sí, para siempre
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteId(null)}
+                        className="admin-btn-ghost"
+                      >
+                        No
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => setConfirmDeleteId(client.id)}
+                      className="admin-btn-ghost danger"
+                    >
+                      Borrar para siempre
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (
@@ -368,14 +429,19 @@ export default function ClientsList() {
                 <div>
                   <p className="font-semibold text-[var(--a-text)]">{client.name}</p>
                   <p className="font-mono text-sm text-[var(--a-text-muted)]">{client.phone}</p>
-                  {(client.interest || client.heard_from === "sitio_web") && (
+                  {(client.interest || client.heard_from?.startsWith("sitio_web")) && (
                     <div className="flex items-center gap-2 mt-1.5">
                       {client.interest && (
                         <span className="admin-badge">{client.interest}</span>
                       )}
-                      {client.heard_from === "sitio_web" && (
+                      {client.heard_from === "sitio_web_contacto" && (
                         <span className="font-mono text-[10px] text-[var(--a-accent)] uppercase">
-                          Desde el sitio
+                          Formulario de contacto
+                        </span>
+                      )}
+                      {client.heard_from === "sitio_web_galeria" && (
+                        <span className="font-mono text-[10px] text-[var(--a-accent)] uppercase">
+                          Galería 3D
                         </span>
                       )}
                     </div>

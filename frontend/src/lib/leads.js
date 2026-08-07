@@ -1,7 +1,7 @@
 import { supabase } from "./supabase";
 
 /**
- * Guarda a alguien que llenó un formulario en la galería como cliente.
+ * Guarda a alguien que llenó el formulario en la galería 3D.
  * input: { name, phone, email?, interest? }
  */
 export async function submitLead(input) {
@@ -10,6 +10,7 @@ export async function submitLead(input) {
     p_phone: input.phone,
     p_email: input.email || null,
     p_interest: input.interest || null,
+    p_heard_from: "sitio_web_galeria",
   });
 
   if (error) throw error;

@@ -8,9 +8,7 @@ type SubmitContactInput = {
 };
 
 /**
- * Guarda a alguien que llenó un formulario en el sitio como cliente.
- * Usa una función de base de datos (no un insert directo) para poder
- * revisar duplicados sin darle permiso de lectura al público.
+ * Guarda a alguien que llenó el formulario de contacto de la landing.
  */
 export async function submitLead(input: SubmitContactInput) {
   const { error } = await supabase.rpc("submit_client_lead", {
@@ -18,6 +16,7 @@ export async function submitLead(input: SubmitContactInput) {
     p_phone: input.phone,
     p_email: input.email || null,
     p_interest: input.interest || null,
+    p_heard_from: "sitio_web_contacto",
   });
 
   if (error) throw error;
