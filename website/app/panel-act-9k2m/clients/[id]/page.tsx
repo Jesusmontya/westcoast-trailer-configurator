@@ -500,11 +500,19 @@ function QuoteSection({ client }: { client: Client }) {
 
   async function deleteQuote(id: string) {
     setDeleteErrorId(null);
+    const quote = quotes.find((q) => q.id === id);
+
     const { error } = await supabase.from("quotes").delete().eq("id", id);
     if (error) {
       setDeleteErrorId(id);
       return;
     }
+
+    // borra también el PDF guardado, para no dejarlo huérfano en Storage
+    if (quote?.pdf_url) {
+      await supabase.storage.from("quote-pdfs").remove([quote.pdf_url]);
+    }
+
     setConfirmDeleteId(null);
     load();
   }
@@ -908,14 +916,20 @@ function QuoteBuilder({
       ) : (
         <div className="flex flex-col gap-2 mb-5">
           {baseItem && (
-            <div className="flex items-center gap-3 bg-[var(--a-surface)] rounded px-3 py-2 border border-[var(--a-accent)]/30">
+            <div className="flex items-center gap-2 sm:gap-3 bg-[var(--a-surface)] rounded px-2 sm:px-3 py-2 border border-[var(--a-accent)]/30">
               {selectedSize?.image_url ? (
-                <img src={selectedSize.image_url} alt="" className="w-9 h-9 rounded object-cover" />
+                <img
+                  src={selectedSize.image_url}
+                  alt=""
+                  className="w-9 h-9 rounded object-cover flex-shrink-0"
+                />
               ) : (
-                <div className="w-9 h-9 rounded bg-[var(--a-surface-2)]" />
+                <div className="w-9 h-9 rounded bg-[var(--a-surface-2)] flex-shrink-0" />
               )}
-              <p className="flex-1 text-sm text-[var(--a-text)]">{baseItem.label}</p>
-              <p className="font-mono text-sm text-[var(--a-accent)]">
+              <p className="flex-1 min-w-0 text-sm text-[var(--a-text)] truncate">
+                {baseItem.label}
+              </p>
+              <p className="font-mono text-sm text-[var(--a-accent)] flex-shrink-0">
                 ${baseItem.price.toLocaleString()}
               </p>
             </div>
@@ -923,20 +937,24 @@ function QuoteBuilder({
           {items.map((item, i) => (
             <div
               key={i}
-              className="flex items-center gap-3 bg-[var(--a-surface)] rounded px-3 py-2"
+              className="flex items-center gap-2 sm:gap-3 bg-[var(--a-surface)] rounded px-2 sm:px-3 py-2"
             >
               {item.image_url ? (
-                <img src={item.image_url} alt="" className="w-9 h-9 rounded object-cover" />
+                <img
+                  src={item.image_url}
+                  alt=""
+                  className="w-9 h-9 rounded object-cover flex-shrink-0"
+                />
               ) : (
-                <div className="w-9 h-9 rounded bg-[var(--a-surface-2)]" />
+                <div className="w-9 h-9 rounded bg-[var(--a-surface-2)] flex-shrink-0" />
               )}
-              <p className="flex-1 text-sm text-[var(--a-text)]">{item.label}</p>
-              <p className="font-mono text-sm text-[var(--a-accent)]">
+              <p className="flex-1 min-w-0 text-sm text-[var(--a-text)] truncate">{item.label}</p>
+              <p className="font-mono text-sm text-[var(--a-accent)] flex-shrink-0">
                 ${item.price.toLocaleString()}
               </p>
               <button
                 onClick={() => removeItem(i)}
-                className="text-[var(--a-text-muted)] hover:text-[var(--a-accent)] text-xs"
+                className="text-[var(--a-text-muted)] hover:text-[var(--a-accent)] text-xs flex-shrink-0"
               >
                 ✕
               </button>

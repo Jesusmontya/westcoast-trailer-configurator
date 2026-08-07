@@ -56,7 +56,11 @@ export default function AcceptedQuotesPage() {
         ← Volver a clientes
       </Link>
 
-      <h1 className="text-2xl font-semibold text-[var(--a-text)] mb-6">Cotizaciones aceptadas</h1>
+      <h1 className="text-2xl font-semibold text-[var(--a-text)] mb-2">Cotizaciones aceptadas</h1>
+      <p className="text-sm text-[var(--a-text-muted)] mb-6">
+        El margen de cotizaciones de antes de agosto 2026 es aproximado — se calculó
+        después con los precios guardados, no en el momento real de la venta.
+      </p>
 
       <div className="flex gap-2 mb-6">
         {(["month", "all"] as const).map((opt) => (

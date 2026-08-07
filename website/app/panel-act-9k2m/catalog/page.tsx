@@ -30,6 +30,7 @@ type CatalogItem = {
 function SizesTab() {
   const [sizes, setSizes] = useState<TrailerSize[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [label, setLabel] = useState("");
   const [cost, setCost] = useState("");
   const [price, setPrice] = useState("");
@@ -49,25 +50,49 @@ function SizesTab() {
     setLoading(false);
   }
 
-  async function addSize() {
-    if (!label || !price) return;
-    setUploading(true);
-    let image_url: string | null = null;
-    if (pendingFile) {
-      image_url = await uploadCatalogImage(pendingFile);
-    }
-    await supabase.from("trailer_sizes").insert({
-      label,
-      image_url,
-      cost: cost ? parseFloat(cost) : null,
-      price: parseFloat(price),
-      sort_order: sizes.length,
-    });
+  function resetForm() {
     setLabel("");
     setCost("");
     setPrice("");
     setPendingFile(null);
     if (fileRef.current) fileRef.current.value = "";
+    setEditingId(null);
+  }
+
+  function startEdit(s: TrailerSize) {
+    setEditingId(s.id);
+    setLabel(s.label);
+    setCost(s.cost != null ? String(s.cost) : "");
+    setPrice(String(s.price));
+  }
+
+  async function saveSize() {
+    if (!label || !price) return;
+    setUploading(true);
+    let image_url: string | undefined;
+    if (pendingFile) {
+      image_url = await uploadCatalogImage(pendingFile);
+    }
+
+    if (editingId) {
+      const updates: Record<string, unknown> = {
+        label,
+        cost: cost ? parseFloat(cost) : null,
+        price: parseFloat(price),
+      };
+      if (image_url) updates.image_url = image_url;
+      await supabase.from("trailer_sizes").update(updates).eq("id", editingId);
+    } else {
+      await supabase.from("trailer_sizes").insert({
+        label,
+        image_url: image_url || null,
+        cost: cost ? parseFloat(cost) : null,
+        price: parseFloat(price),
+        sort_order: sizes.length,
+      });
+    }
+
+    resetForm();
     setUploading(false);
     load();
   }
@@ -88,9 +113,14 @@ function SizesTab() {
 
   return (
     <div>
+      <p className="text-sm text-[var(--a-text-muted)] mb-4">
+        Cada tamaño aparece como opción al armar una cotización — su foto es la
+        que sale como portada del PDF.
+      </p>
+
       <div className="admin-card p-5 mb-6">
         <p className="font-mono text-xs uppercase tracking-wide text-[var(--a-text-muted)] mb-3">
-          Nuevo tamaño
+          {editingId ? "Editando tamaño" : "Nuevo tamaño"}
         </p>
         <div className="flex flex-col sm:flex-row gap-2 mb-2">
           <input
@@ -123,13 +153,23 @@ function SizesTab() {
             className="text-xs font-mono text-[var(--a-text-muted)]"
           />
           <button
-            onClick={addSize}
+            onClick={saveSize}
             disabled={!label || !price || uploading}
             className="px-4 py-2 bg-[var(--a-accent)] text-white rounded text-sm font-semibold disabled:opacity-60"
           >
-            {uploading ? "Subiendo..." : "Agregar"}
+            {uploading ? "Subiendo..." : editingId ? "Guardar cambios" : "Agregar"}
           </button>
+          {editingId && (
+            <button onClick={resetForm} className="admin-btn-secondary">
+              Cancelar
+            </button>
+          )}
         </div>
+        {editingId && (
+          <p className="text-xs text-[var(--a-text-muted)] mt-2">
+            Deja el archivo vacío para conservar la foto actual.
+          </p>
+        )}
       </div>
 
       {deleteError && (
@@ -150,15 +190,7 @@ function SizesTab() {
                 </div>
               )}
               <div className="p-3">
-                <div className="flex items-center justify-between">
-                  <p className="font-semibold text-sm text-[var(--a-text)]">{s.label}</p>
-                  <button
-                    onClick={() => deleteSize(s.id)}
-                    className="text-[var(--a-text-muted)] hover:text-[var(--a-accent)] text-xs"
-                  >
-                    ✕
-                  </button>
-                </div>
+                <p className="font-semibold text-sm text-[var(--a-text)]">{s.label}</p>
                 <p className="font-mono text-sm text-[var(--a-accent)] font-semibold mt-1">
                   ${s.price.toLocaleString()}
                 </p>
@@ -168,6 +200,14 @@ function SizesTab() {
                     {(s.price - s.cost).toLocaleString()}
                   </p>
                 )}
+                <div className="flex items-center gap-2 mt-3">
+                  <button onClick={() => startEdit(s)} className="admin-btn-ghost flex-1">
+                    Editar
+                  </button>
+                  <button onClick={() => deleteSize(s.id)} className="admin-btn-ghost danger">
+                    ✕
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -185,6 +225,8 @@ function CategoriesTab() {
   const [loading, setLoading] = useState(true);
   const [newCategory, setNewCategory] = useState("");
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
 
   useEffect(() => {
     load();
@@ -206,6 +248,18 @@ function CategoriesTab() {
     load();
   }
 
+  function startEdit(cat: Category) {
+    setEditingId(cat.id);
+    setEditName(cat.name);
+  }
+
+  async function saveEdit(id: string) {
+    if (!editName.trim()) return;
+    await supabase.from("catalog_categories").update({ name: editName }).eq("id", id);
+    setEditingId(null);
+    load();
+  }
+
   async function deleteCategory(id: string) {
     setDeleteError(null);
     const { error } = await supabase.from("catalog_categories").delete().eq("id", id);
@@ -224,6 +278,9 @@ function CategoriesTab() {
 
   return (
     <div>
+      <p className="text-sm text-[var(--a-text-muted)] mb-4">
+        Agrupan tus piezas para navegarlas más rápido al armar una cotización.
+      </p>
       {deleteError && <p className="text-sm text-[var(--a-danger)] mb-4">{deleteError}</p>}
       <div className="admin-card p-5 mb-6 flex gap-2">
         <input
@@ -242,14 +299,37 @@ function CategoriesTab() {
       </div>
 
       <div className="flex flex-col gap-2">
-        {categories.map((cat) => (
-          <div key={cat.id} className="admin-card p-4 flex items-center justify-between">
-            <p className="font-semibold text-[var(--a-text)]">{cat.name}</p>
-            <button onClick={() => deleteCategory(cat.id)} className="admin-btn-ghost danger">
-              Borrar
-            </button>
-          </div>
-        ))}
+        {categories.map((cat) =>
+          editingId === cat.id ? (
+            <div key={cat.id} className="admin-card p-4 flex items-center gap-2">
+              <input
+                value={editName}
+                onChange={(e) => setEditName(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && saveEdit(cat.id)}
+                autoFocus
+                className="flex-1 px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
+              />
+              <button onClick={() => saveEdit(cat.id)} className="admin-btn-ghost">
+                Guardar
+              </button>
+              <button onClick={() => setEditingId(null)} className="admin-btn-ghost">
+                Cancelar
+              </button>
+            </div>
+          ) : (
+            <div key={cat.id} className="admin-card p-4 flex items-center justify-between">
+              <p className="font-semibold text-[var(--a-text)]">{cat.name}</p>
+              <div className="flex items-center gap-2">
+                <button onClick={() => startEdit(cat)} className="admin-btn-ghost">
+                  Editar
+                </button>
+                <button onClick={() => deleteCategory(cat.id)} className="admin-btn-ghost danger">
+                  Borrar
+                </button>
+              </div>
+            </div>
+          )
+        )}
       </div>
     </div>
   );
@@ -351,6 +431,24 @@ function ItemsTab() {
 
   async function deleteItem(id: string) {
     setDeleteError(null);
+
+    // revisa si esta pieza está usada en algún preset antes de borrar
+    const { data: refs } = await supabase
+      .from("catalog_preset_items")
+      .select("catalog_presets(name)")
+      .eq("catalog_item_id", id);
+
+    if (refs && refs.length > 0) {
+      const names = refs
+        .map((r: any) => r.catalog_presets?.name)
+        .filter(Boolean)
+        .join(", ");
+      setDeleteError(
+        `Esta pieza está usada en el preset: ${names}. Bórrala del preset primero, o mejor usa "Archivar" para quitarla del catálogo sin romper el preset.`
+      );
+      return;
+    }
+
     const { error } = await supabase.from("catalog_items").delete().eq("id", id);
     if (error) {
       setDeleteError(
@@ -375,6 +473,9 @@ function ItemsTab() {
 
   return (
     <div>
+      <p className="text-sm text-[var(--a-text-muted)] mb-4">
+        Cada pieza que agregues aparece disponible al armar una cotización, con foto y precio.
+      </p>
       <input
         value={search}
         onChange={(e) => setSearch(e.target.value)}
@@ -630,6 +731,7 @@ function PresetsTab() {
   const [loading, setLoading] = useState(true);
 
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [presetName, setPresetName] = useState("");
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
@@ -659,24 +761,48 @@ function PresetsTab() {
     );
   }
 
-  async function savePreset() {
-    if (!presetName || selectedItemIds.length === 0) return;
-    setSaving(true);
-    const { data: preset } = await supabase
-      .from("catalog_presets")
-      .insert({ name: presetName })
-      .select("id")
-      .single();
-
-    if (preset) {
-      await supabase.from("catalog_preset_items").insert(
-        selectedItemIds.map((catalog_item_id) => ({ preset_id: preset.id, catalog_item_id }))
-      );
-    }
-
+  function resetForm() {
     setPresetName("");
     setSelectedItemIds([]);
     setShowForm(false);
+    setEditingId(null);
+  }
+
+  function startEdit(preset: Preset) {
+    setEditingId(preset.id);
+    setPresetName(preset.name);
+    setSelectedItemIds(
+      presetItems.filter((pi) => pi.preset_id === preset.id).map((pi) => pi.catalog_item_id)
+    );
+    setShowForm(true);
+  }
+
+  async function savePreset() {
+    if (!presetName || selectedItemIds.length === 0) return;
+    setSaving(true);
+
+    if (editingId) {
+      await supabase.from("catalog_presets").update({ name: presetName }).eq("id", editingId);
+      // más simple y seguro: borra las relaciones viejas y mete las nuevas
+      await supabase.from("catalog_preset_items").delete().eq("preset_id", editingId);
+      await supabase.from("catalog_preset_items").insert(
+        selectedItemIds.map((catalog_item_id) => ({ preset_id: editingId, catalog_item_id }))
+      );
+    } else {
+      const { data: preset } = await supabase
+        .from("catalog_presets")
+        .insert({ name: presetName })
+        .select("id")
+        .single();
+
+      if (preset) {
+        await supabase.from("catalog_preset_items").insert(
+          selectedItemIds.map((catalog_item_id) => ({ preset_id: preset.id, catalog_item_id }))
+        );
+      }
+    }
+
+    resetForm();
     setSaving(false);
     load();
   }
@@ -696,9 +822,11 @@ function PresetsTab() {
   return (
     <div>
       <div className="flex items-center justify-between mb-4">
-        <p className="admin-label">Paquetes de piezas para agregar de un clic a la cotización</p>
+        <p className="admin-label">
+          Agrupa piezas que sueles cotizar juntas, para agregarlas de un clic
+        </p>
         <button
-          onClick={() => setShowForm((v) => !v)}
+          onClick={() => (showForm ? resetForm() : setShowForm(true))}
           className="px-4 py-2 bg-[var(--a-accent)] text-white rounded text-xs font-mono font-semibold whitespace-nowrap"
         >
           {showForm ? "Cancelar" : "+ Nuevo preset"}
@@ -707,6 +835,7 @@ function PresetsTab() {
 
       {showForm && (
         <div className="admin-card p-5 mb-6">
+          {editingId && <p className="admin-label mb-2">Editando preset existente</p>}
           <label className="admin-label block mb-1">Nombre del preset</label>
           <input
             placeholder="Ej. Taco Trailer Básico"
@@ -753,7 +882,11 @@ function PresetsTab() {
             disabled={saving || !presetName || selectedItemIds.length === 0}
             className="w-full admin-btn-primary"
           >
-            {saving ? "Guardando..." : `Guardar preset (${selectedItemIds.length} piezas)`}
+            {saving
+              ? "Guardando..."
+              : editingId
+              ? `Guardar cambios (${selectedItemIds.length} piezas)`
+              : `Guardar preset (${selectedItemIds.length} piezas)`}
           </button>
         </div>
       )}
@@ -769,12 +902,17 @@ function PresetsTab() {
               <div key={preset.id} className="admin-card p-4">
                 <div className="flex items-center justify-between mb-2">
                   <p className="font-semibold text-[var(--a-text)]">{preset.name}</p>
-                  <button
-                    onClick={() => deletePreset(preset.id)}
-                    className="admin-btn-ghost danger"
-                  >
-                    Borrar
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => startEdit(preset)} className="admin-btn-ghost">
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => deletePreset(preset.id)}
+                      className="admin-btn-ghost danger"
+                    >
+                      Borrar
+                    </button>
+                  </div>
                 </div>
                 <div className="flex flex-wrap gap-1.5 mb-1">
                   {items.map((i) => (
