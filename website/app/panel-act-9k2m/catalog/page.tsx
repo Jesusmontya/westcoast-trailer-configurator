@@ -21,6 +21,7 @@ type CatalogItem = {
   image_url: string | null;
   cost: number | null;
   price: number;
+  active: boolean;
 };
 
 // ============================================
@@ -263,8 +264,10 @@ function ItemsTab() {
   const [loading, setLoading] = useState(true);
   const [filterCat, setFilterCat] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const [showArchived, setShowArchived] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [categoryId, setCategoryId] = useState("");
   const [name, setName] = useState("");
   const [cost, setCost] = useState("");
@@ -272,6 +275,7 @@ function ItemsTab() {
   const fileRef = useRef<HTMLInputElement>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     load();
@@ -288,20 +292,7 @@ function ItemsTab() {
     setLoading(false);
   }
 
-  async function saveItem() {
-    if (!categoryId || !name || !price) return;
-    setSaving(true);
-    let image_url: string | null = null;
-    if (pendingFile) {
-      image_url = await uploadCatalogImage(pendingFile);
-    }
-    await supabase.from("catalog_items").insert({
-      category_id: categoryId,
-      name,
-      image_url,
-      cost: cost ? parseFloat(cost) : null,
-      price: parseFloat(price),
-    });
+  function resetForm() {
     setName("");
     setCost("");
     setPrice("");
@@ -309,12 +300,64 @@ function ItemsTab() {
     setPendingFile(null);
     if (fileRef.current) fileRef.current.value = "";
     setShowForm(false);
+    setEditingId(null);
+  }
+
+  function startEdit(item: CatalogItem) {
+    setEditingId(item.id);
+    setCategoryId(item.category_id);
+    setName(item.name);
+    setCost(item.cost != null ? String(item.cost) : "");
+    setPrice(String(item.price));
+    setShowForm(true);
+  }
+
+  async function saveItem() {
+    if (!categoryId || !name || !price) return;
+    setSaving(true);
+    let image_url: string | undefined;
+    if (pendingFile) {
+      image_url = await uploadCatalogImage(pendingFile);
+    }
+
+    if (editingId) {
+      const updates: Record<string, unknown> = {
+        category_id: categoryId,
+        name,
+        cost: cost ? parseFloat(cost) : null,
+        price: parseFloat(price),
+      };
+      if (image_url) updates.image_url = image_url;
+      await supabase.from("catalog_items").update(updates).eq("id", editingId);
+    } else {
+      await supabase.from("catalog_items").insert({
+        category_id: categoryId,
+        name,
+        image_url: image_url || null,
+        cost: cost ? parseFloat(cost) : null,
+        price: parseFloat(price),
+      });
+    }
+
+    resetForm();
     setSaving(false);
     load();
   }
 
+  async function toggleActive(item: CatalogItem) {
+    await supabase.from("catalog_items").update({ active: !item.active }).eq("id", item.id);
+    load();
+  }
+
   async function deleteItem(id: string) {
-    await supabase.from("catalog_items").delete().eq("id", id);
+    setDeleteError(null);
+    const { error } = await supabase.from("catalog_items").delete().eq("id", id);
+    if (error) {
+      setDeleteError(
+        "No se pudo borrar. Si ya no la quieres ofrecer, prueba \"Archivar\" en vez de borrar — desaparece del catálogo sin perder el registro."
+      );
+      return;
+    }
     load();
   }
 
@@ -324,7 +367,9 @@ function ItemsTab() {
 
   const filtered = (
     filterCat === "all" ? items : items.filter((i) => i.category_id === filterCat)
-  ).filter((i) => i.name.toLowerCase().includes(search.toLowerCase()));
+  )
+    .filter((i) => i.name.toLowerCase().includes(search.toLowerCase()))
+    .filter((i) => (showArchived ? true : i.active));
 
   if (loading) return <p className="text-xs text-[var(--a-text-muted)]">Cargando...</p>;
 
@@ -336,6 +381,10 @@ function ItemsTab() {
         placeholder="Buscar pieza por nombre..."
         className="admin-input w-full mb-4"
       />
+
+      {deleteError && (
+        <p className="text-sm text-[var(--a-danger)] mb-4">{deleteError}</p>
+      )}
 
       <div className="flex items-center justify-between mb-4">
         <div className="flex flex-wrap gap-2">
@@ -362,9 +411,19 @@ function ItemsTab() {
               {c.name}
             </button>
           ))}
+          <button
+            onClick={() => setShowArchived((v) => !v)}
+            className={`px-3 py-1.5 rounded-full text-xs font-mono font-semibold ${
+              showArchived
+                ? "bg-[var(--a-text)] text-[var(--a-surface)]"
+                : "bg-[var(--a-surface-2)] text-[var(--a-text-muted)] border border-[var(--a-border)]"
+            }`}
+          >
+            {showArchived ? "Viendo archivadas" : "Ver archivadas"}
+          </button>
         </div>
         <button
-          onClick={() => setShowForm((v) => !v)}
+          onClick={() => (showForm ? resetForm() : setShowForm(true))}
           className="px-4 py-2 bg-[var(--a-accent)] text-white rounded text-xs font-mono font-semibold whitespace-nowrap"
         >
           {showForm ? "Cancelar" : "+ Nueva pieza"}
@@ -373,6 +432,9 @@ function ItemsTab() {
 
       {showForm && (
         <div className="admin-card p-5 mb-6">
+          {editingId && (
+            <p className="admin-label mb-2">Editando pieza existente</p>
+          )}
           <select
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
@@ -429,19 +491,27 @@ function ItemsTab() {
             onChange={(e) => setPendingFile(e.target.files?.[0] || null)}
             className="w-full mb-3 text-xs font-mono text-[var(--a-text-muted)]"
           />
+          {editingId && (
+            <p className="text-xs text-[var(--a-text-muted)] mb-3">
+              Deja el archivo vacío para conservar la foto actual.
+            </p>
+          )}
           <button
             onClick={saveItem}
             disabled={saving || !categoryId || !name || !price}
             className="w-full px-4 py-2.5 bg-[var(--a-accent)] text-white rounded text-sm font-semibold disabled:opacity-60"
           >
-            {saving ? "Guardando..." : "Guardar pieza"}
+            {saving ? "Guardando..." : editingId ? "Guardar cambios" : "Guardar pieza"}
           </button>
         </div>
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {filtered.map((item) => (
-          <div key={item.id} className="admin-card overflow-hidden">
+          <div
+            key={item.id}
+            className={`admin-card overflow-hidden ${!item.active ? "opacity-50" : ""}`}
+          >
             {item.image_url ? (
               <img src={item.image_url} alt={item.name} className="w-full h-28 object-cover" />
             ) : (
@@ -450,27 +520,37 @@ function ItemsTab() {
               </div>
             )}
             <div className="p-3">
-              <p className="font-semibold text-sm text-[var(--a-text)]">{item.name}</p>
+              <p className="font-semibold text-sm text-[var(--a-text)]">
+                {item.name}
+                {!item.active && (
+                  <span className="admin-badge ml-2" style={{ fontSize: "9px" }}>
+                    Archivada
+                  </span>
+                )}
+              </p>
               <p className="font-mono text-xs text-[var(--a-text-muted)] mt-1">
                 {categoryLabel(item.category_id)}
               </p>
-              <div className="flex items-center justify-between mt-2">
-                <p className="font-mono text-sm text-[var(--a-accent)] font-semibold">
-                  ${item.price.toLocaleString()}
-                </p>
-                <button
-                  onClick={() => deleteItem(item.id)}
-                  className="text-[var(--a-text-muted)] hover:text-[var(--a-accent)] text-xs"
-                >
-                  ✕
-                </button>
-              </div>
+              <p className="font-mono text-sm text-[var(--a-accent)] font-semibold mt-2">
+                ${item.price.toLocaleString()}
+              </p>
               {item.cost != null && (
                 <p className="font-mono text-[10px] text-[var(--a-text-muted)] mt-1">
                   Costo ${item.cost.toLocaleString()} · Margen $
                   {(item.price - item.cost).toLocaleString()}
                 </p>
               )}
+              <div className="flex items-center gap-2 mt-3">
+                <button onClick={() => startEdit(item)} className="admin-btn-ghost flex-1">
+                  Editar
+                </button>
+                <button onClick={() => toggleActive(item)} className="admin-btn-ghost flex-1">
+                  {item.active ? "Archivar" : "Reactivar"}
+                </button>
+                <button onClick={() => deleteItem(item.id)} className="admin-btn-ghost danger">
+                  ✕
+                </button>
+              </div>
             </div>
           </div>
         ))}

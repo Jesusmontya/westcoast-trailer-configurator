@@ -666,7 +666,10 @@ function QuoteBuilder({
     const [s, c, ci, settings, p, pi] = await Promise.all([
       supabase.from("trailer_sizes").select("*").order("sort_order"),
       supabase.from("catalog_categories").select("*").order("sort_order"),
-      supabase.from("catalog_items").select("id,category_id,name,image_url,price,cost"),
+      supabase
+        .from("catalog_items")
+        .select("id,category_id,name,image_url,price,cost")
+        .eq("active", true),
       supabase.from("business_settings").select("*").eq("id", 1).single(),
       supabase.from("catalog_presets").select("*").order("created_at", { ascending: false }),
       supabase.from("catalog_preset_items").select("*"),
