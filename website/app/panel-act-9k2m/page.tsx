@@ -14,6 +14,7 @@ type Client = {
   timeline: string | null;
   status: "activo" | "perdido";
   deleted_at: string | null;
+  utm_source: string | null;
   created_at: string;
 };
 
@@ -429,8 +430,10 @@ export default function ClientsList() {
                 <div>
                   <p className="font-semibold text-[var(--a-text)]">{client.name}</p>
                   <p className="font-mono text-sm text-[var(--a-text-muted)]">{client.phone}</p>
-                  {(client.interest || client.heard_from?.startsWith("sitio_web")) && (
-                    <div className="flex items-center gap-2 mt-1.5">
+                  {(client.interest ||
+                    client.heard_from?.startsWith("sitio_web") ||
+                    client.utm_source) && (
+                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                       {client.interest && (
                         <span className="admin-badge">{client.interest}</span>
                       )}
@@ -443,6 +446,9 @@ export default function ClientsList() {
                         <span className="font-mono text-[10px] text-[var(--a-accent)] uppercase">
                           Galería 3D
                         </span>
+                      )}
+                      {client.utm_source && (
+                        <span className="admin-badge accent">📣 {client.utm_source}</span>
                       )}
                     </div>
                   )}

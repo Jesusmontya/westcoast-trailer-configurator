@@ -33,6 +33,8 @@ type Client = {
   timeline: string | null;
   status: "activo" | "perdido";
   deleted_at: string | null;
+  utm_source: string | null;
+  utm_campaign: string | null;
   created_at: string;
 };
 type Activity = { id: string; client_id: string; note: string; created_at: string };
@@ -278,17 +280,24 @@ export default function ClientDetailPage() {
           </div>
         )}
 
-        {!isEditing && (client.interest || client.heard_from || client.timeline) && (
-          <div className="flex flex-wrap gap-2 mt-3">
-            {client.interest && <span className="admin-badge">{client.interest}</span>}
-            {client.heard_from && (
-              <span className="admin-badge">{HEARD_FROM_LABELS[client.heard_from] || client.heard_from}</span>
-            )}
-            {client.timeline && (
-              <span className="admin-badge">{TIMELINE_LABELS[client.timeline] || client.timeline}</span>
-            )}
-          </div>
-        )}
+        {!isEditing &&
+          (client.interest || client.heard_from || client.timeline || client.utm_source) && (
+            <div className="flex flex-wrap gap-2 mt-3">
+              {client.interest && <span className="admin-badge">{client.interest}</span>}
+              {client.heard_from && (
+                <span className="admin-badge">{HEARD_FROM_LABELS[client.heard_from] || client.heard_from}</span>
+              )}
+              {client.timeline && (
+                <span className="admin-badge">{TIMELINE_LABELS[client.timeline] || client.timeline}</span>
+              )}
+              {client.utm_source && (
+                <span className="admin-badge accent">
+                  📣 {client.utm_source}
+                  {client.utm_campaign ? ` — ${client.utm_campaign}` : ""}
+                </span>
+              )}
+            </div>
+          )}
       </div>
 
       <ActivitySection client={client} />
