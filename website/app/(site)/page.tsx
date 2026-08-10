@@ -178,34 +178,48 @@ function HomeContent() {
 
   return (
     <main className="flex flex-col">
-      {/* HERO — dos columnas: texto + foto inclinada tipo corcho */}
-      <section className="relative w-full blueprint-bg overflow-hidden" id="home">
-        <div className="max-w-6xl mx-auto w-full px-6 sm:px-10 py-20 lg:py-28 grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-          <div>
-            <span className="tag-pill mb-5">{t.hero.eyebrow}</span>
-            <h1 className="font-display text-5xl sm:text-6xl font-semibold tracking-tight leading-[0.98] text-[var(--text)]">
+      {/* HERO — fondo de video (agrega tu archivo cuando lo tengas, ver nota abajo) */}
+      <section className="relative w-full min-h-[85vh] flex items-center overflow-hidden" id="home">
+        {/* Fondo oscuro de respaldo — se ve mientras no haya video, y detrás del
+            overlay una vez que lo agregues */}
+        <div className="absolute inset-0 bg-[#14171a]" />
+
+        {/*
+          Cuando tengas el video listo, descomenta este bloque y borra el div de
+          arriba (el fondo oscuro de respaldo). Coloca el archivo en
+          website/public/videos/hero-background.mp4
+
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            className="absolute inset-0 w-full h-full object-cover"
+          >
+            <source src="/videos/hero-background.mp4" type="video/mp4" />
+          </video>
+        */}
+
+        {/* Overlay oscuro para que el texto blanco siempre contraste bien,
+            tenga o no video detrás */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/30" />
+
+        <div className="relative z-10 max-w-6xl mx-auto w-full px-6 sm:px-10">
+          <div className="max-w-xl">
+            <span className="inline-block font-mono text-[10px] uppercase tracking-wide text-white/70 border border-white/25 rounded px-3 py-1 mb-5">
+              {t.hero.eyebrow}
+            </span>
+            <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-semibold tracking-tight leading-[0.98] text-white">
               {t.hero.headline}
             </h1>
-            <p className="mt-6 max-w-md text-lg text-[var(--text-muted)]">{t.hero.paragraph}</p>
-            <p className="mt-3 font-mono text-sm text-[var(--accent-2)]">{t.hero.trustLine}</p>
+            <p className="mt-6 max-w-md text-lg text-white/80">{t.hero.paragraph}</p>
+            <p className="mt-3 font-mono text-sm text-white/60">{t.hero.trustLine}</p>
             <a
               href={configuratorUrl}
-              className="mt-9 inline-block w-fit px-7 py-3.5 bg-[var(--accent-2)] text-white font-semibold rounded hover:bg-[var(--accent)] transition-colors"
+              className="mt-9 inline-block w-fit px-7 py-3.5 bg-[var(--accent)] text-white font-semibold rounded hover:bg-[var(--accent-glow)] transition-colors"
             >
               {t.hero.cta} →
             </a>
-          </div>
-
-          <div className="relative">
-            <div className="relative rotate-2 hover:rotate-0 transition-transform duration-300">
-              <ImagePlaceholder
-                label="[ Foto: trailer terminado ]"
-                className="w-full h-80 sm:h-96 rounded-lg border border-[var(--line)] shadow-2xl"
-              />
-              <span className="corner-ticket absolute -bottom-5 -left-5">
-                {t.hero.trustLine}
-              </span>
-            </div>
           </div>
         </div>
       </section>
