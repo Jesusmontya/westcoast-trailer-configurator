@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import { useLanguage } from "../context/LanguageContext";
 import { submitLead } from "../../lib/leads";
 
@@ -160,9 +161,20 @@ function ContactForm() {
   );
 }
 
-export default function Home() {
+function HomeContent() {
   const { t } = useLanguage();
   const [activeWork, setActiveWork] = useState<(typeof clientWork)[number] | null>(null);
+  const searchParams = useSearchParams();
+
+  const configuratorUrl = (() => {
+    const utmSource = searchParams.get("utm_source");
+    const utmCampaign = searchParams.get("utm_campaign");
+    const params = new URLSearchParams();
+    if (utmSource) params.set("utm_source", utmSource);
+    if (utmCampaign) params.set("utm_campaign", utmCampaign);
+    const qs = params.toString();
+    return qs ? `${CONFIGURATOR_URL}?${qs}` : CONFIGURATOR_URL;
+  })();
 
   return (
     <main className="flex flex-col">
@@ -177,7 +189,7 @@ export default function Home() {
             <p className="mt-6 max-w-md text-lg text-[var(--text-muted)]">{t.hero.paragraph}</p>
             <p className="mt-3 font-mono text-sm text-[var(--accent-2)]">{t.hero.trustLine}</p>
             <a
-              href={CONFIGURATOR_URL}
+              href={configuratorUrl}
               className="mt-9 inline-block w-fit px-7 py-3.5 bg-[var(--accent-2)] text-white font-semibold rounded hover:bg-[var(--accent)] transition-colors"
             >
               {t.hero.cta} →
@@ -373,5 +385,13 @@ export default function Home() {
         </div>
       </section>
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={null}>
+      <HomeContent />
+    </Suspense>
   );
 }
