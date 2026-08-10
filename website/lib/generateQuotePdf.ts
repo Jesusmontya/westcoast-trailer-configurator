@@ -36,64 +36,70 @@ async function loadImageAsDataUrl(url: string): Promise<string | null> {
 export async function generateQuotePdf(input: QuotePdfInput): Promise<QuoteTotals> {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
+  const margin = 14;
 
-  let y = 0;
+  let y = 20;
 
-  // Foto de portada (del tamaño de trailer elegido), si hay
+  // Foto de portada, si hay — sin franja de color encima
   if (input.coverImageUrl) {
     const dataUrl = await loadImageAsDataUrl(input.coverImageUrl);
     if (dataUrl) {
       try {
-        doc.addImage(dataUrl, "JPEG", 0, 0, pageWidth, 70);
-        y = 70;
+        doc.addImage(dataUrl, "JPEG", 0, 0, pageWidth, 65);
+        y = 78;
       } catch {
-        // si la imagen no carga, seguimos sin portada
+        // sin portada si la imagen no carga
       }
     }
   }
 
-  // Franja de marca
-  doc.setFillColor(184, 86, 47);
-  doc.rect(0, y, pageWidth, 28, "F");
+  doc.setTextColor(0, 0, 0);
 
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(17);
+  // Encabezado: solo texto, sin fondo
+  doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
-  doc.text("ALL CUSTOM TRAILERS", 14, y + 13);
+  doc.text("ALL CUSTOM TRAILERS", margin, y);
 
-  doc.setFontSize(8.5);
+  doc.setFontSize(9);
   doc.setFont("helvetica", "normal");
-  doc.text("Custom Food Trailers — Nevada", 14, y + 20);
+  doc.setTextColor(90, 90, 90);
+  doc.text("Custom Trailers — Nevada", margin, y + 6);
 
-  doc.setFontSize(10.5);
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(11);
   doc.setFont("helvetica", "bold");
-  doc.text(`QUOTE #${input.quoteNumber}`, pageWidth - 14, y + 13, { align: "right" });
+  doc.text(`QUOTE #${input.quoteNumber}`, pageWidth - margin, y, { align: "right" });
   doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
-  doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 14, y + 20, {
+  doc.setFontSize(9);
+  doc.setTextColor(90, 90, 90);
+  doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - margin, y + 6, {
     align: "right",
   });
 
-  y += 42;
+  y += 14;
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.4);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 10;
 
-  doc.setTextColor(20, 20, 20);
-  doc.setFontSize(10);
+  doc.setTextColor(0, 0, 0);
+  doc.setFontSize(9.5);
   doc.setFont("helvetica", "bold");
-  doc.text("PREPARED FOR", 14, y);
+  doc.text("PREPARED FOR", margin, y);
   y += 6;
   doc.setFont("helvetica", "normal");
-  doc.text(`Name: ${input.clientName || "—"}`, 14, y);
+  doc.text(`Name: ${input.clientName || "—"}`, margin, y);
   y += 5;
-  doc.text(`Phone: ${input.clientPhone || "—"}`, 14, y);
+  doc.text(`Phone: ${input.clientPhone || "—"}`, margin, y);
   y += 10;
 
   doc.setFont("helvetica", "bold");
-  doc.text("TRAILER", 14, y);
+  doc.text("TRAILER", margin, y);
   y += 6;
   doc.setFont("helvetica", "normal");
-  doc.text(`Model: ${input.trailerModel || "—"}`, 14, y);
+  doc.text(`Model: ${input.trailerModel || "—"}`, margin, y);
   y += 5;
-  doc.text(`Size: ${input.trailerSize || "—"}`, 14, y);
+  doc.text(`Size: ${input.trailerSize || "—"}`, margin, y);
   y += 10;
 
   const rows = input.items
@@ -104,10 +110,21 @@ export async function generateQuotePdf(input: QuotePdfInput): Promise<QuoteTotal
     startY: y,
     head: [["Item", "Price"]],
     body: rows,
-    theme: "plain",
-    headStyles: { fillColor: [43, 36, 29], textColor: 255, fontStyle: "bold" },
+    theme: "grid",
+    headStyles: {
+      fillColor: [255, 255, 255],
+      textColor: [0, 0, 0],
+      fontStyle: "bold",
+      lineColor: [0, 0, 0],
+      lineWidth: 0.3,
+    },
+    bodyStyles: {
+      textColor: [0, 0, 0],
+      lineColor: [180, 180, 180],
+      lineWidth: 0.2,
+    },
     styles: { fontSize: 10, cellPadding: 4 },
-    margin: { left: 14, right: 14 },
+    margin: { left: margin, right: margin },
   });
 
   // @ts-expect-error - lastAutoTable no está tipado en jsPDF por default
@@ -120,7 +137,8 @@ export async function generateQuotePdf(input: QuotePdfInput): Promise<QuoteTotal
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(10);
-  doc.text(`Subtotal: $${subtotal.toLocaleString()}`, pageWidth - 14, afterTableY, {
+  doc.setTextColor(90, 90, 90);
+  doc.text(`Subtotal: $${subtotal.toLocaleString()}`, pageWidth - margin, afterTableY, {
     align: "right",
   });
   afterTableY += 6;
@@ -128,19 +146,25 @@ export async function generateQuotePdf(input: QuotePdfInput): Promise<QuoteTotal
   if (taxRate > 0) {
     doc.text(
       `Tax (${taxRate}%): $${taxAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
-      pageWidth - 14,
+      pageWidth - margin,
       afterTableY,
       { align: "right" }
     );
     afterTableY += 6;
   }
 
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.3);
+  doc.line(pageWidth - 80, afterTableY, pageWidth - margin, afterTableY);
+  afterTableY += 7;
+
   doc.setFont("helvetica", "bold");
   doc.setFontSize(13);
+  doc.setTextColor(0, 0, 0);
   doc.text(
     `TOTAL: $${total.toLocaleString(undefined, { maximumFractionDigits: 2 })}`,
-    pageWidth - 14,
-    afterTableY + 2,
+    pageWidth - margin,
+    afterTableY,
     { align: "right" }
   );
 
@@ -149,25 +173,26 @@ export async function generateQuotePdf(input: QuotePdfInput): Promise<QuoteTotal
   if (input.monthlyEstimate) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    doc.setTextColor(184, 86, 47);
-    doc.text(`Financing available — as low as $${input.monthlyEstimate}/mo`, 14, footerY);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Financing available — as low as $${input.monthlyEstimate}/mo`, margin, footerY);
     footerY += 8;
   }
 
   if (input.notes) {
-    doc.setTextColor(80, 80, 80);
+    doc.setTextColor(90, 90, 90);
     doc.setFontSize(9);
-    const splitNotes = doc.splitTextToSize(input.notes, pageWidth - 28);
-    doc.text(splitNotes, 14, footerY);
+    const splitNotes = doc.splitTextToSize(input.notes, pageWidth - margin * 2);
+    doc.text(splitNotes, margin, footerY);
     footerY += splitNotes.length * 5 + 6;
   }
 
-  doc.setDrawColor(220, 220, 220);
-  doc.line(14, 285, pageWidth - 14, 285);
+  doc.setDrawColor(180, 180, 180);
+  doc.setLineWidth(0.2);
+  doc.line(margin, 285, pageWidth - margin, 285);
   doc.setFontSize(8);
-  doc.setTextColor(120, 120, 120);
-  doc.text("This quote is valid for 30 days.", 14, 291);
-  doc.text("allcustomtrailers.com", pageWidth - 14, 291, { align: "right" });
+  doc.setTextColor(130, 130, 130);
+  doc.text("This quote is valid for 30 days.", margin, 291);
+  doc.text("allcustomtrailers.com", pageWidth - margin, 291, { align: "right" });
 
   doc.save(`quote-${input.quoteNumber}-${input.clientName || "client"}.pdf`);
 
