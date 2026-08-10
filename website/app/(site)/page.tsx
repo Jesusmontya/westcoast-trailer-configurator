@@ -178,30 +178,22 @@ function HomeContent() {
 
   return (
     <main className="flex flex-col">
-      {/* HERO — fondo de video (agrega tu archivo cuando lo tengas, ver nota abajo) */}
+      {/* HERO — fondo de video */}
       <section className="relative w-full min-h-[85vh] flex items-center overflow-hidden" id="home">
-        {/* Fondo oscuro de respaldo — se ve mientras no haya video, y detrás del
-            overlay una vez que lo agregues */}
+        {/* Fondo oscuro de respaldo, visible un instante mientras el video carga */}
         <div className="absolute inset-0 bg-[#14171a]" />
 
-        {/*
-          Cuando tengas el video listo, descomenta este bloque y borra el div de
-          arriba (el fondo oscuro de respaldo). Coloca el archivo en
-          website/public/videos/hero-background.mp4
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        >
+          <source src="/videos/hero-background.mp4" type="video/mp4" />
+        </video>
 
-          <video
-            autoPlay
-            muted
-            loop
-            playsInline
-            className="absolute inset-0 w-full h-full object-cover"
-          >
-            <source src="/videos/hero-background.mp4" type="video/mp4" />
-          </video>
-        */}
-
-        {/* Overlay oscuro para que el texto blanco siempre contraste bien,
-            tenga o no video detrás */}
+        {/* Overlay oscuro para que el texto blanco siempre contraste bien */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/50 to-black/30" />
 
         <div className="relative z-10 max-w-6xl mx-auto w-full px-6 sm:px-10">
