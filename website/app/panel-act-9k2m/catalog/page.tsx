@@ -352,6 +352,277 @@ function CategoriesTab() {
 // ============================================
 // PIEZAS
 // ============================================
+// ============================================
+// IMPORTAR PIEZAS EN LOTE (CSV pegado)
+// ============================================
+function BulkImportModal({
+  onClose,
+  onDone,
+}: {
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const [csvText, setCsvText] = useState("");
+  const [processing, setProcessing] = useState(false);
+  const [result, setResult] = useState<{
+    added: number;
+    newCategories: number;
+    errors: string[];
+  } | null>(null);
+
+  function downloadTemplate() {
+    const template =
+      "categoria,nombre,costo,precio\nCocina,Freidora doble industrial,450,850\nCocina,Plancha grande,300,600\nVentanas,Ventana de servicio,200,450\n";
+    const blob = new Blob([template], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "plantilla-catalogo.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function processImport() {
+    setProcessing(true);
+    const errors: string[] = [];
+    let added = 0;
+    let newCategories = 0;
+
+    const { data: existingCats } = await supabase.from("catalog_categories").select("*");
+    const categoryMap = new Map<string, string>(
+      (existingCats || []).map((c: Category) => [c.name.trim().toLowerCase(), c.id])
+    );
+
+    const lines = csvText
+      .trim()
+      .split("\n")
+      .map((l) => l.trim())
+      .filter(Boolean);
+
+    const startIndex =
+      lines[0]?.toLowerCase().includes("categoria") || lines[0]?.toLowerCase().includes("nombre")
+        ? 1
+        : 0;
+
+    for (let i = startIndex; i < lines.length; i++) {
+      const parts = lines[i].split(",").map((p) => p.trim());
+      const [categoryName, itemName, costStr, priceStr] = parts;
+
+      if (!categoryName || !itemName || !priceStr) {
+        errors.push(`Línea ${i + 1}: faltan datos, se saltó.`);
+        continue;
+      }
+
+      const catKey = categoryName.toLowerCase();
+      let categoryId = categoryMap.get(catKey);
+
+      if (!categoryId) {
+        const { data: newCat, error: catError } = await supabase
+          .from("catalog_categories")
+          .insert({ name: categoryName })
+          .select("id")
+          .single();
+        if (catError || !newCat) {
+          errors.push(`Línea ${i + 1}: no se pudo crear la categoría "${categoryName}".`);
+          continue;
+        }
+        categoryId = newCat.id as string;
+        categoryMap.set(catKey, newCat.id as string);
+        newCategories++;
+      }
+
+      const price = parseFloat(priceStr);
+      const cost = costStr ? parseFloat(costStr) : null;
+
+      if (isNaN(price)) {
+        errors.push(`Línea ${i + 1}: precio inválido, se saltó.`);
+        continue;
+      }
+
+      const { error: itemError } = await supabase.from("catalog_items").insert({
+        category_id: categoryId,
+        name: itemName,
+        cost,
+        price,
+        active: true,
+      });
+
+      if (itemError) {
+        errors.push(`Línea ${i + 1}: no se pudo guardar "${itemName}".`);
+        continue;
+      }
+
+      added++;
+    }
+
+    setResult({ added, newCategories, errors });
+    setProcessing(false);
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-6 py-10 overflow-y-auto">
+      <div className="admin-card bg-[var(--a-surface)] w-full max-w-lg p-6">
+        <h3 className="text-lg font-semibold text-[var(--a-text)] mb-2">
+          Importar piezas en lote
+        </h3>
+
+        {!result ? (
+          <>
+            <p className="text-sm text-[var(--a-text-muted)] mb-4">
+              Pega una lista con formato: <strong>categoría, nombre, costo, precio</strong> — una
+              pieza por línea. El costo puede quedar vacío. Las categorías que no existan se
+              crean solas.
+            </p>
+
+            <button onClick={downloadTemplate} className="admin-btn-ghost mb-3" type="button">
+              Descargar plantilla de ejemplo (.csv)
+            </button>
+
+            <textarea
+              value={csvText}
+              onChange={(e) => setCsvText(e.target.value)}
+              placeholder={
+                "Cocina,Freidora doble industrial,450,850\nCocina,Plancha grande,300,600\nVentanas,Ventana de servicio,200,450"
+              }
+              className="w-full min-h-[220px] px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)] font-mono mb-4"
+            />
+
+            <div className="flex gap-2">
+              <button onClick={onClose} className="flex-1 admin-btn-secondary">
+                Cancelar
+              </button>
+              <button
+                onClick={processImport}
+                disabled={!csvText.trim() || processing}
+                className="flex-1 admin-btn-primary"
+              >
+                {processing ? "Importando..." : "Importar"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="mb-4">
+              <p className="text-sm text-[var(--a-text)] mb-1">
+                ✓ {result.added} piezas agregadas
+              </p>
+              {result.newCategories > 0 && (
+                <p className="text-sm text-[var(--a-text)] mb-1">
+                  ✓ {result.newCategories} categorías nuevas creadas
+                </p>
+              )}
+              {result.errors.length > 0 && (
+                <div className="mt-3 p-3 bg-[var(--a-danger-bg)] rounded">
+                  <p className="text-sm text-[var(--a-danger)] font-semibold mb-1">
+                    {result.errors.length} línea(s) con problemas:
+                  </p>
+                  {result.errors.map((e, i) => (
+                    <p key={i} className="text-xs text-[var(--a-danger)]">
+                      {e}
+                    </p>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button
+              onClick={() => {
+                onDone();
+                onClose();
+              }}
+              className="w-full admin-btn-primary"
+            >
+              Listo
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// COMPLETAR ANCHOS FALTANTES
+// ============================================
+function WidthCompletionModal({
+  items,
+  onClose,
+  onDone,
+}: {
+  items: CatalogItem[];
+  onClose: () => void;
+  onDone: () => void;
+}) {
+  const missing = items.filter((i) => i.width_in == null);
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+
+  async function saveOne(id: string) {
+    const val = values[id];
+    if (!val) return;
+    await supabase.from("catalog_items").update({ width_in: parseFloat(val) }).eq("id", id);
+    setSavedIds((prev) => new Set(prev).add(id));
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-6 py-10 overflow-y-auto">
+      <div className="admin-card bg-[var(--a-surface)] w-full max-w-lg p-6">
+        <h3 className="text-lg font-semibold text-[var(--a-text)] mb-1">
+          Completar anchos ({missing.length})
+        </h3>
+        <p className="text-sm text-[var(--a-text-muted)] mb-4">
+          Ponle ancho en pulgadas a cada pieza — se guarda sola en cuanto sales del
+          campo. Puedes cerrar en cualquier momento y seguir después.
+        </p>
+
+        {missing.length === 0 ? (
+          <p className="text-sm text-[var(--a-text-muted)] mb-4">
+            Ya no queda ninguna pieza sin ancho.
+          </p>
+        ) : (
+          <div className="flex flex-col gap-2 mb-4 max-h-96 overflow-y-auto">
+            {missing.map((item) => (
+              <div
+                key={item.id}
+                className="flex items-center gap-3 bg-[var(--a-surface-2)] rounded px-3 py-2"
+              >
+                {item.image_url ? (
+                  <img src={item.image_url} alt="" className="w-9 h-9 rounded object-cover" />
+                ) : (
+                  <div className="w-9 h-9 rounded bg-[var(--a-border)]" />
+                )}
+                <p className="flex-1 text-sm text-[var(--a-text)]">{item.name}</p>
+                <input
+                  type="number"
+                  placeholder="in"
+                  value={values[item.id] || ""}
+                  onChange={(e) =>
+                    setValues((prev) => ({ ...prev, [item.id]: e.target.value }))
+                  }
+                  onBlur={() => saveOne(item.id)}
+                  className="w-20 px-2 py-1.5 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
+                />
+                {savedIds.has(item.id) && (
+                  <span className="text-[var(--a-success)] text-xs">✓</span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button
+          onClick={() => {
+            onDone();
+            onClose();
+          }}
+          className="w-full admin-btn-primary"
+        >
+          Listo
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function ItemsTab() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<CatalogItem[]>([]);
@@ -359,6 +630,8 @@ function ItemsTab() {
   const [filterCat, setFilterCat] = useState<string>("all");
   const [search, setSearch] = useState("");
   const [showArchived, setShowArchived] = useState(false);
+  const [showImport, setShowImport] = useState(false);
+  const [showWidthCompletion, setShowWidthCompletion] = useState(false);
 
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -542,13 +815,36 @@ function ItemsTab() {
             {showArchived ? "Viendo archivadas" : "Ver archivadas"}
           </button>
         </div>
-        <button
-          onClick={() => (showForm ? resetForm() : setShowForm(true))}
-          className="px-4 py-2 bg-[var(--a-accent)] text-white rounded text-xs font-mono font-semibold whitespace-nowrap"
-        >
-          {showForm ? "Cancelar" : "+ Nueva pieza"}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowWidthCompletion(true)}
+            className="admin-btn-secondary whitespace-nowrap"
+          >
+            Completar anchos
+          </button>
+          <button
+            onClick={() => setShowImport(true)}
+            className="admin-btn-secondary whitespace-nowrap"
+          >
+            Importar CSV
+          </button>
+          <button
+            onClick={() => (showForm ? resetForm() : setShowForm(true))}
+            className="px-4 py-2 bg-[var(--a-accent)] text-white rounded text-xs font-mono font-semibold whitespace-nowrap"
+          >
+            {showForm ? "Cancelar" : "+ Nueva pieza"}
+          </button>
+        </div>
       </div>
+
+      {showImport && <BulkImportModal onClose={() => setShowImport(false)} onDone={load} />}
+      {showWidthCompletion && (
+        <WidthCompletionModal
+          items={items}
+          onClose={() => setShowWidthCompletion(false)}
+          onDone={load}
+        />
+      )}
 
       {showForm && (
         <div className="admin-card p-5 mb-6">
