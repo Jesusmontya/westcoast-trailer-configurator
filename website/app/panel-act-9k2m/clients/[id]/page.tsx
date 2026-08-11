@@ -52,6 +52,7 @@ type Quote = {
   margin: number | null;
   pdf_url: string | null;
   emailed_at: string | null;
+  door_wall: string | null;
   status: "enviada" | "aceptada" | "rechazada";
   monthly_estimate: number | null;
   notes: string | null;
@@ -63,6 +64,7 @@ type TrailerSize = {
   image_url: string | null;
   price: number;
   cost: number | null;
+  length_ft: number | null;
 };
 type Category = { id: string; name: string };
 type CatalogItem = {
@@ -72,6 +74,7 @@ type CatalogItem = {
   image_url: string | null;
   price: number;
   cost: number | null;
+  width_in: number | null;
 };
 type Preset = { id: string; name: string };
 type PresetItem = { id: string; preset_id: string; catalog_item_id: string };
@@ -849,6 +852,8 @@ function QuoteBuilder({
   const [manualPrice, setManualPrice] = useState("");
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [currentWall, setCurrentWall] = useState<string>("trasera");
+  const [doorWall, setDoorWall] = useState<string>(source?.door_wall || "trasera");
 
   useEffect(() => {
     loadCatalog();
@@ -860,7 +865,7 @@ function QuoteBuilder({
       supabase.from("catalog_categories").select("*").order("sort_order"),
       supabase
         .from("catalog_items")
-        .select("id,category_id,name,image_url,price,cost")
+        .select("id,category_id,name,image_url,price,cost,width_in")
         .eq("active", true),
       supabase.from("business_settings").select("*").eq("id", 1).single(),
       supabase.from("catalog_presets").select("*").order("created_at", { ascending: false }),
@@ -872,36 +877,54 @@ function QuoteBuilder({
     setPresets((p.data as Preset[]) || []);
     setPresetItems((pi.data as PresetItem[]) || []);
     setTaxRate(source?.tax_rate ?? settings.data?.tax_rate ?? 0);
+    if (!source?.door_wall && settings.data?.default_door_wall) {
+      setDoorWall(settings.data.default_door_wall);
+    }
   }
 
   function addCatalogItem(item: CatalogItem) {
     setItems((prev) => [
       ...prev,
-      { label: item.name, price: item.price, image_url: item.image_url, cost: item.cost || 0 },
-    ]);
-  }
-
-  function addPreset(preset: Preset) {
-    const itemIds = presetItems
-      .filter((pi) => pi.preset_id === preset.id)
-      .map((pi) => pi.catalog_item_id);
-    const itemsToAdd = catalogItems.filter((ci) => itemIds.includes(ci.id));
-    setItems((prev) => [
-      ...prev,
-      ...itemsToAdd.map((item) => ({
+      {
         label: item.name,
         price: item.price,
         image_url: item.image_url,
         cost: item.cost || 0,
-      })),
+        wall: currentWall,
+      },
     ]);
+  }
+
+  function addPreset(preset: Preset) {
+    const presetLinks = presetItems.filter((pi) => pi.preset_id === preset.id);
+    const itemsToAdd = presetLinks
+      .map((link) => {
+        const item = catalogItems.find((ci) => ci.id === link.catalog_item_id);
+        if (!item) return null;
+        return {
+          label: item.name,
+          price: item.price,
+          image_url: item.image_url,
+          cost: item.cost || 0,
+          wall: (link as PresetItem & { wall?: string }).wall || currentWall,
+        };
+      })
+      .filter((x): x is QuoteLineItem => x !== null);
+    setItems((prev) => [...prev, ...itemsToAdd]);
   }
 
   function addManualItem() {
     if (!manualLabel || !manualPrice) return;
-    setItems((prev) => [...prev, { label: manualLabel, price: parseFloat(manualPrice) || 0, cost: 0 }]);
+    setItems((prev) => [
+      ...prev,
+      { label: manualLabel, price: parseFloat(manualPrice) || 0, cost: 0, wall: currentWall },
+    ]);
     setManualLabel("");
     setManualPrice("");
+  }
+
+  function updateItemWall(index: number, wall: string) {
+    setItems((prev) => prev.map((item, i) => (i === index ? { ...item, wall } : item)));
   }
 
   function removeItem(i: number) {
@@ -972,6 +995,7 @@ function QuoteBuilder({
       total: totals.total,
       margin,
       pdf_url: uploadError ? null : pdfPath,
+      door_wall: doorWall,
       monthly_estimate: monthlyEstimate ? parseFloat(monthlyEstimate) : null,
       notes: notes || null,
     };
@@ -1017,6 +1041,43 @@ function QuoteBuilder({
             {s.label}
           </button>
         ))}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mb-5">
+        <div>
+          <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)] mb-1.5">
+            Puerta en
+          </label>
+          <select
+            value={doorWall}
+            onChange={(e) => setDoorWall(e.target.value)}
+            className="w-full px-3 py-2 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
+          >
+            <option value="trasera">Pared trasera</option>
+            <option value="frontal">Pared frontal (lengüeta)</option>
+            <option value="izquierda">Pared izquierda</option>
+            <option value="derecha">Pared derecha</option>
+          </select>
+        </div>
+        <div>
+          <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)] mb-1.5">
+            Agregar piezas a la pared
+          </label>
+          <select
+            value={currentWall}
+            onChange={(e) => setCurrentWall(e.target.value)}
+            className="w-full px-3 py-2 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
+          >
+            <option value="trasera">Pared trasera</option>
+            <option value="frontal">Pared frontal</option>
+            <option value="izquierda">Pared izquierda</option>
+            <option value="derecha">Pared derecha</option>
+            <option value="isla">Isla / centro</option>
+          </select>
+          <p className="text-[10px] text-[var(--a-text-muted)] mt-1">
+            Lo que agregues de aquí en adelante va a esta pared.
+          </p>
+        </div>
       </div>
 
       {presets.length > 0 && (
@@ -1151,6 +1212,17 @@ function QuoteBuilder({
                 <div className="w-9 h-9 rounded bg-[var(--a-surface-2)] flex-shrink-0" />
               )}
               <p className="flex-1 min-w-0 text-sm text-[var(--a-text)] truncate">{item.label}</p>
+              <select
+                value={item.wall || "trasera"}
+                onChange={(e) => updateItemWall(i, e.target.value)}
+                className="text-[10px] font-mono bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded px-1.5 py-1 text-[var(--a-text-muted)] flex-shrink-0"
+              >
+                <option value="trasera">Trasera</option>
+                <option value="frontal">Frontal</option>
+                <option value="izquierda">Izquierda</option>
+                <option value="derecha">Derecha</option>
+                <option value="isla">Isla</option>
+              </select>
               <p className="font-mono text-sm text-[var(--a-accent)] flex-shrink-0">
                 ${item.price.toLocaleString()}
               </p>
@@ -1231,6 +1303,52 @@ function QuoteBuilder({
                   </div>
                 ))}
               </div>
+
+              {items.length > 0 && (
+                <div className="mb-4 pt-3 border-t border-[var(--a-border)]">
+                  <p className="admin-label mb-2">Plano del trailer</p>
+                  {(["trasera", "frontal", "izquierda", "derecha", "isla"] as const)
+                    .map((wall) => ({
+                      wall,
+                      wallItems: items.filter((it) => (it.wall || "trasera") === wall),
+                    }))
+                    .filter((g) => g.wallItems.length > 0)
+                    .map((g) => (
+                      <div key={g.wall} className="mb-2">
+                        <p className="font-mono text-[10px] uppercase text-[var(--a-text-muted)] mb-1 flex items-center gap-1">
+                          {g.wall === "trasera"
+                            ? "Pared trasera"
+                            : g.wall === "frontal"
+                            ? "Pared frontal"
+                            : g.wall === "izquierda"
+                            ? "Pared izquierda"
+                            : g.wall === "derecha"
+                            ? "Pared derecha"
+                            : "Isla / centro"}
+                          {doorWall === g.wall && " · 🚪 puerta"}
+                        </p>
+                        <div className="flex gap-1.5 flex-wrap">
+                          {g.wallItems.map((it, idx) => (
+                            <div
+                              key={idx}
+                              className="bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded px-2 py-1.5 text-center"
+                              style={{ minWidth: "60px" }}
+                            >
+                              <p className="text-[10px] text-[var(--a-text)] leading-tight">
+                                {it.label}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  {selectedSize?.length_ft && (
+                    <p className="font-mono text-[10px] text-[var(--a-text-muted)] mt-1">
+                      Largo total: {selectedSize.length_ft} ft
+                    </p>
+                  )}
+                </div>
+              )}
 
               <div className="flex flex-col items-end gap-1 mb-5 font-mono text-sm border-t border-[var(--a-border)] pt-3">
                 <p className="text-[var(--a-text-muted)]">Subtotal: ${subtotal.toLocaleString()}</p>

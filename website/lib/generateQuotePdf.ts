@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-export type QuoteLineItem = { label: string; price: number; image_url?: string | null; cost?: number };
+export type QuoteLineItem = { label: string; price: number; image_url?: string | null; cost?: number; wall?: string };
 
 export type QuotePdfInput = {
   quoteNumber: string;
@@ -14,7 +14,7 @@ export type QuotePdfInput = {
   taxRate?: number;
   monthlyEstimate?: number | null;
   notes?: string | null;
-  download?: boolean; // default true — pon false si solo quieres el archivo, sin descargarlo
+  download?: boolean;
 };
 
 export type QuoteTotals = { subtotal: number; taxAmount: number; total: number; blob: Blob };
@@ -41,7 +41,6 @@ export async function generateQuotePdf(input: QuotePdfInput): Promise<QuoteTotal
 
   let y = 20;
 
-  // Foto de portada, si hay — sin franja de color encima
   if (input.coverImageUrl) {
     const dataUrl = await loadImageAsDataUrl(input.coverImageUrl);
     if (dataUrl) {
@@ -56,7 +55,6 @@ export async function generateQuotePdf(input: QuotePdfInput): Promise<QuoteTotal
 
   doc.setTextColor(0, 0, 0);
 
-  // Encabezado: solo texto, sin fondo
   doc.setFontSize(16);
   doc.setFont("helvetica", "bold");
   doc.text("ALL CUSTOM TRAILERS", margin, y);
