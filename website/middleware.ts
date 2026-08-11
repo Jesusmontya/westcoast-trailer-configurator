@@ -9,8 +9,9 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const isAdminSubdomain = hostname.startsWith("admin.");
+  const isApiRoute = pathname.startsWith("/api");
 
-  if (isAdminSubdomain && !pathname.startsWith(ADMIN_ROUTE)) {
+  if (isAdminSubdomain && !pathname.startsWith(ADMIN_ROUTE) && !isApiRoute) {
     const url = request.nextUrl.clone();
     url.pathname = ADMIN_ROUTE + pathname;
     return NextResponse.rewrite(url);
