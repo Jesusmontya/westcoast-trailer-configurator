@@ -898,7 +898,7 @@ function QuoteBuilder({
   function addPreset(preset: Preset) {
     const presetLinks = presetItems.filter((pi) => pi.preset_id === preset.id);
     const itemsToAdd = presetLinks
-      .map((link) => {
+      .map((link): QuoteLineItem | null => {
         const item = catalogItems.find((ci) => ci.id === link.catalog_item_id);
         if (!item) return null;
         return {
