@@ -14,6 +14,7 @@ export type QuotePdfInput = {
   taxRate?: number;
   monthlyEstimate?: number | null;
   notes?: string | null;
+  download?: boolean; // default true — pon false si solo quieres el archivo, sin descargarlo
 };
 
 export type QuoteTotals = { subtotal: number; taxAmount: number; total: number; blob: Blob };
@@ -194,7 +195,9 @@ export async function generateQuotePdf(input: QuotePdfInput): Promise<QuoteTotal
   doc.text("This quote is valid for 30 days.", margin, 291);
   doc.text("allcustomtrailers.com", pageWidth - margin, 291, { align: "right" });
 
-  doc.save(`quote-${input.quoteNumber}-${input.clientName || "client"}.pdf`);
+  if (input.download !== false) {
+    doc.save(`quote-${input.quoteNumber}-${input.clientName || "client"}.pdf`);
+  }
 
   const blob = doc.output("blob");
 

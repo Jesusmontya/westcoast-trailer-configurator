@@ -455,6 +455,8 @@ function QuoteSection({ client }: { client: Client }) {
   const [loading, setLoading] = useState(true);
   const [showBuilder, setShowBuilder] = useState(false);
   const [duplicateFrom, setDuplicateFrom] = useState<Quote | null>(null);
+  const [sendingId, setSendingId] = useState<string | null>(null);
+  const [sendResult, setSendResult] = useState<{ id: string; ok: boolean } | null>(null);
 
   useEffect(() => {
     load();
@@ -497,6 +499,53 @@ function QuoteSection({ client }: { client: Client }) {
       monthlyEstimate: q.monthly_estimate,
       notes: q.notes,
     });
+  }
+
+  async function sendByEmail(q: Quote) {
+    if (!client.email) return;
+    setSendingId(q.id);
+    setSendResult(null);
+
+    try {
+      // Genera el PDF en memoria, sin descargarlo, solo para adjuntarlo
+      const totals = await generateQuotePdf({
+        quoteNumber: q.quote_number,
+        clientName: client.name,
+        clientPhone: client.phone,
+        trailerModel: q.trailer_model || "",
+        trailerSize: q.trailer_size || "",
+        coverImageUrl: q.cover_image_url,
+        items: q.items,
+        taxRate: q.tax_rate || 0,
+        monthlyEstimate: q.monthly_estimate,
+        notes: q.notes,
+        download: false,
+      });
+
+      const pdfBase64: string = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = reject;
+        reader.readAsDataURL(totals.blob);
+      });
+
+      const res = await fetch("/api/send-quote", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          toEmail: client.email,
+          clientName: client.name,
+          quoteNumber: q.quote_number,
+          pdfBase64,
+        }),
+      });
+
+      setSendResult({ id: q.id, ok: res.ok });
+    } catch {
+      setSendResult({ id: q.id, ok: false });
+    } finally {
+      setSendingId(null);
+    }
   }
 
   async function updateQuoteStatus(q: Quote, status: Quote["status"]) {
@@ -606,6 +655,25 @@ function QuoteSection({ client }: { client: Client }) {
               <button onClick={() => redownload(q)} className="admin-btn-ghost">
                 Descargar
               </button>
+              {client.email ? (
+                <button
+                  onClick={() => sendByEmail(q)}
+                  disabled={sendingId === q.id}
+                  className="admin-btn-ghost"
+                >
+                  {sendingId === q.id
+                    ? "Enviando..."
+                    : sendResult?.id === q.id
+                    ? sendResult.ok
+                      ? "✓ Enviado"
+                      : "Error, reintentar"
+                    : "Enviar por correo"}
+                </button>
+              ) : (
+                <span className="font-mono text-[10px] text-[var(--a-text-muted)]">
+                  Agrega email para enviar
+                </span>
+              )}
               {confirmDeleteId === q.id ? (
                 <div className="flex items-center gap-1.5">
                   {deleteErrorId === q.id && (
