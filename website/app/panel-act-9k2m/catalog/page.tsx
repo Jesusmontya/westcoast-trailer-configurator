@@ -12,6 +12,7 @@ type TrailerSize = {
   image_url: string | null;
   cost: number | null;
   price: number;
+  length_ft: number | null;
 };
 type Category = { id: string; name: string; sort_order: number };
 type CatalogItem = {
@@ -22,6 +23,7 @@ type CatalogItem = {
   cost: number | null;
   price: number;
   active: boolean;
+  width_in: number | null;
 };
 
 // ============================================
@@ -34,6 +36,7 @@ function SizesTab() {
   const [label, setLabel] = useState("");
   const [cost, setCost] = useState("");
   const [price, setPrice] = useState("");
+  const [lengthFt, setLengthFt] = useState("");
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -54,6 +57,7 @@ function SizesTab() {
     setLabel("");
     setCost("");
     setPrice("");
+    setLengthFt("");
     setPendingFile(null);
     if (fileRef.current) fileRef.current.value = "";
     setEditingId(null);
@@ -64,6 +68,7 @@ function SizesTab() {
     setLabel(s.label);
     setCost(s.cost != null ? String(s.cost) : "");
     setPrice(String(s.price));
+    setLengthFt(s.length_ft != null ? String(s.length_ft) : "");
   }
 
   async function saveSize() {
@@ -79,6 +84,7 @@ function SizesTab() {
         label,
         cost: cost ? parseFloat(cost) : null,
         price: parseFloat(price),
+        length_ft: lengthFt ? parseFloat(lengthFt) : null,
       };
       if (image_url) updates.image_url = image_url;
       await supabase.from("trailer_sizes").update(updates).eq("id", editingId);
@@ -88,6 +94,7 @@ function SizesTab() {
         image_url: image_url || null,
         cost: cost ? parseFloat(cost) : null,
         price: parseFloat(price),
+        length_ft: lengthFt ? parseFloat(lengthFt) : null,
         sort_order: sizes.length,
       });
     }
@@ -141,6 +148,13 @@ function SizesTab() {
             placeholder="Precio al cliente"
             value={price}
             onChange={(e) => setPrice(e.target.value)}
+            className="w-36 px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
+          />
+          <input
+            type="number"
+            placeholder="Largo real (ft)"
+            value={lengthFt}
+            onChange={(e) => setLengthFt(e.target.value)}
             className="w-36 px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
           />
         </div>
@@ -338,199 +352,6 @@ function CategoriesTab() {
 // ============================================
 // PIEZAS
 // ============================================
-// ============================================
-// IMPORTAR PIEZAS EN LOTE (CSV pegado)
-// ============================================
-function BulkImportModal({
-  onClose,
-  onDone,
-}: {
-  onClose: () => void;
-  onDone: () => void;
-}) {
-  const [csvText, setCsvText] = useState("");
-  const [processing, setProcessing] = useState(false);
-  const [result, setResult] = useState<{
-    added: number;
-    newCategories: number;
-    errors: string[];
-  } | null>(null);
-
-  function downloadTemplate() {
-    const template =
-      "categoria,nombre,costo,precio\nCocina,Freidora doble industrial,450,850\nCocina,Plancha grande,300,600\nVentanas,Ventana de servicio,200,450\n";
-    const blob = new Blob([template], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "plantilla-catalogo.csv";
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  async function processImport() {
-    setProcessing(true);
-    const errors: string[] = [];
-    let added = 0;
-    let newCategories = 0;
-
-    const { data: existingCats } = await supabase.from("catalog_categories").select("*");
-    const categoryMap = new Map<string, string>(
-      (existingCats || []).map((c: Category) => [c.name.trim().toLowerCase(), c.id])
-    );
-
-    const lines = csvText
-      .trim()
-      .split("\n")
-      .map((l) => l.trim())
-      .filter(Boolean);
-
-    // si la primera línea parece encabezado (dice "categoria" o "nombre"), la saltamos
-    const startIndex =
-      lines[0]?.toLowerCase().includes("categoria") || lines[0]?.toLowerCase().includes("nombre")
-        ? 1
-        : 0;
-
-    for (let i = startIndex; i < lines.length; i++) {
-      const parts = lines[i].split(",").map((p) => p.trim());
-      const [categoryName, itemName, costStr, priceStr] = parts;
-
-      if (!categoryName || !itemName || !priceStr) {
-        errors.push(`Línea ${i + 1}: faltan datos, se saltó.`);
-        continue;
-      }
-
-      const catKey = categoryName.toLowerCase();
-      let categoryId = categoryMap.get(catKey);
-
-      if (!categoryId) {
-        const { data: newCat, error: catError } = await supabase
-          .from("catalog_categories")
-          .insert({ name: categoryName })
-          .select("id")
-          .single();
-        if (catError || !newCat) {
-          errors.push(`Línea ${i + 1}: no se pudo crear la categoría "${categoryName}".`);
-          continue;
-        }
-        categoryId = newCat.id as string;
-        categoryMap.set(catKey, newCat.id as string);
-        newCategories++;
-      }
-
-      const price = parseFloat(priceStr);
-      const cost = costStr ? parseFloat(costStr) : null;
-
-      if (isNaN(price)) {
-        errors.push(`Línea ${i + 1}: precio inválido, se saltó.`);
-        continue;
-      }
-
-      const { error: itemError } = await supabase.from("catalog_items").insert({
-        category_id: categoryId,
-        name: itemName,
-        cost,
-        price,
-        active: true,
-      });
-
-      if (itemError) {
-        errors.push(`Línea ${i + 1}: no se pudo guardar "${itemName}".`);
-        continue;
-      }
-
-      added++;
-    }
-
-    setResult({ added, newCategories, errors });
-    setProcessing(false);
-  }
-
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-6 py-10 overflow-y-auto">
-      <div className="admin-card bg-[var(--a-surface)] w-full max-w-lg p-6">
-        <h3 className="text-lg font-semibold text-[var(--a-text)] mb-2">
-          Importar piezas en lote
-        </h3>
-
-        {!result ? (
-          <>
-            <p className="text-sm text-[var(--a-text-muted)] mb-4">
-              Pega una lista con formato: <strong>categoría, nombre, costo, precio</strong> — una
-              pieza por línea. El costo puede quedar vacío. Las categorías que no existan se
-              crean solas.
-            </p>
-
-            <button
-              onClick={downloadTemplate}
-              className="admin-btn-ghost mb-3"
-              type="button"
-            >
-              Descargar plantilla de ejemplo (.csv)
-            </button>
-
-            <textarea
-              value={csvText}
-              onChange={(e) => setCsvText(e.target.value)}
-              placeholder={
-                "Cocina,Freidora doble industrial,450,850\nCocina,Plancha grande,300,600\nVentanas,Ventana de servicio,200,450"
-              }
-              className="w-full min-h-[220px] px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)] font-mono mb-4"
-            />
-
-            <div className="flex gap-2">
-              <button onClick={onClose} className="flex-1 admin-btn-secondary">
-                Cancelar
-              </button>
-              <button
-                onClick={processImport}
-                disabled={!csvText.trim() || processing}
-                className="flex-1 admin-btn-primary"
-              >
-                {processing ? "Importando..." : "Importar"}
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            <div className="mb-4">
-              <p className="text-sm text-[var(--a-text)] mb-1">
-                ✓ {result.added} piezas agregadas
-              </p>
-              {result.newCategories > 0 && (
-                <p className="text-sm text-[var(--a-text)] mb-1">
-                  ✓ {result.newCategories} categorías nuevas creadas
-                </p>
-              )}
-              {result.errors.length > 0 && (
-                <div className="mt-3 p-3 bg-[var(--a-danger-bg)] rounded">
-                  <p className="text-sm text-[var(--a-danger)] font-semibold mb-1">
-                    {result.errors.length} línea(s) con problemas:
-                  </p>
-                  {result.errors.map((e, i) => (
-                    <p key={i} className="text-xs text-[var(--a-danger)]">
-                      {e}
-                    </p>
-                  ))}
-                </div>
-              )}
-            </div>
-            <button
-              onClick={() => {
-                onDone();
-                onClose();
-              }}
-              className="w-full admin-btn-primary"
-            >
-              Listo
-            </button>
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
 function ItemsTab() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [items, setItems] = useState<CatalogItem[]>([]);
@@ -545,11 +366,11 @@ function ItemsTab() {
   const [name, setName] = useState("");
   const [cost, setCost] = useState("");
   const [price, setPrice] = useState("");
+  const [widthIn, setWidthIn] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [showImport, setShowImport] = useState(false);
 
   useEffect(() => {
     load();
@@ -570,6 +391,7 @@ function ItemsTab() {
     setName("");
     setCost("");
     setPrice("");
+    setWidthIn("");
     setCategoryId("");
     setPendingFile(null);
     if (fileRef.current) fileRef.current.value = "";
@@ -583,6 +405,7 @@ function ItemsTab() {
     setName(item.name);
     setCost(item.cost != null ? String(item.cost) : "");
     setPrice(String(item.price));
+    setWidthIn(item.width_in != null ? String(item.width_in) : "");
     setShowForm(true);
   }
 
@@ -600,6 +423,7 @@ function ItemsTab() {
         name,
         cost: cost ? parseFloat(cost) : null,
         price: parseFloat(price),
+        width_in: widthIn ? parseFloat(widthIn) : null,
       };
       if (image_url) updates.image_url = image_url;
       await supabase.from("catalog_items").update(updates).eq("id", editingId);
@@ -610,6 +434,7 @@ function ItemsTab() {
         image_url: image_url || null,
         cost: cost ? parseFloat(cost) : null,
         price: parseFloat(price),
+        width_in: widthIn ? parseFloat(widthIn) : null,
       });
     }
 
@@ -717,25 +542,13 @@ function ItemsTab() {
             {showArchived ? "Viendo archivadas" : "Ver archivadas"}
           </button>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setShowImport(true)}
-            className="admin-btn-secondary whitespace-nowrap"
-          >
-            Importar CSV
-          </button>
-          <button
-            onClick={() => (showForm ? resetForm() : setShowForm(true))}
-            className="px-4 py-2 bg-[var(--a-accent)] text-white rounded text-xs font-mono font-semibold whitespace-nowrap"
-          >
-            {showForm ? "Cancelar" : "+ Nueva pieza"}
-          </button>
-        </div>
+        <button
+          onClick={() => (showForm ? resetForm() : setShowForm(true))}
+          className="px-4 py-2 bg-[var(--a-accent)] text-white rounded text-xs font-mono font-semibold whitespace-nowrap"
+        >
+          {showForm ? "Cancelar" : "+ Nueva pieza"}
+        </button>
       </div>
-
-      {showImport && (
-        <BulkImportModal onClose={() => setShowImport(false)} onDone={load} />
-      )}
 
       {showForm && (
         <div className="admin-card p-5 mb-6">
@@ -791,6 +604,18 @@ function ItemsTab() {
               Margen: ${(parseFloat(price) - parseFloat(cost)).toLocaleString()}
             </p>
           )}
+          <div className="mb-2">
+            <label className="block font-mono text-[10px] text-[var(--a-text-muted)] mb-1">
+              Ancho (pulgadas, opcional — para el plano del trailer)
+            </label>
+            <input
+              type="number"
+              placeholder="Ej. 24"
+              value={widthIn}
+              onChange={(e) => setWidthIn(e.target.value)}
+              className="w-full px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
+            />
+          </div>
           <input
             ref={fileRef}
             type="file"
@@ -869,60 +694,6 @@ function ItemsTab() {
 // ============================================
 // CONFIGURACIÓN (tax)
 // ============================================
-function SettingsTab() {
-  const [taxRate, setTaxRate] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saved, setSaved] = useState(false);
-
-  useEffect(() => {
-    load();
-  }, []);
-
-  async function load() {
-    setLoading(true);
-    const { data } = await supabase.from("business_settings").select("*").eq("id", 1).single();
-    setTaxRate(data ? String(data.tax_rate) : "0");
-    setLoading(false);
-  }
-
-  async function save() {
-    await supabase
-      .from("business_settings")
-      .update({ tax_rate: parseFloat(taxRate) || 0 })
-      .eq("id", 1);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  }
-
-  if (loading) return <p className="text-xs text-[var(--a-text-muted)]">Cargando...</p>;
-
-  return (
-    <div className="admin-card p-6 max-w-sm">
-      <label className="block font-mono text-xs uppercase tracking-wide text-[var(--a-text-muted)] mb-2">
-        Tax (%)
-      </label>
-      <div className="flex gap-2">
-        <input
-          type="number"
-          step="0.001"
-          value={taxRate}
-          onChange={(e) => setTaxRate(e.target.value)}
-          className="flex-1 px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
-        />
-        <button
-          onClick={save}
-          className="px-4 py-2 bg-[var(--a-accent)] text-white rounded text-sm font-semibold"
-        >
-          {saved ? "✓ Guardado" : "Guardar"}
-        </button>
-      </div>
-      <p className="text-xs text-[var(--a-text-muted)] mt-2">
-        Se aplica automático a cada cotización nueva.
-      </p>
-    </div>
-  );
-}
-
 // ============================================
 // PRESETS (paquetes de piezas)
 // ============================================
@@ -1141,9 +912,7 @@ function PresetsTab() {
 
 // ============================================
 export default function CatalogPage() {
-  const [tab, setTab] = useState<"sizes" | "categories" | "items" | "presets" | "settings">(
-    "sizes"
-  );
+  const [tab, setTab] = useState<"sizes" | "categories" | "items" | "presets">("sizes");
 
   return (
     <div>
@@ -1157,7 +926,7 @@ export default function CatalogPage() {
       <h1 className="text-2xl font-semibold text-[var(--a-text)] mb-6">Catálogo</h1>
 
       <div className="flex gap-2 mb-8 flex-wrap">
-        {(["sizes", "categories", "items", "presets", "settings"] as const).map((t) => (
+        {(["sizes", "categories", "items", "presets"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -1173,9 +942,7 @@ export default function CatalogPage() {
               ? "Categorías"
               : t === "items"
               ? "Piezas"
-              : t === "presets"
-              ? "Presets"
-              : "Configuración"}
+              : "Presets"}
           </button>
         ))}
       </div>
@@ -1184,7 +951,6 @@ export default function CatalogPage() {
       {tab === "categories" && <CategoriesTab />}
       {tab === "items" && <ItemsTab />}
       {tab === "presets" && <PresetsTab />}
-      {tab === "settings" && <SettingsTab />}
     </div>
   );
 }

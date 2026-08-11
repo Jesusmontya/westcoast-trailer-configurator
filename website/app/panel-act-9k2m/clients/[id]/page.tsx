@@ -51,6 +51,7 @@ type Quote = {
   tax_rate: number | null;
   margin: number | null;
   pdf_url: string | null;
+  emailed_at: string | null;
   status: "enviada" | "aceptada" | "rechazada";
   monthly_estimate: number | null;
   notes: string | null;
@@ -455,6 +456,8 @@ function QuoteSection({ client }: { client: Client }) {
   const [loading, setLoading] = useState(true);
   const [showBuilder, setShowBuilder] = useState(false);
   const [duplicateFrom, setDuplicateFrom] = useState<Quote | null>(null);
+  const [editingQuote, setEditingQuote] = useState<Quote | null>(null);
+  const [viewingQuote, setViewingQuote] = useState<Quote | null>(null);
   const [sendingId, setSendingId] = useState<string | null>(null);
   const [sendResult, setSendResult] = useState<{ id: string; ok: boolean } | null>(null);
 
@@ -541,6 +544,14 @@ function QuoteSection({ client }: { client: Client }) {
       });
 
       setSendResult({ id: q.id, ok: res.ok });
+
+      if (res.ok) {
+        const now = new Date().toISOString();
+        await supabase.from("quotes").update({ emailed_at: now }).eq("id", q.id);
+        setQuotes((prev) =>
+          prev.map((x) => (x.id === q.id ? { ...x, emailed_at: now } : x))
+        );
+      }
     } catch {
       setSendResult({ id: q.id, ok: false });
     } finally {
@@ -588,7 +599,10 @@ function QuoteSection({ client }: { client: Client }) {
         </p>
         <button
           onClick={() => {
-            if (showBuilder) setDuplicateFrom(null);
+            if (showBuilder) {
+              setDuplicateFrom(null);
+              setEditingQuote(null);
+            }
             setShowBuilder((v) => !v);
           }}
           className="admin-btn-secondary"
@@ -601,9 +615,12 @@ function QuoteSection({ client }: { client: Client }) {
         <QuoteBuilder
           client={client}
           duplicateFrom={duplicateFrom}
+          editingQuote={editingQuote}
           onDone={() => {
             setShowBuilder(false);
             setDuplicateFrom(null);
+            setEditingQuote(null);
+            setViewingQuote(null);
             load();
           }}
         />
@@ -636,6 +653,11 @@ function QuoteSection({ client }: { client: Client }) {
                   {new Date(q.created_at).toLocaleDateString()} · $
                   {q.total.toLocaleString()}
                 </p>
+                {q.emailed_at && (
+                  <p className="font-mono text-[10px] text-[var(--a-accent)] mt-0.5">
+                    📧 Enviado {new Date(q.emailed_at).toLocaleDateString()}
+                  </p>
+                )}
               </div>
               <select
                 value={q.status}
@@ -649,6 +671,9 @@ function QuoteSection({ client }: { client: Client }) {
                 <option value="aceptada">Aceptada</option>
                 <option value="rechazada">Rechazada</option>
               </select>
+              <button onClick={() => setViewingQuote(q)} className="admin-btn-ghost">
+                Ver
+              </button>
               <button onClick={() => startDuplicate(q)} className="admin-btn-ghost">
                 Duplicar y editar
               </button>
@@ -707,6 +732,84 @@ function QuoteSection({ client }: { client: Client }) {
           ))}
         </div>
       )}
+
+      {viewingQuote && (
+        <ViewQuoteModal
+          quote={viewingQuote}
+          onClose={() => setViewingQuote(null)}
+          onEdit={() => {
+            setEditingQuote(viewingQuote);
+            setViewingQuote(null);
+            setShowBuilder(true);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function ViewQuoteModal({
+  quote,
+  onClose,
+  onEdit,
+}: {
+  quote: Quote;
+  onClose: () => void;
+  onEdit: () => void;
+}) {
+  const subtotal = quote.items.reduce((sum, i) => sum + (i.price || 0), 0);
+  const taxAmount = subtotal * ((quote.tax_rate || 0) / 100);
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-6 py-10 overflow-y-auto">
+      <div className="admin-card bg-[var(--a-surface)] w-full max-w-lg overflow-hidden">
+        {quote.cover_image_url && (
+          <img src={quote.cover_image_url} alt="" className="w-full h-40 object-cover" />
+        )}
+        <div className="p-6">
+          <p className="admin-label mb-1">Cotización #{quote.quote_number}</p>
+          <h3 className="text-lg font-semibold text-[var(--a-text)] mb-4">
+            {quote.trailer_size || "Sin tamaño"}
+          </h3>
+
+          <div className="flex flex-col gap-1.5 mb-4">
+            {quote.items.map((item, i) => (
+              <div key={i} className="flex items-center justify-between text-sm">
+                <p className="text-[var(--a-text)]">{item.label}</p>
+                <p className="font-mono text-[var(--a-text-muted)]">
+                  ${item.price.toLocaleString()}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="flex flex-col items-end gap-1 mb-5 font-mono text-sm border-t border-[var(--a-border)] pt-3">
+            <p className="text-[var(--a-text-muted)]">Subtotal: ${subtotal.toLocaleString()}</p>
+            {(quote.tax_rate || 0) > 0 && (
+              <p className="text-[var(--a-text-muted)]">
+                Tax ({quote.tax_rate}%): $
+                {taxAmount.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+              </p>
+            )}
+            <p className="text-[var(--a-text)] font-semibold text-base">
+              Total: ${quote.total.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            </p>
+          </div>
+
+          {quote.notes && (
+            <p className="text-sm text-[var(--a-text-muted)] mb-4">{quote.notes}</p>
+          )}
+
+          <div className="flex gap-2">
+            <button onClick={onClose} className="flex-1 admin-btn-secondary">
+              Cerrar
+            </button>
+            <button onClick={onEdit} className="flex-1 admin-btn-primary">
+              Editar
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -714,12 +817,16 @@ function QuoteSection({ client }: { client: Client }) {
 function QuoteBuilder({
   client,
   duplicateFrom,
+  editingQuote,
   onDone,
 }: {
   client: Client;
   duplicateFrom: Quote | null;
+  editingQuote: Quote | null;
   onDone: () => void;
 }) {
+  const source = editingQuote || duplicateFrom;
+
   const [sizes, setSizes] = useState<TrailerSize[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [catalogItems, setCatalogItems] = useState<CatalogItem[]>([]);
@@ -727,17 +834,17 @@ function QuoteBuilder({
   const [presetItems, setPresetItems] = useState<PresetItem[]>([]);
   const [taxRate, setTaxRate] = useState(0);
 
-  const [sizeId, setSizeId] = useState(duplicateFrom?.trailer_size_id || "");
+  const [sizeId, setSizeId] = useState(source?.trailer_size_id || "");
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [items, setItems] = useState<QuoteLineItem[]>(
-    duplicateFrom
-      ? duplicateFrom.items.filter((i) => !i.label.startsWith("Trailer base — "))
+    source
+      ? source.items.filter((i) => !i.label.startsWith("Trailer base — "))
       : []
   );
   const [monthlyEstimate, setMonthlyEstimate] = useState(
-    duplicateFrom?.monthly_estimate ? String(duplicateFrom.monthly_estimate) : ""
+    source?.monthly_estimate ? String(source.monthly_estimate) : ""
   );
-  const [notes, setNotes] = useState(duplicateFrom?.notes || "");
+  const [notes, setNotes] = useState(source?.notes || "");
   const [manualLabel, setManualLabel] = useState("");
   const [manualPrice, setManualPrice] = useState("");
   const [saving, setSaving] = useState(false);
@@ -764,7 +871,7 @@ function QuoteBuilder({
     setCatalogItems((ci.data as CatalogItem[]) || []);
     setPresets((p.data as Preset[]) || []);
     setPresetItems((pi.data as PresetItem[]) || []);
-    setTaxRate(duplicateFrom?.tax_rate ?? settings.data?.tax_rate ?? 0);
+    setTaxRate(source?.tax_rate ?? settings.data?.tax_rate ?? 0);
   }
 
   function addCatalogItem(item: CatalogItem) {
@@ -821,12 +928,17 @@ function QuoteBuilder({
     if (combinedItems.length === 0) return;
     setSaving(true);
 
-    // número de cotización: cuenta cuántas ya tiene este cliente
-    const { count } = await supabase
-      .from("quotes")
-      .select("id", { count: "exact", head: true })
-      .eq("client_id", client.id);
-    const quoteNumber = String((count || 0) + 1).padStart(4, "0");
+    // si estamos editando, se reusa el mismo número; si es nueva, se calcula
+    const quoteNumber = editingQuote
+      ? editingQuote.quote_number
+      : String(
+          ((
+            await supabase
+              .from("quotes")
+              .select("id", { count: "exact", head: true })
+              .eq("client_id", client.id)
+          ).count || 0) + 1
+        ).padStart(4, "0");
 
     const totals = await generateQuotePdf({
       quoteNumber,
@@ -838,19 +950,18 @@ function QuoteBuilder({
       taxRate,
       monthlyEstimate: monthlyEstimate ? parseFloat(monthlyEstimate) : null,
       notes,
+      download: false,
     });
 
     // Guardamos el PDF real generado, para que "Descargar" siempre abra
-    // exactamente el documento que se le mandó al cliente, sin importar
-    // si el diseño del generador cambia después.
+    // exactamente el documento que se generó, sin importar si el diseño
+    // del generador cambia después.
     const pdfPath = `${client.id}/${quoteNumber}-${Date.now()}.pdf`;
     const { error: uploadError } = await supabase.storage
       .from("quote-pdfs")
       .upload(pdfPath, totals.blob, { contentType: "application/pdf" });
 
-    await supabase.from("quotes").insert({
-      client_id: client.id,
-      quote_number: quoteNumber,
+    const payload = {
       trailer_size: selectedSize?.label || null,
       trailer_size_id: selectedSize?.id || null,
       cover_image_url: selectedSize?.image_url || null,
@@ -863,7 +974,21 @@ function QuoteBuilder({
       pdf_url: uploadError ? null : pdfPath,
       monthly_estimate: monthlyEstimate ? parseFloat(monthlyEstimate) : null,
       notes: notes || null,
-    });
+    };
+
+    if (editingQuote) {
+      // borra el PDF viejo para no dejarlo huérfano en Storage
+      if (editingQuote.pdf_url) {
+        await supabase.storage.from("quote-pdfs").remove([editingQuote.pdf_url]);
+      }
+      await supabase.from("quotes").update(payload).eq("id", editingQuote.id);
+    } else {
+      await supabase.from("quotes").insert({
+        client_id: client.id,
+        quote_number: quoteNumber,
+        ...payload,
+      });
+    }
 
     setSaving(false);
     onDone();
@@ -1135,7 +1260,7 @@ function QuoteBuilder({
                   disabled={saving}
                   className="flex-1 px-4 py-2.5 bg-[var(--a-accent)] text-white rounded text-sm font-semibold disabled:opacity-60"
                 >
-                  {saving ? "Guardando..." : "Confirmar y descargar"}
+                  {saving ? "Guardando..." : "Guardar cotización"}
                 </button>
               </div>
             </div>
