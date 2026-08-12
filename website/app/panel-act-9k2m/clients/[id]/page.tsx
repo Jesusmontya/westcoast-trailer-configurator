@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "../../../../lib/supabase";
@@ -853,6 +853,8 @@ function QuoteBuilder({
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [currentWall, setCurrentWall] = useState<string>("trasera");
+  const [recentlyAddedIds, setRecentlyAddedIds] = useState<Set<string>>(new Set());
+  const itemsListRef = useRef<HTMLDivElement>(null);
   const [doorWall, setDoorWall] = useState<string>(source?.door_wall || "trasera");
 
   useEffect(() => {
@@ -893,6 +895,14 @@ function QuoteBuilder({
         wall: currentWall,
       },
     ]);
+    setRecentlyAddedIds((prev) => new Set(prev).add(item.id));
+    setTimeout(() => {
+      setRecentlyAddedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(item.id);
+        return next;
+      });
+    }, 1200);
   }
 
   function addPreset(preset: Preset) {
@@ -1099,6 +1109,24 @@ function QuoteBuilder({
         </>
       )}
 
+      {items.length > 0 && (
+        <div
+          className="sticky top-2 z-20 mb-4 flex items-center justify-between px-4 py-2.5 rounded-lg"
+          style={{ background: "rgba(31,58,92,0.08)", border: "0.5px solid var(--a-accent)" }}
+        >
+          <p className="text-sm font-semibold text-[var(--a-accent)]">
+            {items.length} pieza{items.length !== 1 ? "s" : ""} · $
+            {items.reduce((sum, i) => sum + i.price, 0).toLocaleString()}
+          </p>
+          <button
+            onClick={() => itemsListRef.current?.scrollIntoView({ behavior: "smooth" })}
+            className="text-xs font-mono text-[var(--a-accent)]"
+          >
+            Ver lista ↓
+          </button>
+        </div>
+      )}
+
       {/* Navegación del catálogo */}
       <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)] mb-1.5">
         Catálogo
@@ -1121,27 +1149,49 @@ function QuoteBuilder({
 
       {activeCategory && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
-          {visibleItems.map((item) => (
-            <button
-              key={item.id}
-              onClick={() => addCatalogItem(item)}
-              className="admin-card overflow-hidden text-left"
-            >
-              {item.image_url ? (
-                <img src={item.image_url} alt={item.name} className="w-full h-20 object-cover" />
-              ) : (
-                <div className="w-full h-20 bg-[var(--a-bg)] flex items-center justify-center text-[10px] font-mono text-[var(--a-text-muted)]">
-                  Sin foto
+          {visibleItems.map((item) => {
+            const justAdded = recentlyAddedIds.has(item.id);
+            return (
+              <button
+                key={item.id}
+                onClick={() => addCatalogItem(item)}
+                className={`admin-card overflow-hidden text-left relative transition-colors ${
+                  justAdded ? "border-[var(--a-success)]" : ""
+                }`}
+                style={justAdded ? { background: "rgba(30,142,90,0.08)" } : undefined}
+              >
+                {justAdded && (
+                  <span
+                    className="absolute top-1.5 right-1.5 z-10 rounded-full flex items-center justify-center"
+                    style={{
+                      width: 20,
+                      height: 20,
+                      background: "var(--a-success)",
+                      color: "white",
+                      fontSize: 12,
+                    }}
+                  >
+                    ✓
+                  </span>
+                )}
+                {item.image_url ? (
+                  <img src={item.image_url} alt={item.name} className="w-full h-20 object-cover" />
+                ) : (
+                  <div className="w-full h-20 bg-[var(--a-bg)] flex items-center justify-center text-[10px] font-mono text-[var(--a-text-muted)]">
+                    Sin foto
+                  </div>
+                )}
+                <div className="p-2">
+                  <p className="text-xs font-semibold text-[var(--a-text)] leading-tight">
+                    {item.name}
+                  </p>
+                  <p className="font-mono text-xs text-[var(--a-accent)] mt-1">
+                    {justAdded ? "Agregada" : `$${item.price.toLocaleString()}`}
+                  </p>
                 </div>
-              )}
-              <div className="p-2">
-                <p className="text-xs font-semibold text-[var(--a-text)] leading-tight">{item.name}</p>
-                <p className="font-mono text-xs text-[var(--a-accent)] mt-1">
-                  ${item.price.toLocaleString()}
-                </p>
-              </div>
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -1169,7 +1219,7 @@ function QuoteBuilder({
       </div>
 
       {/* Lista de items agregados — esto es lo que ve el cliente en vivo */}
-      <p className="font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)] mb-2">
+      <p ref={itemsListRef} className="font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)] mb-2">
         En la cotización ({combinedItems.length})
       </p>
       {combinedItems.length === 0 ? (
