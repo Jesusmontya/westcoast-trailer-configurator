@@ -788,6 +788,236 @@ function QuoteSection({ client }: { client: Client }) {
 // ============================================
 // PLANO 2D REAL — piezas puestas alrededor del rectángulo, a escala
 // ============================================
+// ============================================
+// EDITOR DEL PLANO — arrastrar y soltar cada pieza a su pared
+// ============================================
+const WALL_ZONES: { key: string; label: string }[] = [
+  { key: "trasera", label: "Pared trasera" },
+  { key: "izquierda", label: "Pared izquierda" },
+  { key: "isla", label: "Isla / centro" },
+  { key: "frontal", label: "Pared frontal" },
+  { key: "derecha", label: "Pared derecha" },
+];
+
+function FloorPlanEditorModal({
+  items,
+  onUpdateWall,
+  onClose,
+}: {
+  items: QuoteLineItem[];
+  onUpdateWall: (index: number, wall: string) => void;
+  onClose: () => void;
+}) {
+  const zoneRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+  const [ghostPos, setGhostPos] = useState<{ x: number; y: number } | null>(null);
+  const [hoverZone, setHoverZone] = useState<string | null>(null);
+
+  function findZoneAt(x: number, y: number): string | null {
+    for (const key of Object.keys(zoneRefs.current)) {
+      const el = zoneRefs.current[key];
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return key;
+    }
+    return null;
+  }
+
+  function handlePointerDown(e: React.PointerEvent, index: number) {
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDraggingIndex(index);
+    setGhostPos({ x: e.clientX, y: e.clientY });
+  }
+
+  function handlePointerMove(e: React.PointerEvent) {
+    if (draggingIndex === null) return;
+    setGhostPos({ x: e.clientX, y: e.clientY });
+    setHoverZone(findZoneAt(e.clientX, e.clientY));
+  }
+
+  function handlePointerUp(e: React.PointerEvent) {
+    if (draggingIndex === null) return;
+    const zone = findZoneAt(e.clientX, e.clientY);
+    if (zone) onUpdateWall(draggingIndex, zone);
+    setDraggingIndex(null);
+    setGhostPos(null);
+    setHoverZone(null);
+  }
+
+  const draggingItem = draggingIndex !== null ? items[draggingIndex] : null;
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4 py-8">
+      <div className="admin-card bg-[var(--a-surface)] w-full max-w-2xl p-5">
+        <div className="flex items-center justify-between mb-1">
+          <h3 className="text-lg font-semibold text-[var(--a-text)]">Editar plano</h3>
+          <button onClick={onClose} className="admin-btn-secondary">
+            Listo
+          </button>
+        </div>
+        <p className="text-xs text-[var(--a-text-muted)] mb-4">
+          Arrastra cada pieza a la pared donde va. Suéltala encima del recuadro.
+        </p>
+
+        <div
+          className="grid grid-cols-3 gap-2 select-none"
+          style={{ touchAction: "none" }}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+        >
+          <div />
+          <div
+            ref={(el) => { zoneRefs.current.trasera = el; }}
+            className="rounded-lg border-2 border-dashed p-2 min-h-[90px]"
+            style={{
+              borderColor: hoverZone === "trasera" ? "#1f3a5c" : "#c9cfd4",
+              background: hoverZone === "trasera" ? "rgba(31,58,92,0.08)" : "transparent",
+            }}
+          >
+            <p className="font-mono text-[9px] uppercase text-[var(--a-text-muted)] mb-1 text-center">
+              Trasera
+            </p>
+            <div className="flex flex-wrap gap-1 justify-center">
+              {items.map((it, i) =>
+                (it.wall || "trasera") === "trasera" ? (
+                  <div
+                    key={i}
+                    onPointerDown={(e) => handlePointerDown(e, i)}
+                    className="px-2 py-1 rounded bg-[var(--a-surface-2)] border border-[var(--a-border)] text-[9px] text-[var(--a-text)] cursor-grab active:cursor-grabbing"
+                    style={{ opacity: draggingIndex === i ? 0.3 : 1 }}
+                  >
+                    {it.label}
+                  </div>
+                ) : null
+              )}
+            </div>
+          </div>
+          <div />
+
+          <div
+            ref={(el) => { zoneRefs.current.izquierda = el; }}
+            className="rounded-lg border-2 border-dashed p-2 min-h-[90px]"
+            style={{
+              borderColor: hoverZone === "izquierda" ? "#1f3a5c" : "#c9cfd4",
+              background: hoverZone === "izquierda" ? "rgba(31,58,92,0.08)" : "transparent",
+            }}
+          >
+            <p className="font-mono text-[9px] uppercase text-[var(--a-text-muted)] mb-1 text-center">
+              Izquierda
+            </p>
+            <div className="flex flex-wrap gap-1 justify-center">
+              {items.map((it, i) =>
+                it.wall === "izquierda" ? (
+                  <div
+                    key={i}
+                    onPointerDown={(e) => handlePointerDown(e, i)}
+                    className="px-2 py-1 rounded bg-[var(--a-surface-2)] border border-[var(--a-border)] text-[9px] text-[var(--a-text)] cursor-grab active:cursor-grabbing"
+                    style={{ opacity: draggingIndex === i ? 0.3 : 1 }}
+                  >
+                    {it.label}
+                  </div>
+                ) : null
+              )}
+            </div>
+          </div>
+
+          <div
+            ref={(el) => { zoneRefs.current.isla = el; }}
+            className="rounded-lg border-2 border-dashed p-2 min-h-[90px] flex flex-col items-center justify-center"
+            style={{
+              borderColor: hoverZone === "isla" ? "#1f3a5c" : "#c9cfd4",
+              background: hoverZone === "isla" ? "rgba(31,58,92,0.08)" : "transparent",
+            }}
+          >
+            <p className="font-mono text-[9px] uppercase text-[var(--a-text-muted)] mb-1 text-center">
+              Isla
+            </p>
+            <div className="flex flex-wrap gap-1 justify-center">
+              {items.map((it, i) =>
+                it.wall === "isla" ? (
+                  <div
+                    key={i}
+                    onPointerDown={(e) => handlePointerDown(e, i)}
+                    className="px-2 py-1 rounded bg-[var(--a-surface-2)] border border-[var(--a-border)] text-[9px] text-[var(--a-text)] cursor-grab active:cursor-grabbing"
+                    style={{ opacity: draggingIndex === i ? 0.3 : 1 }}
+                  >
+                    {it.label}
+                  </div>
+                ) : null
+              )}
+            </div>
+          </div>
+
+          <div
+            ref={(el) => { zoneRefs.current.frontal = el; }}
+            className="rounded-lg border-2 border-dashed p-2 min-h-[90px]"
+            style={{
+              borderColor: hoverZone === "frontal" ? "#1f3a5c" : "#c9cfd4",
+              background: hoverZone === "frontal" ? "rgba(31,58,92,0.08)" : "transparent",
+            }}
+          >
+            <p className="font-mono text-[9px] uppercase text-[var(--a-text-muted)] mb-1 text-center">
+              Frontal
+            </p>
+            <div className="flex flex-wrap gap-1 justify-center">
+              {items.map((it, i) =>
+                it.wall === "frontal" ? (
+                  <div
+                    key={i}
+                    onPointerDown={(e) => handlePointerDown(e, i)}
+                    className="px-2 py-1 rounded bg-[var(--a-surface-2)] border border-[var(--a-border)] text-[9px] text-[var(--a-text)] cursor-grab active:cursor-grabbing"
+                    style={{ opacity: draggingIndex === i ? 0.3 : 1 }}
+                  >
+                    {it.label}
+                  </div>
+                ) : null
+              )}
+            </div>
+          </div>
+
+          <div />
+          <div
+            ref={(el) => { zoneRefs.current.derecha = el; }}
+            className="rounded-lg border-2 border-dashed p-2 min-h-[90px]"
+            style={{
+              borderColor: hoverZone === "derecha" ? "#1f3a5c" : "#c9cfd4",
+              background: hoverZone === "derecha" ? "rgba(31,58,92,0.08)" : "transparent",
+            }}
+          >
+            <p className="font-mono text-[9px] uppercase text-[var(--a-text-muted)] mb-1 text-center">
+              Derecha
+            </p>
+            <div className="flex flex-wrap gap-1 justify-center">
+              {items.map((it, i) =>
+                it.wall === "derecha" ? (
+                  <div
+                    key={i}
+                    onPointerDown={(e) => handlePointerDown(e, i)}
+                    className="px-2 py-1 rounded bg-[var(--a-surface-2)] border border-[var(--a-border)] text-[9px] text-[var(--a-text)] cursor-grab active:cursor-grabbing"
+                    style={{ opacity: draggingIndex === i ? 0.3 : 1 }}
+                  >
+                    {it.label}
+                  </div>
+                ) : null
+              )}
+            </div>
+          </div>
+          <div />
+        </div>
+
+        {draggingItem && ghostPos && (
+          <div
+            className="fixed pointer-events-none px-3 py-1.5 rounded bg-[var(--a-accent)] text-white text-xs font-semibold shadow-lg z-50"
+            style={{ left: ghostPos.x - 40, top: ghostPos.y - 16 }}
+          >
+            {draggingItem.label}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function TrailerFloorPlanSVG({
   items,
   lengthFt,
@@ -1071,7 +1301,7 @@ function QuoteBuilder({
   const [manualPrice, setManualPrice] = useState("");
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
-  const [currentWall, setCurrentWall] = useState<string>("trasera");
+  const [showPlanEditor, setShowPlanEditor] = useState(false);
   const [recentlyAddedIds, setRecentlyAddedIds] = useState<Set<string>>(new Set());
   const itemsListRef = useRef<HTMLDivElement>(null);
   const [doorWall, setDoorWall] = useState<string>(source?.door_wall || "trasera");
@@ -1111,7 +1341,7 @@ function QuoteBuilder({
         price: item.price,
         image_url: item.image_url,
         cost: item.cost || 0,
-        wall: currentWall,
+        wall: "trasera",
         width_in: item.width_in,
       },
     ]);
@@ -1136,7 +1366,7 @@ function QuoteBuilder({
           price: item.price,
           image_url: item.image_url,
           cost: item.cost || 0,
-          wall: (link as PresetItem & { wall?: string }).wall || currentWall,
+          wall: (link as PresetItem & { wall?: string }).wall || "trasera",
           width_in: item.width_in,
         };
       })
@@ -1148,7 +1378,7 @@ function QuoteBuilder({
     if (!manualLabel || !manualPrice) return;
     setItems((prev) => [
       ...prev,
-      { label: manualLabel, price: parseFloat(manualPrice) || 0, cost: 0, wall: currentWall },
+      { label: manualLabel, price: parseFloat(manualPrice) || 0, cost: 0, wall: "trasera" },
     ]);
     setManualLabel("");
     setManualPrice("");
@@ -1268,41 +1498,20 @@ function QuoteBuilder({
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 mb-5">
-        <div>
-          <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)] mb-1.5">
-            Puerta en
-          </label>
-          <select
-            value={doorWall}
-            onChange={(e) => setDoorWall(e.target.value)}
-            className="w-full px-3 py-2 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
-          >
-            <option value="trasera">Pared trasera</option>
-            <option value="frontal">Pared frontal (lengüeta)</option>
-            <option value="izquierda">Pared izquierda</option>
-            <option value="derecha">Pared derecha</option>
-          </select>
-        </div>
-        <div>
-          <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)] mb-1.5">
-            Agregar piezas a la pared
-          </label>
-          <select
-            value={currentWall}
-            onChange={(e) => setCurrentWall(e.target.value)}
-            className="w-full px-3 py-2 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
-          >
-            <option value="trasera">Pared trasera</option>
-            <option value="frontal">Pared frontal</option>
-            <option value="izquierda">Pared izquierda</option>
-            <option value="derecha">Pared derecha</option>
-            <option value="isla">Isla / centro</option>
-          </select>
-          <p className="text-[10px] text-[var(--a-text-muted)] mt-1">
-            Lo que agregues de aquí en adelante va a esta pared.
-          </p>
-        </div>
+      <div className="mb-5">
+        <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)] mb-1.5">
+          Puerta en
+        </label>
+        <select
+          value={doorWall}
+          onChange={(e) => setDoorWall(e.target.value)}
+          className="w-full sm:w-64 px-3 py-2 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
+        >
+          <option value="trasera">Pared trasera</option>
+          <option value="frontal">Pared frontal (lengüeta)</option>
+          <option value="izquierda">Pared izquierda</option>
+          <option value="derecha">Pared derecha</option>
+        </select>
       </div>
 
       {presets.length > 0 && (
@@ -1431,9 +1640,19 @@ function QuoteBuilder({
         </button>
       </div>
 
-      <p ref={itemsListRef} className="font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)] mb-2">
-        En la cotización ({combinedItems.length})
-      </p>
+      <div className="flex items-center justify-between mb-2">
+        <p ref={itemsListRef} className="font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)]">
+          En la cotización ({combinedItems.length})
+        </p>
+        {items.length > 0 && (
+          <button
+            onClick={() => setShowPlanEditor(true)}
+            className="text-xs font-mono text-[var(--a-accent)] font-semibold"
+          >
+            ✏️ Editar plano
+          </button>
+        )}
+      </div>
       {combinedItems.length === 0 ? (
         <p className="text-xs text-[var(--a-text-muted)] mb-5">
           Elige un tamaño o agrega algo del catálogo.
@@ -1442,15 +1661,18 @@ function QuoteBuilder({
         <div className="flex flex-col gap-2 mb-5">
           {baseItem && (
             <div className="flex items-center gap-2 sm:gap-3 bg-[var(--a-surface)] rounded px-2 sm:px-3 py-2 border border-[var(--a-accent)]/30">
-              {selectedSize?.image_url ? (
-                <img
-                  src={selectedSize.image_url}
-                  alt=""
-                  className="w-9 h-9 rounded object-cover flex-shrink-0"
-                />
-              ) : (
-                <div className="w-9 h-9 rounded bg-[var(--a-surface-2)] flex-shrink-0" />
-              )}
+              {(() => {
+                const sizeImg = selectedSize?.image_url;
+                return sizeImg ? (
+                  <img
+                    src={sizeImg}
+                    alt=""
+                    className="w-9 h-9 rounded object-cover flex-shrink-0"
+                  />
+                ) : (
+                  <div className="w-9 h-9 rounded bg-[var(--a-surface-2)] flex-shrink-0" />
+                );
+              })()}
               <p className="flex-1 min-w-0 text-sm text-[var(--a-text)] truncate">
                 {baseItem.label}
               </p>
@@ -1474,17 +1696,17 @@ function QuoteBuilder({
                 <div className="w-9 h-9 rounded bg-[var(--a-surface-2)] flex-shrink-0" />
               )}
               <p className="flex-1 min-w-0 text-sm text-[var(--a-text)] truncate">{item.label}</p>
-              <select
-                value={item.wall || "trasera"}
-                onChange={(e) => updateItemWall(i, e.target.value)}
-                className="text-[10px] font-mono bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded px-1.5 py-1 text-[var(--a-text-muted)] flex-shrink-0"
-              >
-                <option value="trasera">Trasera</option>
-                <option value="frontal">Frontal</option>
-                <option value="izquierda">Izquierda</option>
-                <option value="derecha">Derecha</option>
-                <option value="isla">Isla</option>
-              </select>
+              <span className="text-[9px] font-mono uppercase text-[var(--a-text-muted)] bg-[var(--a-surface-2)] rounded px-1.5 py-1 flex-shrink-0">
+                {item.wall === "frontal"
+                  ? "Frontal"
+                  : item.wall === "izquierda"
+                  ? "Izquierda"
+                  : item.wall === "derecha"
+                  ? "Derecha"
+                  : item.wall === "isla"
+                  ? "Isla"
+                  : "Trasera"}
+              </span>
               <p className="font-mono text-sm text-[var(--a-accent)] flex-shrink-0">
                 ${item.price.toLocaleString()}
               </p>
@@ -1547,7 +1769,7 @@ function QuoteBuilder({
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-6 py-10 overflow-y-auto">
           <div className="admin-card bg-[var(--a-surface)] w-full max-w-lg overflow-hidden">
             {selectedSize?.image_url && (
-              <img src={selectedSize.image_url} alt="" className="w-full h-40 object-cover" />
+              <img src={selectedSize.image_url as string} alt="" className="w-full h-40 object-cover" />
             )}
             <div className="p-6">
               <p className="admin-label mb-1">Vista previa — no se ha guardado todavía</p>
@@ -1611,6 +1833,14 @@ function QuoteBuilder({
             </div>
           </div>
         </div>
+      )}
+
+      {showPlanEditor && (
+        <FloorPlanEditorModal
+          items={items}
+          onUpdateWall={updateItemWall}
+          onClose={() => setShowPlanEditor(false)}
+        />
       )}
     </div>
   );
