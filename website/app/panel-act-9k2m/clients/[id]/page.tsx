@@ -35,6 +35,7 @@ type Client = {
   deleted_at: string | null;
   utm_source: string | null;
   utm_campaign: string | null;
+  temperature: "rojo" | "amarillo" | "verde" | null;
   created_at: string;
 };
 type Activity = { id: string; client_id: string; note: string; created_at: string };
@@ -139,6 +140,29 @@ export default function ClientDetailPage() {
     const newStatus = client.status === "activo" ? "perdido" : "activo";
     await supabase.from("clients").update({ status: newStatus }).eq("id", client.id);
     setClient({ ...client, status: newStatus });
+  }
+
+  async function cycleTemperature() {
+    if (!client) return;
+    const order: (Client["temperature"])[] = [null, "rojo", "amarillo", "verde"];
+    const currentIndex = order.indexOf(client.temperature);
+    const next = order[(currentIndex + 1) % order.length];
+    await supabase.from("clients").update({ temperature: next }).eq("id", client.id);
+    setClient({ ...client, temperature: next });
+  }
+
+  function temperatureColor(t: Client["temperature"] | undefined) {
+    if (t === "rojo") return "#c0392b";
+    if (t === "amarillo") return "#e0a52c";
+    if (t === "verde") return "#1e8e5a";
+    return "var(--a-border)";
+  }
+
+  function temperatureLabel(t: Client["temperature"] | undefined) {
+    if (t === "rojo") return "Veremos";
+    if (t === "amarillo") return "En proceso";
+    if (t === "verde") return "Aprobado";
+    return "Sin definir";
   }
 
   async function moveToTrash() {
@@ -257,6 +281,21 @@ export default function ClientDetailPage() {
               <p className="font-mono text-[11px] text-[var(--a-text-muted)] mt-1">
                 Cliente desde {new Date(client.created_at).toLocaleDateString()}
               </p>
+              <button
+                onClick={cycleTemperature}
+                className="flex items-center gap-1.5 mt-2 text-xs font-mono text-[var(--a-text-muted)]"
+              >
+                <span
+                  className="rounded-full flex-shrink-0"
+                  style={{
+                    width: 12,
+                    height: 12,
+                    background: temperatureColor(client.temperature),
+                    border: client.temperature ? "none" : "2px solid var(--a-border)",
+                  }}
+                />
+                {temperatureLabel(client.temperature)} · cambiar
+              </button>
             </div>
             <div className="flex flex-col items-end gap-2">
               <button

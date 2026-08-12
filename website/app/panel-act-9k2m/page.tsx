@@ -15,6 +15,7 @@ type Client = {
   status: "activo" | "perdido";
   deleted_at: string | null;
   utm_source: string | null;
+  temperature: "rojo" | "amarillo" | "verde" | null;
   created_at: string;
 };
 
@@ -247,6 +248,21 @@ export default function ClientsList() {
     load();
   }
 
+  async function cycleTemperature(client: Client) {
+    const order: (Client["temperature"])[] = [null, "rojo", "amarillo", "verde"];
+    const currentIndex = order.indexOf(client.temperature);
+    const next = order[(currentIndex + 1) % order.length];
+    setClients((prev) => prev.map((c) => (c.id === client.id ? { ...c, temperature: next } : c)));
+    await supabase.from("clients").update({ temperature: next }).eq("id", client.id);
+  }
+
+  function temperatureColor(t: Client["temperature"]) {
+    if (t === "rojo") return "#c0392b";
+    if (t === "amarillo") return "#e0a52c";
+    if (t === "verde") return "#1e8e5a";
+    return "var(--a-border)";
+  }
+
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
 
@@ -427,16 +443,32 @@ export default function ClientsList() {
                 href={`/panel-act-9k2m/clients/${client.id}`}
                 className="admin-card p-5 flex items-center justify-between"
               >
-                <div>
-                  <p className="font-semibold text-[var(--a-text)]">{client.name}</p>
-                  <p className="font-mono text-sm text-[var(--a-text-muted)]">{client.phone}</p>
-                  {(client.interest ||
-                    client.heard_from?.startsWith("sitio_web") ||
-                    client.utm_source) && (
-                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                      {client.interest && (
-                        <span className="admin-badge">{client.interest}</span>
-                      )}
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      cycleTemperature(client);
+                    }}
+                    title="Qué tan probable es que compre — clic para cambiar"
+                    className="flex-shrink-0 rounded-full"
+                    style={{
+                      width: 14,
+                      height: 14,
+                      background: temperatureColor(client.temperature),
+                      border: client.temperature ? "none" : "2px solid var(--a-border)",
+                    }}
+                  />
+                  <div>
+                    <p className="font-semibold text-[var(--a-text)]">{client.name}</p>
+                    <p className="font-mono text-sm text-[var(--a-text-muted)]">{client.phone}</p>
+                    {(client.interest ||
+                      client.heard_from?.startsWith("sitio_web") ||
+                      client.utm_source) && (
+                      <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                        {client.interest && (
+                          <span className="admin-badge">{client.interest}</span>
+                        )}
                       {client.heard_from === "sitio_web_contacto" && (
                         <span className="font-mono text-[10px] text-[var(--a-accent)] uppercase">
                           Formulario de contacto
@@ -452,6 +484,7 @@ export default function ClientsList() {
                       )}
                     </div>
                   )}
+                </div>
                 </div>
                 <span className="font-mono text-[11px] text-[var(--a-text-muted)]">
                   {new Date(client.created_at).toLocaleDateString()}
