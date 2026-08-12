@@ -164,3 +164,104 @@ git push
 ```
 
 Acceso al panel: **admin.allcustomtrailers.com** (login por Supabase Auth, Authentication → Users)
+
+
+
+Repo: westcoast-trailer-configurator (monorepo) — dueño: Jesús Pavel Montoya Cerpa, fabricante de trailers personalizados, Nevada (cubre todo el estado, envía a cualquier lado, hace de todo tipo: comida, carga, utilidad).
+
+westcoast-trailer-configurator/
+├── website/    → Next.js: landing + admin panel (allcustomtrailers.com + admin.allcustomtrailers.com)
+├── frontend/   → Vite+React: galería 3D (3d.allcustomtrailers.com)
+DISEÑO — Paleta industrial (vigente, reemplazó la cálida de mostaza/cobre)
+css
+--bg: #eef1f3        /* gris acero claro */
+--surface: #ffffff
+--surface-2: #e2e6e9
+--accent: #1f3a5c     /* azul marino — color de marca principal */
+--accent-glow: #3d6690
+--accent-2: #14263a   /* navy oscuro, hover */
+--text: #1b1f23       /* casi negro */
+--text-muted: #5b6570
+
+Header/footer del sitio: fondo oscuro (var(--text)), texto blanco. Hero: video de fondo en loop (website/public/videos/hero-background.mp4) con overlay oscuro y texto blanco. Sin cuadrícula/grid decorativa (se quitó por petición explícita). Logo: todavía pendiente (prompt de diseño ya entregado al usuario para generarlo aparte).
+
+SITIO PÚBLICO (website/)
+app/
+├── (site)/page.tsx          → landing: Hero(video)→Gallery→Advantages→Marquee→About→Process→Testimonial→Contact
+├── components/Navbar.tsx, Footer.tsx    → paleta industrial
+├── context/LanguageContext.tsx          → EN/ES
+└── panel-act-9k2m/                      → admin (via middleware rewrite desde admin.*)
+
+Formulario de contacto → submitLead() → RPC submit_client_lead → dedup por teléfono (30 días) → captura UTM (utm_source, utm_campaign) de la URL → guarda heard_from: "sitio_web_contacto".
+
+Botón del hero hacia la galería 3D reenvía los parámetros UTM en el link.
+
+GALERÍA 3D (frontend/)
+
+Mismo patrón de dedup + UTM que la landing, heard_from: "sitio_web_galeria". Estilos en src/styles/gallery.css, recoloreados a la paleta industrial. TrailerModal.jsx usa clase .modal-error (ya definida).
+
+PANEL ADMIN (website/app/panel-act-9k2m/)
+
+Header: Clientes | Aceptadas | Catálogo | Ajustes | Log out
+
+page.tsx — Lista de clientes:
+
+Dashboard de stats (cotizado/aceptado/margen del mes, clientes nuevos)
+Filtros: semáforo (🔴🟡🟢/sin definir), estado (activo/perdido), fecha, fuente
+Semáforo de probabilidad (temperature: rojo="Veremos", amarillo="En proceso", verde="Aprobado") — clic cicla el color, tanto en lista como en ficha
+Papelera con confirmación inline (no confirm() nativo)
+"+ Nuevo cliente" con dedup automático por teléfono
+
+clients/[id]/page.tsx — Ficha del cliente:
+
+Editar info, toggle estado, semáforo, mover a papelera (todo con confirmación inline)
+Seguimiento (notas con fecha)
+QuoteSection: listar, Ver (preview con Editar), Duplicar, Descargar, Enviar por correo (Google Workspace vía nodemailer, marca emailed_at persistente), Borrar (con aviso si fallo)
+QuoteBuilder: tamaño (con foto) → puerta en (pared) → agregar piezas a la pared (selector activo) → catálogo/presets con confirmación visual instantánea al agregar (check verde en la tarjeta) → barra fija de resumen ("X piezas · $Total") → lista de items con selector de pared por pieza → plano 2D agrupado por pared en Vista previa → Guardar cotización (ya NO descarga automático, separado de "Descargar")
+Editar cotización existente actualiza el mismo registro (no duplica), borra el PDF viejo del Storage
+
+catalog/page.tsx:
+
+Tamaños (con largo real en pies, length_ft), Categorías, Piezas (con ancho en pulgadas width_in, activar/archivar, editar, importar CSV en lote, "Completar anchos" para piezas viejas sin ese dato), Presets (editable, recuerda acomodo)
+
+settings/page.tsx (nuevo, separado de Catálogo): Tax %, puerta por default
+
+quotes/page.tsx: Cotizaciones aceptadas — filtro mes/todo el tiempo, totales, margen (nota de que antes de agosto 2026 es aproximado)
+
+BASE DE DATOS (Supabase) — tablas activas
+clients            → +utm_source, +utm_campaign, +temperature (semáforo)
+client_activity
+quotes             → +emailed_at, +door_wall
+catalog_categories
+catalog_items      → +active, +width_in
+catalog_presets, catalog_preset_items → +wall
+trailer_sizes      → +length_ft
+business_settings  → +default_door_wall
+price_history
+profiles           → role admin/ventas (solo Jesús tiene admin hoy)
+
+Storage: catalog (fotos, público), quote-pdfs (privado)
+
+Función clave: submit_client_lead(p_name, p_phone, p_email, p_interest, p_heard_from, p_utm_source, p_utm_campaign) — dedup 30 días
+
+INTEGRACIONES EXTERNAS
+Correo: Google Workspace vía SMTP/nodemailer (website/app/api/send-quote/route.ts), env vars GMAIL_USER + GMAIL_APP_PASSWORD en Vercel
+PDF: generateQuotePdf.ts — diseño limpio sin colores (texto negro/gris), portada con foto del tamaño, campo download opcional para no forzar descarga
+PENDIENTE / CONOCIDO
+Fotos reales del negocio (trailers terminados, testimonios) — pospuesto a propósito, al final
+Logo — prompt ya entregado, esperando que el usuario lo genere
+Recolorear sitio/panel una vez que el logo esté listo (si cambia la paleta)
+Ambiente de staging separado — no urgente aún (sin clientes reales en producción todavía)
+Backups automáticos de Supabase — no configurado
+2FA en el login — no configurado
+Del análisis de 6 meses: límites de Supabase sin vigilar, listas sin paginar, lógica de leads duplicada entre website/ y frontend/, cero pruebas automáticas
+El plano 2D es v1 — agrupa por pared con cajas simples, no dibuja a escala exacta todavía (se guarda width_in/length_ft para cuando se quiera afinar)
+Falta probar el flujo completo de principio a fin con datos reales
+RECOMENDACIÓN VIGENTE
+
+Dejar de agregar features y usar el sistema una semana con datos reales (catálogo lleno, clientes reales, cotizaciones completas) antes de seguir construyendo — es la mejor señal de qué falta de verdad.
+
+
+
+
+Claude is AI and can make mistakes. Please double-check responses.
