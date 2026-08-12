@@ -227,6 +227,9 @@ export default function ClientsList() {
   const [dateFilter, setDateFilter] = useState<"all" | "today" | "week">("all");
   const [sourceFilter, setSourceFilter] = useState<"all" | "sitio_web" | "manual">("all");
   const [statusFilter, setStatusFilter] = useState<"activo" | "perdido" | "all">("activo");
+  const [temperatureFilter, setTemperatureFilter] = useState<
+    "all" | "rojo" | "amarillo" | "verde" | "sin_definir"
+  >("all");
   const [showTrash, setShowTrash] = useState(false);
 
   useEffect(() => {
@@ -302,6 +305,11 @@ export default function ClientsList() {
     .filter((c) => {
       if (statusFilter === "all") return true;
       return c.status === statusFilter;
+    })
+    .filter((c) => {
+      if (temperatureFilter === "all") return true;
+      if (temperatureFilter === "sin_definir") return !c.temperature;
+      return c.temperature === temperatureFilter;
     });
 
   return (
@@ -345,6 +353,47 @@ export default function ClientsList() {
             className={`admin-pill ${statusFilter === opt ? "active" : ""}`}
           >
             {opt === "activo" ? "Activos" : opt === "perdido" ? "Perdidos" : "Todos"}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex gap-2 mb-3">
+        {(["all", "rojo", "amarillo", "verde", "sin_definir"] as const).map((opt) => (
+          <button
+            key={opt}
+            onClick={() => setTemperatureFilter(opt)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-mono font-semibold transition-colors ${
+              temperatureFilter === opt
+                ? "bg-[var(--a-accent)] text-white"
+                : "bg-[var(--a-surface-2)] text-[var(--a-text-muted)] border border-[var(--a-border)]"
+            }`}
+          >
+            {opt !== "all" && (
+              <span
+                className="rounded-full flex-shrink-0"
+                style={{
+                  width: 8,
+                  height: 8,
+                  background:
+                    opt === "rojo"
+                      ? "#c0392b"
+                      : opt === "amarillo"
+                      ? "#e0a52c"
+                      : opt === "verde"
+                      ? "#1e8e5a"
+                      : "var(--a-border)",
+                }}
+              />
+            )}
+            {opt === "all"
+              ? "Todos"
+              : opt === "rojo"
+              ? "Veremos"
+              : opt === "amarillo"
+              ? "En proceso"
+              : opt === "verde"
+              ? "Aprobado"
+              : "Sin definir"}
           </button>
         ))}
       </div>
