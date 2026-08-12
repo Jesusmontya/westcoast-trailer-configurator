@@ -520,8 +520,6 @@ function QuoteSection({ client }: { client: Client }) {
 
   async function redownload(q: Quote) {
     if (q.pdf_url) {
-      // pdf_url guarda la ruta dentro del bucket privado — generamos un
-      // link temporal para abrir el archivo real que se le mandó al cliente.
       const { data, error } = await supabase.storage
         .from("quote-pdfs")
         .createSignedUrl(q.pdf_url, 60);
@@ -531,7 +529,6 @@ function QuoteSection({ client }: { client: Client }) {
       }
     }
 
-    // Cotizaciones de antes de este cambio no tienen PDF guardado — se recrea.
     await generateQuotePdf({
       quoteNumber: q.quote_number,
       clientName: client.name,
@@ -552,7 +549,6 @@ function QuoteSection({ client }: { client: Client }) {
     setSendResult(null);
 
     try {
-      // Genera el PDF en memoria, sin descargarlo, solo para adjuntarlo
       const totals = await generateQuotePdf({
         quoteNumber: q.quote_number,
         clientName: client.name,
@@ -619,7 +615,6 @@ function QuoteSection({ client }: { client: Client }) {
       return;
     }
 
-    // borra también el PDF guardado, para no dejarlo huérfano en Storage
     if (quote?.pdf_url) {
       await supabase.storage.from("quote-pdfs").remove([quote.pdf_url]);
     }
@@ -1000,7 +995,6 @@ function QuoteBuilder({
     if (combinedItems.length === 0) return;
     setSaving(true);
 
-    // si estamos editando, se reusa el mismo número; si es nueva, se calcula
     const quoteNumber = editingQuote
       ? editingQuote.quote_number
       : String(
@@ -1025,9 +1019,6 @@ function QuoteBuilder({
       download: false,
     });
 
-    // Guardamos el PDF real generado, para que "Descargar" siempre abra
-    // exactamente el documento que se generó, sin importar si el diseño
-    // del generador cambia después.
     const pdfPath = `${client.id}/${quoteNumber}-${Date.now()}.pdf`;
     const { error: uploadError } = await supabase.storage
       .from("quote-pdfs")
@@ -1050,7 +1041,6 @@ function QuoteBuilder({
     };
 
     if (editingQuote) {
-      // borra el PDF viejo para no dejarlo huérfano en Storage
       if (editingQuote.pdf_url) {
         await supabase.storage.from("quote-pdfs").remove([editingQuote.pdf_url]);
       }
@@ -1069,7 +1059,6 @@ function QuoteBuilder({
 
   return (
     <div className="mb-6 p-4 bg-[var(--a-surface-2)] rounded-lg">
-      {/* Tamaño */}
       <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)] mb-1.5">
         Tamaño del trailer
       </label>
@@ -1166,7 +1155,6 @@ function QuoteBuilder({
         </div>
       )}
 
-      {/* Navegación del catálogo */}
       <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)] mb-1.5">
         Catálogo
       </label>
@@ -1234,7 +1222,6 @@ function QuoteBuilder({
         </div>
       )}
 
-      {/* Agregar algo suelto, fuera de catálogo */}
       <div className="flex gap-2 mb-5">
         <input
           placeholder="Item suelto (no está en catálogo)"
@@ -1257,7 +1244,6 @@ function QuoteBuilder({
         </button>
       </div>
 
-      {/* Lista de items agregados — esto es lo que ve el cliente en vivo */}
       <p ref={itemsListRef} className="font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)] mb-2">
         En la cotización ({combinedItems.length})
       </p>
@@ -1393,51 +1379,63 @@ function QuoteBuilder({
                 ))}
               </div>
 
-              {items.length > 0 && (
-                <div className="mb-4 pt-3 border-t border-[var(--a-border)]">
-                  <p className="admin-label mb-2">Plano del trailer</p>
-                  {(["trasera", "frontal", "izquierda", "derecha", "isla"] as const)
-                    .map((wall) => ({
-                      wall,
-                      wallItems: items.filter((it) => (it.wall || "trasera") === wall),
-                    }))
-                    .filter((g) => g.wallItems.length > 0)
-                    .map((g) => (
-                      <div key={g.wall} className="mb-2">
-                        <p className="font-mono text-[10px] uppercase text-[var(--a-text-muted)] mb-1 flex items-center gap-1">
-                          {g.wall === "trasera"
-                            ? "Pared trasera"
-                            : g.wall === "frontal"
-                            ? "Pared frontal"
-                            : g.wall === "izquierda"
-                            ? "Pared izquierda"
-                            : g.wall === "derecha"
-                            ? "Pared derecha"
-                            : "Isla / centro"}
-                          {doorWall === g.wall && " · 🚪 puerta"}
-                        </p>
-                        <div className="flex gap-1.5 flex-wrap">
-                          {g.wallItems.map((it, idx) => (
-                            <div
-                              key={idx}
-                              className="bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded px-2 py-1.5 text-center"
-                              style={{ minWidth: "60px" }}
-                            >
-                              <p className="text-[10px] text-[var(--a-text)] leading-tight">
-                                {it.label}
-                              </p>
-                            </div>
-                          ))}
+              {items.length > 0 && (() => {
+                const wallDefs: { key: string; label: string }[] = [
+                  { key: "trasera", label: "Pared trasera" },
+                  { key: "frontal", label: "Pared frontal" },
+                  { key: "izquierda", label: "Pared izquierda" },
+                  { key: "derecha", label: "Pared derecha" },
+                  { key: "isla", label: "Isla / centro" },
+                ];
+                const known = new Set(wallDefs.map((w) => w.key));
+                const groups = wallDefs.map((w) => ({
+                  ...w,
+                  wallItems: items.filter((it) => (it.wall || "trasera") === w.key),
+                }));
+                const unassigned = items.filter((it) => !known.has(it.wall || "trasera"));
+                if (unassigned.length > 0) {
+                  groups.push({ key: "sin_asignar", label: "Sin pared asignada", wallItems: unassigned });
+                }
+                const visibleGroups = groups.filter((g) => g.wallItems.length > 0);
+
+                return (
+                  <div className="mb-4 pt-3 border-t border-[var(--a-border)]">
+                    <p className="admin-label mb-2">Plano del trailer</p>
+                    {visibleGroups.length === 0 ? (
+                      <p className="text-xs text-[var(--a-text-muted)]">
+                        (No se pudo agrupar ninguna pieza — avísale a soporte, esto no debería pasar)
+                      </p>
+                    ) : (
+                      visibleGroups.map((g) => (
+                        <div key={g.key} className="mb-2">
+                          <p className="font-mono text-[10px] uppercase text-[var(--a-text-muted)] mb-1 flex items-center gap-1">
+                            {g.label}
+                            {doorWall === g.key && " · 🚪 puerta"}
+                          </p>
+                          <div className="flex gap-1.5 flex-wrap">
+                            {g.wallItems.map((it, idx) => (
+                              <div
+                                key={idx}
+                                className="bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded px-2 py-1.5 text-center"
+                                style={{ minWidth: "60px" }}
+                              >
+                                <p className="text-[10px] text-[var(--a-text)] leading-tight">
+                                  {it.label || "(sin nombre)"}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    ))}
-                  {selectedSize?.length_ft && (
-                    <p className="font-mono text-[10px] text-[var(--a-text-muted)] mt-1">
-                      Largo total: {selectedSize.length_ft} ft
-                    </p>
-                  )}
-                </div>
-              )}
+                      ))
+                    )}
+                    {selectedSize?.length_ft && (
+                      <p className="font-mono text-[10px] text-[var(--a-text-muted)] mt-1">
+                        Largo total: {selectedSize.length_ft} ft
+                      </p>
+                    )}
+                  </div>
+                );
+              })()}
 
               <div className="flex flex-col items-end gap-1 mb-5 font-mono text-sm border-t border-[var(--a-border)] pt-3">
                 <p className="text-[var(--a-text-muted)]">Subtotal: ${subtotal.toLocaleString()}</p>
