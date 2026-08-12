@@ -785,6 +785,191 @@ function QuoteSection({ client }: { client: Client }) {
   );
 }
 
+// ============================================
+// PLANO 2D REAL — piezas puestas alrededor del rectángulo, a escala
+// ============================================
+function TrailerFloorPlanSVG({
+  items,
+  lengthFt,
+  doorWall,
+}: {
+  items: QuoteLineItem[];
+  lengthFt: number | null | undefined;
+  doorWall: string;
+}) {
+  const knownWalls = new Set(["trasera", "frontal", "izquierda", "derecha"]);
+
+  const byWall: Record<string, QuoteLineItem[]> = {
+    trasera: [],
+    frontal: [],
+    izquierda: [],
+    derecha: [],
+    isla: [],
+  };
+  items.forEach((it) => {
+    const w = it.wall === "isla" ? "isla" : knownWalls.has(it.wall || "") ? (it.wall as string) : "trasera";
+    byWall[w].push(it);
+  });
+
+  const totalIn = (lengthFt || 20) * 12;
+  const bodyX = 110;
+  const bodyY = 50;
+  const bodyW = 520;
+  const bodyH = 200;
+  const scaleLong = bodyW / totalIn;
+
+  function longRow(wallItems: QuoteLineItem[], y: number, dimAbove: boolean) {
+    let cursor = bodyX + 12;
+    const boxes: React.ReactNode[] = [];
+    wallItems.forEach((it, idx) => {
+      const widthIn = it.width_in || 24;
+      const w = Math.max(34, widthIn * scaleLong);
+      const dimY = dimAbove ? y - 8 : y + 44;
+      const labelY = dimAbove ? y - 12 : y + 56;
+      boxes.push(
+        <g key={idx}>
+          <line
+            x1={cursor}
+            y1={dimY}
+            x2={cursor + w}
+            y2={dimY}
+            stroke="#5b6570"
+            strokeWidth={0.5}
+            markerStart="url(#fp-arrow)"
+            markerEnd="url(#fp-arrow)"
+          />
+          <text x={cursor + w / 2} y={labelY} textAnchor="middle" fontSize={8} fill="#5b6570">
+            {Math.round(widthIn)}"
+          </text>
+          <rect
+            x={cursor}
+            y={y}
+            width={w}
+            height={36}
+            rx={4}
+            fill="rgba(31,58,92,0.08)"
+            stroke="#1f3a5c"
+            strokeWidth={0.75}
+          />
+          <text x={cursor + w / 2} y={y + 22} textAnchor="middle" fontSize={8} fill="#1b1f23">
+            {it.label.length > 12 ? it.label.slice(0, 11) + "…" : it.label}
+          </text>
+        </g>
+      );
+      cursor += w + 6;
+    });
+    return boxes;
+  }
+
+  function shortColumn(wallItems: QuoteLineItem[], x: number, alignLabelRight: boolean) {
+    let cursor = bodyY + 12;
+    const boxes: React.ReactNode[] = [];
+    wallItems.forEach((it, idx) => {
+      const h = 32;
+      boxes.push(
+        <g key={idx}>
+          <rect
+            x={x}
+            y={cursor}
+            width={70}
+            height={h}
+            rx={4}
+            fill="rgba(31,58,92,0.08)"
+            stroke="#1f3a5c"
+            strokeWidth={0.75}
+          />
+          <text x={x + 35} y={cursor + h / 2 + 3} textAnchor="middle" fontSize={7.5} fill="#1b1f23">
+            {it.label.length > 10 ? it.label.slice(0, 9) + "…" : it.label}
+          </text>
+        </g>
+      );
+      cursor += h + 6;
+    });
+    return boxes;
+  }
+
+  const doorPositions: Record<string, { x: number; y: number; label: { x: number; y: number } }> = {
+    trasera: { x: bodyX + bodyW / 2, y: bodyY, label: { x: bodyX + bodyW / 2, y: bodyY - 30 } },
+    derecha: { x: bodyX + bodyW / 2, y: bodyY + bodyH, label: { x: bodyX + bodyW / 2, y: bodyY + bodyH + 42 } },
+    izquierda: { x: bodyX, y: bodyY + bodyH / 2, label: { x: bodyX - 30, y: bodyY + bodyH / 2 } },
+    frontal: { x: bodyX + bodyW, y: bodyY + bodyH / 2, label: { x: bodyX + bodyW + 30, y: bodyY + bodyH / 2 } },
+  };
+  const doorPos = doorPositions[doorWall] || doorPositions.trasera;
+
+  return (
+    <svg viewBox="0 0 760 340" width="100%" style={{ maxHeight: 340 }}>
+      <defs>
+        <marker
+          id="fp-arrow"
+          viewBox="0 0 10 10"
+          refX="8"
+          refY="5"
+          markerWidth="5"
+          markerHeight="5"
+          orient="auto-start-reverse"
+        >
+          <path d="M2 1L8 5L2 9" fill="none" stroke="#5b6570" strokeWidth="1.5" />
+        </marker>
+      </defs>
+
+      {/* cuerpo del trailer */}
+      <rect x={bodyX} y={bodyY} width={bodyW} height={bodyH} rx={8} fill="none" stroke="#1b1f23" strokeWidth={1} />
+
+      {/* lengüeta, siempre del lado frontal */}
+      <path
+        d={`M${bodyX + bodyW} ${bodyY} L${bodyX + bodyW + 55} ${bodyY + bodyH / 2} L${bodyX + bodyW} ${bodyY + bodyH}`}
+        fill="none"
+        stroke="#1b1f23"
+        strokeWidth={1}
+      />
+      <text x={bodyX + bodyW + 20} y={bodyY + bodyH / 2 + 4} fontSize={8} fill="#5b6570" textAnchor="middle">
+        Lengüeta
+      </text>
+
+      {/* puerta */}
+      <circle cx={doorPos.x} cy={doorPos.y} r={4} fill="#c0392b" />
+      <text x={doorPos.label.x} y={doorPos.label.y} fontSize={8} fill="#c0392b" textAnchor="middle">
+        🚪 Puerta
+      </text>
+
+      {/* piezas por pared */}
+      {longRow(byWall.trasera, bodyY + 6, true)}
+      {longRow(byWall.derecha, bodyY + bodyH - 42, false)}
+      {shortColumn(byWall.izquierda, bodyX + 6, false)}
+      {shortColumn(byWall.frontal, bodyX + bodyW - 76, true)}
+
+      {/* isla, flotando al centro */}
+      {byWall.isla.length > 0 && (
+        <g>
+          {byWall.isla.map((it, idx) => (
+            <g key={idx} transform={`translate(${bodyX + bodyW / 2 - 40 + idx * 85}, ${bodyY + bodyH / 2 - 18})`}>
+              <rect width={75} height={36} rx={4} fill="rgba(31,58,92,0.12)" stroke="#1f3a5c" strokeWidth={0.75} />
+              <text x={37} y={22} textAnchor="middle" fontSize={7.5} fill="#1b1f23">
+                {it.label.length > 11 ? it.label.slice(0, 10) + "…" : it.label}
+              </text>
+            </g>
+          ))}
+        </g>
+      )}
+
+      {/* medida total */}
+      <line
+        x1={bodyX}
+        y1={bodyY + bodyH + 20}
+        x2={bodyX + bodyW}
+        y2={bodyY + bodyH + 20}
+        stroke="#5b6570"
+        strokeWidth={0.5}
+        markerStart="url(#fp-arrow)"
+        markerEnd="url(#fp-arrow)"
+      />
+      <text x={bodyX + bodyW / 2} y={bodyY + bodyH + 34} textAnchor="middle" fontSize={9} fill="#1b1f23">
+        {lengthFt || 20} ft
+      </text>
+    </svg>
+  );
+}
+
 function ViewQuoteModal({
   quote,
   onClose,
@@ -927,6 +1112,7 @@ function QuoteBuilder({
         image_url: item.image_url,
         cost: item.cost || 0,
         wall: currentWall,
+        width_in: item.width_in,
       },
     ]);
     setRecentlyAddedIds((prev) => new Set(prev).add(item.id));
@@ -951,6 +1137,7 @@ function QuoteBuilder({
           image_url: item.image_url,
           cost: item.cost || 0,
           wall: (link as PresetItem & { wall?: string }).wall || currentWall,
+          width_in: item.width_in,
         };
       })
       .filter((x): x is QuoteLineItem => x !== null);
@@ -1379,63 +1566,16 @@ function QuoteBuilder({
                 ))}
               </div>
 
-              {items.length > 0 && (() => {
-                const wallDefs: { key: string; label: string }[] = [
-                  { key: "trasera", label: "Pared trasera" },
-                  { key: "frontal", label: "Pared frontal" },
-                  { key: "izquierda", label: "Pared izquierda" },
-                  { key: "derecha", label: "Pared derecha" },
-                  { key: "isla", label: "Isla / centro" },
-                ];
-                const known = new Set(wallDefs.map((w) => w.key));
-                const groups = wallDefs.map((w) => ({
-                  ...w,
-                  wallItems: items.filter((it) => (it.wall || "trasera") === w.key),
-                }));
-                const unassigned = items.filter((it) => !known.has(it.wall || "trasera"));
-                if (unassigned.length > 0) {
-                  groups.push({ key: "sin_asignar", label: "Sin pared asignada", wallItems: unassigned });
-                }
-                const visibleGroups = groups.filter((g) => g.wallItems.length > 0);
-
-                return (
-                  <div className="mb-4 pt-3 border-t border-[var(--a-border)]">
-                    <p className="admin-label mb-2">Plano del trailer</p>
-                    {visibleGroups.length === 0 ? (
-                      <p className="text-xs text-[var(--a-text-muted)]">
-                        (No se pudo agrupar ninguna pieza — avísale a soporte, esto no debería pasar)
-                      </p>
-                    ) : (
-                      visibleGroups.map((g) => (
-                        <div key={g.key} className="mb-2">
-                          <p className="font-mono text-[10px] uppercase text-[var(--a-text-muted)] mb-1 flex items-center gap-1">
-                            {g.label}
-                            {doorWall === g.key && " · 🚪 puerta"}
-                          </p>
-                          <div className="flex gap-1.5 flex-wrap">
-                            {g.wallItems.map((it, idx) => (
-                              <div
-                                key={idx}
-                                className="bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded px-2 py-1.5 text-center"
-                                style={{ minWidth: "60px" }}
-                              >
-                                <p className="text-[10px] text-[var(--a-text)] leading-tight">
-                                  {it.label || "(sin nombre)"}
-                                </p>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                    {selectedSize?.length_ft && (
-                      <p className="font-mono text-[10px] text-[var(--a-text-muted)] mt-1">
-                        Largo total: {selectedSize.length_ft} ft
-                      </p>
-                    )}
-                  </div>
-                );
-              })()}
+              {items.length > 0 && (
+                <div className="mb-4 pt-3 border-t border-[var(--a-border)]">
+                  <p className="admin-label mb-2">Plano del trailer</p>
+                  <TrailerFloorPlanSVG
+                    items={items}
+                    lengthFt={selectedSize?.length_ft}
+                    doorWall={doorWall}
+                  />
+                </div>
+              )}
 
               <div className="flex flex-col items-end gap-1 mb-5 font-mono text-sm border-t border-[var(--a-border)] pt-3">
                 <p className="text-[var(--a-text-muted)]">Subtotal: ${subtotal.toLocaleString()}</p>

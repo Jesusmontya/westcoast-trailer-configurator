@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-export type QuoteLineItem = { label: string; price: number; image_url?: string | null; cost?: number; wall?: string };
+export type QuoteLineItem = { label: string; price: number; image_url?: string | null; cost?: number; wall?: string; width_in?: number | null };
 
 export type QuotePdfInput = {
   quoteNumber: string;
