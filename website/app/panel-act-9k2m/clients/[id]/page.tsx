@@ -1214,7 +1214,7 @@ function ViewQuoteModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-6 py-10 overflow-y-auto">
-      <div className="admin-card bg-[var(--a-surface)] w-full max-w-lg overflow-hidden">
+      <div className="admin-card bg-[var(--a-surface)] w-full max-w-2xl overflow-hidden">
         {quote.cover_image_url && (
           <img src={quote.cover_image_url} alt="" className="w-full h-40 object-cover" />
         )}
@@ -1801,7 +1801,7 @@ function QuoteBuilder({
 
       {showPreview && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-6 py-10 overflow-y-auto">
-          <div className="admin-card bg-[var(--a-surface)] w-full max-w-lg overflow-hidden">
+          <div className="admin-card bg-[var(--a-surface)] w-full max-w-2xl overflow-hidden">
             {selectedSize?.image_url && (
               <img src={selectedSize.image_url as string} alt="" className="w-full h-40 object-cover" />
             )}
