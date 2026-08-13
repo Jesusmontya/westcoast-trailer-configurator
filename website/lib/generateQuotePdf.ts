@@ -236,15 +236,20 @@ export async function generateQuotePdf(input: QuotePdfInput): Promise<QuoteTotal
 
     const rotatedFloorPlan = await rotateImageDataUrl(input.floorPlanImageDataUrl, 90);
     const usableWidth = pageWidth - margin * 2;
-    const usableHeight = 260;
-    const widthScale = usableWidth / 760;
-    const heightScale = usableHeight / 340;
-    const scale = Math.min(widthScale, heightScale);
-    const imgW = 760 * scale;
-    const imgH = 340 * scale;
+    const usableHeight = 240;
+    const rotatedWidth = 340;
+    const rotatedHeight = 760;
+    const scale = Math.min(usableWidth / rotatedWidth, usableHeight / rotatedHeight);
+    const imgW = rotatedWidth * scale;
+    const imgH = rotatedHeight * scale;
     const x = pageWidth / 2 - imgW / 2;
     const y = 36;
 
+    doc.setFillColor(255, 255, 255);
+    doc.roundedRect(x - 4, y - 4, imgW + 8, imgH + 8, 3, 3, "F");
+    doc.setDrawColor(210, 210, 210);
+    doc.setLineWidth(0.4);
+    doc.roundedRect(x - 4, y - 4, imgW + 8, imgH + 8, 3, 3, "S");
     doc.addImage(rotatedFloorPlan, "PNG", x, y, imgW, imgH);
   }
 
