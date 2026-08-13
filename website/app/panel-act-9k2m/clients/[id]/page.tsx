@@ -801,14 +801,15 @@ const WALL_ZONES: { key: string; label: string }[] = [
 
 function FloorPlanEditorModal({
   items,
-  onUpdateWall,
+  onReorder,
   onClose,
 }: {
   items: QuoteLineItem[];
-  onUpdateWall: (index: number, wall: string) => void;
+  onReorder: (newItems: QuoteLineItem[]) => void;
   onClose: () => void;
 }) {
   const zoneRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const chipRefs = useRef<Record<number, HTMLDivElement | null>>({});
   const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
   const [ghostPos, setGhostPos] = useState<{ x: number; y: number } | null>(null);
   const [hoverZone, setHoverZone] = useState<string | null>(null);
@@ -819,6 +820,23 @@ function FloorPlanEditorModal({
       if (!el) continue;
       const r = el.getBoundingClientRect();
       if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return key;
+    }
+    return null;
+  }
+
+  // Encuentra, dentro de una pared, antes de cuál pieza (por índice global)
+  // debería insertarse la que estás soltando, según en qué x la soltaste.
+  function findInsertBeforeIndex(zoneKey: string, clientX: number, excludeIndex: number): number | null {
+    const zoneEntries = items
+      .map((it, i) => ({ it, i }))
+      .filter(({ it, i }) => i !== excludeIndex && (it.wall || "trasera") === zoneKey);
+
+    for (const { i } of zoneEntries) {
+      const el = chipRefs.current[i];
+      if (!el) continue;
+      const r = el.getBoundingClientRect();
+      const midX = r.left + r.width / 2;
+      if (clientX < midX) return i;
     }
     return null;
   }
@@ -838,13 +856,49 @@ function FloorPlanEditorModal({
   function handlePointerUp(e: React.PointerEvent) {
     if (draggingIndex === null) return;
     const zone = findZoneAt(e.clientX, e.clientY);
-    if (zone) onUpdateWall(draggingIndex, zone);
+    if (zone) {
+      const insertBeforeGlobalIndex = findInsertBeforeIndex(zone, e.clientX, draggingIndex);
+      const movedItem: QuoteLineItem = { ...items[draggingIndex], wall: zone };
+      const remaining = items.filter((_, i) => i !== draggingIndex);
+
+      let insertPos = remaining.length; // por default, al final de esa pared
+      if (insertBeforeGlobalIndex !== null) {
+        const targetRef = items[insertBeforeGlobalIndex];
+        const foundPos = remaining.indexOf(targetRef);
+        if (foundPos !== -1) insertPos = foundPos;
+      }
+      remaining.splice(insertPos, 0, movedItem);
+      onReorder(remaining);
+    }
     setDraggingIndex(null);
     setGhostPos(null);
     setHoverZone(null);
   }
 
   const draggingItem = draggingIndex !== null ? items[draggingIndex] : null;
+
+  function renderZoneChips(zoneKey: string) {
+    return items.map((it, i) =>
+      (it.wall || "trasera") === zoneKey ? (
+        <div
+          key={i}
+          ref={(el) => { chipRefs.current[i] = el; }}
+          onPointerDown={(e) => handlePointerDown(e, i)}
+          className="px-2 py-1 rounded bg-[var(--a-surface-2)] border border-[var(--a-border)] text-[9px] text-[var(--a-text)] cursor-grab active:cursor-grabbing"
+          style={{ opacity: draggingIndex === i ? 0.3 : 1 }}
+        >
+          {it.label}
+        </div>
+      ) : null
+    );
+  }
+
+  function zoneStyle(key: string) {
+    return {
+      borderColor: hoverZone === key ? "#1f3a5c" : "#c9cfd4",
+      background: hoverZone === key ? "rgba(31,58,92,0.08)" : "transparent",
+    };
+  }
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4 py-8">
@@ -856,7 +910,8 @@ function FloorPlanEditorModal({
           </button>
         </div>
         <p className="text-xs text-[var(--a-text-muted)] mb-4">
-          Arrastra cada pieza a la pared donde va. Suéltala encima del recuadro.
+          Arrastra cada pieza a la pared y posición exacta donde va — el orden en
+          que las sueltas es el orden en que van a quedar, sin encimarse.
         </p>
 
         <div
@@ -869,138 +924,58 @@ function FloorPlanEditorModal({
           <div
             ref={(el) => { zoneRefs.current.trasera = el; }}
             className="rounded-lg border-2 border-dashed p-2 min-h-[90px]"
-            style={{
-              borderColor: hoverZone === "trasera" ? "#1f3a5c" : "#c9cfd4",
-              background: hoverZone === "trasera" ? "rgba(31,58,92,0.08)" : "transparent",
-            }}
+            style={zoneStyle("trasera")}
           >
             <p className="font-mono text-[9px] uppercase text-[var(--a-text-muted)] mb-1 text-center">
               Trasera
             </p>
-            <div className="flex flex-wrap gap-1 justify-center">
-              {items.map((it, i) =>
-                (it.wall || "trasera") === "trasera" ? (
-                  <div
-                    key={i}
-                    onPointerDown={(e) => handlePointerDown(e, i)}
-                    className="px-2 py-1 rounded bg-[var(--a-surface-2)] border border-[var(--a-border)] text-[9px] text-[var(--a-text)] cursor-grab active:cursor-grabbing"
-                    style={{ opacity: draggingIndex === i ? 0.3 : 1 }}
-                  >
-                    {it.label}
-                  </div>
-                ) : null
-              )}
-            </div>
+            <div className="flex flex-wrap gap-1 justify-center">{renderZoneChips("trasera")}</div>
           </div>
           <div />
 
           <div
             ref={(el) => { zoneRefs.current.izquierda = el; }}
             className="rounded-lg border-2 border-dashed p-2 min-h-[90px]"
-            style={{
-              borderColor: hoverZone === "izquierda" ? "#1f3a5c" : "#c9cfd4",
-              background: hoverZone === "izquierda" ? "rgba(31,58,92,0.08)" : "transparent",
-            }}
+            style={zoneStyle("izquierda")}
           >
             <p className="font-mono text-[9px] uppercase text-[var(--a-text-muted)] mb-1 text-center">
               Izquierda
             </p>
-            <div className="flex flex-wrap gap-1 justify-center">
-              {items.map((it, i) =>
-                it.wall === "izquierda" ? (
-                  <div
-                    key={i}
-                    onPointerDown={(e) => handlePointerDown(e, i)}
-                    className="px-2 py-1 rounded bg-[var(--a-surface-2)] border border-[var(--a-border)] text-[9px] text-[var(--a-text)] cursor-grab active:cursor-grabbing"
-                    style={{ opacity: draggingIndex === i ? 0.3 : 1 }}
-                  >
-                    {it.label}
-                  </div>
-                ) : null
-              )}
-            </div>
+            <div className="flex flex-wrap gap-1 justify-center">{renderZoneChips("izquierda")}</div>
           </div>
 
           <div
             ref={(el) => { zoneRefs.current.isla = el; }}
             className="rounded-lg border-2 border-dashed p-2 min-h-[90px] flex flex-col items-center justify-center"
-            style={{
-              borderColor: hoverZone === "isla" ? "#1f3a5c" : "#c9cfd4",
-              background: hoverZone === "isla" ? "rgba(31,58,92,0.08)" : "transparent",
-            }}
+            style={zoneStyle("isla")}
           >
             <p className="font-mono text-[9px] uppercase text-[var(--a-text-muted)] mb-1 text-center">
               Isla
             </p>
-            <div className="flex flex-wrap gap-1 justify-center">
-              {items.map((it, i) =>
-                it.wall === "isla" ? (
-                  <div
-                    key={i}
-                    onPointerDown={(e) => handlePointerDown(e, i)}
-                    className="px-2 py-1 rounded bg-[var(--a-surface-2)] border border-[var(--a-border)] text-[9px] text-[var(--a-text)] cursor-grab active:cursor-grabbing"
-                    style={{ opacity: draggingIndex === i ? 0.3 : 1 }}
-                  >
-                    {it.label}
-                  </div>
-                ) : null
-              )}
-            </div>
+            <div className="flex flex-wrap gap-1 justify-center">{renderZoneChips("isla")}</div>
           </div>
 
           <div
             ref={(el) => { zoneRefs.current.frontal = el; }}
             className="rounded-lg border-2 border-dashed p-2 min-h-[90px]"
-            style={{
-              borderColor: hoverZone === "frontal" ? "#1f3a5c" : "#c9cfd4",
-              background: hoverZone === "frontal" ? "rgba(31,58,92,0.08)" : "transparent",
-            }}
+            style={zoneStyle("frontal")}
           >
             <p className="font-mono text-[9px] uppercase text-[var(--a-text-muted)] mb-1 text-center">
               Frontal
             </p>
-            <div className="flex flex-wrap gap-1 justify-center">
-              {items.map((it, i) =>
-                it.wall === "frontal" ? (
-                  <div
-                    key={i}
-                    onPointerDown={(e) => handlePointerDown(e, i)}
-                    className="px-2 py-1 rounded bg-[var(--a-surface-2)] border border-[var(--a-border)] text-[9px] text-[var(--a-text)] cursor-grab active:cursor-grabbing"
-                    style={{ opacity: draggingIndex === i ? 0.3 : 1 }}
-                  >
-                    {it.label}
-                  </div>
-                ) : null
-              )}
-            </div>
+            <div className="flex flex-wrap gap-1 justify-center">{renderZoneChips("frontal")}</div>
           </div>
 
           <div />
           <div
             ref={(el) => { zoneRefs.current.derecha = el; }}
             className="rounded-lg border-2 border-dashed p-2 min-h-[90px]"
-            style={{
-              borderColor: hoverZone === "derecha" ? "#1f3a5c" : "#c9cfd4",
-              background: hoverZone === "derecha" ? "rgba(31,58,92,0.08)" : "transparent",
-            }}
+            style={zoneStyle("derecha")}
           >
             <p className="font-mono text-[9px] uppercase text-[var(--a-text-muted)] mb-1 text-center">
               Derecha
             </p>
-            <div className="flex flex-wrap gap-1 justify-center">
-              {items.map((it, i) =>
-                it.wall === "derecha" ? (
-                  <div
-                    key={i}
-                    onPointerDown={(e) => handlePointerDown(e, i)}
-                    className="px-2 py-1 rounded bg-[var(--a-surface-2)] border border-[var(--a-border)] text-[9px] text-[var(--a-text)] cursor-grab active:cursor-grabbing"
-                    style={{ opacity: draggingIndex === i ? 0.3 : 1 }}
-                  >
-                    {it.label}
-                  </div>
-                ) : null
-              )}
-            </div>
+            <div className="flex flex-wrap gap-1 justify-center">{renderZoneChips("derecha")}</div>
           </div>
           <div />
         </div>
@@ -1022,10 +997,12 @@ function TrailerFloorPlanSVG({
   items,
   lengthFt,
   doorWall,
+  windowWall,
 }: {
   items: QuoteLineItem[];
   lengthFt: number | null | undefined;
   doorWall: string;
+  windowWall?: string;
 }) {
   const knownWalls = new Set(["trasera", "frontal", "izquierda", "derecha"]);
 
@@ -1126,6 +1103,14 @@ function TrailerFloorPlanSVG({
   };
   const doorPos = doorPositions[doorWall] || doorPositions.trasera;
 
+  const windowPositions: Record<string, { x: number; y: number; label: { x: number; y: number } }> = {
+    trasera: { x: bodyX + bodyW * 0.28, y: bodyY, label: { x: bodyX + bodyW * 0.28, y: bodyY - 16 } },
+    derecha: { x: bodyX + bodyW * 0.28, y: bodyY + bodyH, label: { x: bodyX + bodyW * 0.28, y: bodyY + bodyH + 56 } },
+    izquierda: { x: bodyX, y: bodyY + bodyH * 0.28, label: { x: bodyX - 30, y: bodyY + bodyH * 0.28 - 14 } },
+    frontal: { x: bodyX + bodyW, y: bodyY + bodyH * 0.28, label: { x: bodyX + bodyW + 30, y: bodyY + bodyH * 0.28 - 14 } },
+  };
+  const windowPos = windowWall ? windowPositions[windowWall] || windowPositions.frontal : null;
+
   return (
     <svg viewBox="0 0 760 340" width="100%" style={{ maxHeight: 340 }}>
       <defs>
@@ -1161,6 +1146,16 @@ function TrailerFloorPlanSVG({
       <text x={doorPos.label.x} y={doorPos.label.y} fontSize={8} fill="#c0392b" textAnchor="middle">
         🚪 Puerta
       </text>
+
+      {/* ventana de servicio */}
+      {windowPos && (
+        <>
+          <rect x={windowPos.x - 5} y={windowPos.y - 5} width={10} height={10} fill="#3d6690" />
+          <text x={windowPos.label.x} y={windowPos.label.y} fontSize={8} fill="#3d6690" textAnchor="middle">
+            🪟 Ventana
+          </text>
+        </>
+      )}
 
       {/* piezas por pared */}
       {longRow(byWall.trasera, bodyY + 6, true)}
@@ -1306,6 +1301,9 @@ function QuoteBuilder({
   const [recentlyAddedIds, setRecentlyAddedIds] = useState<Set<string>>(new Set());
   const itemsListRef = useRef<HTMLDivElement>(null);
   const [doorWall, setDoorWall] = useState<string>(source?.door_wall || "trasera");
+  const [windowWall, setWindowWall] = useState<string>(
+    (source as (Quote & { window_wall?: string | null }) | null)?.window_wall || "frontal"
+  );
   const [catalogSearch, setCatalogSearch] = useState("");
 
   useEffect(() => {
@@ -1464,6 +1462,7 @@ function QuoteBuilder({
       margin,
       pdf_url: uploadError ? null : pdfPath,
       door_wall: doorWall,
+      window_wall: windowWall,
       monthly_estimate: monthlyEstimate ? parseFloat(monthlyEstimate) : null,
       notes: notes || null,
     };
@@ -1509,20 +1508,37 @@ function QuoteBuilder({
         ))}
       </div>
 
-      <div className="mb-5">
-        <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)] mb-1.5">
-          Puerta en
-        </label>
-        <select
-          value={doorWall}
-          onChange={(e) => setDoorWall(e.target.value)}
-          className="w-full sm:w-64 px-3 py-2 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
-        >
-          <option value="trasera">Pared trasera</option>
-          <option value="frontal">Pared frontal (lengüeta)</option>
-          <option value="izquierda">Pared izquierda</option>
-          <option value="derecha">Pared derecha</option>
-        </select>
+      <div className="grid grid-cols-2 gap-3 mb-5">
+        <div>
+          <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)] mb-1.5">
+            Puerta en
+          </label>
+          <select
+            value={doorWall}
+            onChange={(e) => setDoorWall(e.target.value)}
+            className="w-full px-3 py-2 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
+          >
+            <option value="trasera">Pared trasera</option>
+            <option value="frontal">Pared frontal (lengüeta)</option>
+            <option value="izquierda">Pared izquierda</option>
+            <option value="derecha">Pared derecha</option>
+          </select>
+        </div>
+        <div>
+          <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)] mb-1.5">
+            Ventana de servicio en
+          </label>
+          <select
+            value={windowWall}
+            onChange={(e) => setWindowWall(e.target.value)}
+            className="w-full px-3 py-2 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
+          >
+            <option value="trasera">Pared trasera</option>
+            <option value="frontal">Pared frontal (lengüeta)</option>
+            <option value="izquierda">Pared izquierda</option>
+            <option value="derecha">Pared derecha</option>
+          </select>
+        </div>
       </div>
 
       {presets.length > 0 && (
@@ -1842,6 +1858,7 @@ function QuoteBuilder({
                     items={items}
                     lengthFt={selectedSize?.length_ft}
                     doorWall={doorWall}
+                    windowWall={windowWall}
                   />
                 </div>
               )}
@@ -1885,7 +1902,7 @@ function QuoteBuilder({
       {showPlanEditor && (
         <FloorPlanEditorModal
           items={items}
-          onUpdateWall={updateItemWall}
+          onReorder={setItems}
           onClose={() => setShowPlanEditor(false)}
         />
       )}
