@@ -35,6 +35,39 @@ async function loadImageAsDataUrl(url: string): Promise<string | null> {
   }
 }
 
+async function rotateImageDataUrl(dataUrl: string, degrees: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const angle = ((degrees % 360) + 360) % 360;
+
+      if (angle === 90 || angle === 270) {
+        canvas.width = img.height;
+        canvas.height = img.width;
+      } else {
+        canvas.width = img.width;
+        canvas.height = img.height;
+      }
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("No 2D context available"));
+        return;
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((angle * Math.PI) / 180);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = () => reject(new Error("Image load failed"));
+    img.src = dataUrl;
+  });
+}
+
 export async function generateQuotePdf(input: QuotePdfInput): Promise<QuoteTotals> {
   const doc = new jsPDF();
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -201,10 +234,18 @@ export async function generateQuotePdf(input: QuotePdfInput): Promise<QuoteTotal
     doc.setFont("helvetica", "bold");
     doc.text("Floor Plan", margin, 20);
 
-    // el plano se dibujó en un lienzo de 760x340 — mantenemos esa proporción
-    const imgW = pageWidth - margin * 2;
-    const imgH = (imgW * 340) / 760;
-    doc.addImage(input.floorPlanImageDataUrl, "PNG", margin, 30, imgW, imgH);
+    const rotatedFloorPlan = await rotateImageDataUrl(input.floorPlanImageDataUrl, 90);
+    const usableWidth = pageWidth - margin * 2;
+    const usableHeight = 260;
+    const widthScale = usableWidth / 760;
+    const heightScale = usableHeight / 340;
+    const scale = Math.min(widthScale, heightScale);
+    const imgW = 760 * scale;
+    const imgH = 340 * scale;
+    const x = pageWidth / 2 - imgW / 2;
+    const y = 36;
+
+    doc.addImage(rotatedFloorPlan, "PNG", x, y, imgW, imgH);
   }
 
   if (input.download !== false) {
