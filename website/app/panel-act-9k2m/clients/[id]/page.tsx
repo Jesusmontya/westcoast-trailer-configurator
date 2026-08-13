@@ -1302,6 +1302,7 @@ function QuoteBuilder({
   const [saving, setSaving] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [showPlanEditor, setShowPlanEditor] = useState(false);
+  const [includeFloorPlan, setIncludeFloorPlan] = useState(true);
   const [recentlyAddedIds, setRecentlyAddedIds] = useState<Set<string>>(new Set());
   const itemsListRef = useRef<HTMLDivElement>(null);
   const [doorWall, setDoorWall] = useState<string>(source?.door_wall || "trasera");
@@ -1679,12 +1680,24 @@ function QuoteBuilder({
           En la cotización ({combinedItems.length})
         </p>
         {items.length > 0 && (
-          <button
-            onClick={() => setShowPlanEditor(true)}
-            className="text-xs font-mono text-[var(--a-accent)] font-semibold"
-          >
-            ✏️ Editar plano
-          </button>
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-1.5 text-xs font-mono text-[var(--a-text-muted)] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={includeFloorPlan}
+                onChange={(e) => setIncludeFloorPlan(e.target.checked)}
+              />
+              Incluir plano
+            </label>
+            {includeFloorPlan && (
+              <button
+                onClick={() => setShowPlanEditor(true)}
+                className="text-xs font-mono text-[var(--a-accent)] font-semibold"
+              >
+                ✏️ Editar plano
+              </button>
+            )}
+          </div>
         )}
       </div>
       {combinedItems.length === 0 ? (
@@ -1822,7 +1835,7 @@ function QuoteBuilder({
                 ))}
               </div>
 
-              {items.length > 0 && (
+              {includeFloorPlan && items.length > 0 && (
                 <div className="mb-4 pt-3 border-t border-[var(--a-border)]">
                   <p className="admin-label mb-2">Plano del trailer</p>
                   <TrailerFloorPlanSVG
