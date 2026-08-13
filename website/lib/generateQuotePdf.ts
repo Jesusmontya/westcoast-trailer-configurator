@@ -14,6 +14,7 @@ export type QuotePdfInput = {
   taxRate?: number;
   monthlyEstimate?: number | null;
   notes?: string | null;
+  floorPlanImageDataUrl?: string | null;
   download?: boolean;
 };
 
@@ -192,6 +193,19 @@ export async function generateQuotePdf(input: QuotePdfInput): Promise<QuoteTotal
   doc.setTextColor(130, 130, 130);
   doc.text("This quote is valid for 30 days.", margin, 291);
   doc.text("allcustomtrailers.com", pageWidth - margin, 291, { align: "right" });
+
+  if (input.floorPlanImageDataUrl) {
+    doc.addPage();
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(13);
+    doc.setFont("helvetica", "bold");
+    doc.text("Floor Plan", margin, 20);
+
+    // el plano se dibujó en un lienzo de 760x340 — mantenemos esa proporción
+    const imgW = pageWidth - margin * 2;
+    const imgH = (imgW * 340) / 760;
+    doc.addImage(input.floorPlanImageDataUrl, "PNG", margin, 30, imgW, imgH);
+  }
 
   if (input.download !== false) {
     doc.save(`quote-${input.quoteNumber}-${input.clientName || "client"}.pdf`);

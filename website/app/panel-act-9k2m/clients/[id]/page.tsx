@@ -801,6 +801,8 @@ const WALL_ZONES: { key: string; label: string }[] = [
 
 const CORNER_MARGIN_FRAC = 0.18; // qué tan cerca de la esquina no se voltea sola
 const TAP_THRESHOLD_PX = 6; // si te mueves menos que esto, cuenta como "tap", no arrastre
+const FP_BODY_W = 520;
+const FP_BODY_H = 200;
 
 function isRotatedForWall(item: QuoteLineItem, wall: string): boolean {
   if (wall !== "frontal" && wall !== "izquierda") return false;
@@ -823,6 +825,19 @@ function boxSpanFrac(
   const rotated = isRotatedForWall(item, wall);
   if (rotated) return Math.max(28 / bodyH, widthIn / totalIn);
   return 32 / bodyH;
+}
+
+// Calcula dónde debería caer una pieza nueva, justo después de la última
+// que ya ocupa esa pared — para que no nazca encimada con las demás.
+function nextPosForWall(itemsList: QuoteLineItem[], wall: string, totalIn: number): number {
+  const sameWall = itemsList.filter((it) => (it.wall || "trasera") === wall);
+  let maxEnd = 0;
+  sameWall.forEach((it) => {
+    const span = boxSpanFrac(it, wall, totalIn, FP_BODY_W, FP_BODY_H);
+    const end = (it.pos ?? 0) + span;
+    if (end > maxEnd) maxEnd = end;
+  });
+  return Math.min(maxEnd, 0.95);
 }
 
 function FloorPlanEditorModal({
@@ -1510,6 +1525,7 @@ function QuoteBuilder({
   const [showPreview, setShowPreview] = useState(false);
   const [showPlanEditor, setShowPlanEditor] = useState(false);
   const [includeFloorPlan, setIncludeFloorPlan] = useState(true);
+  const floorPlanCaptureRef = useRef<HTMLDivElement>(null);
   const [recentlyAddedIds, setRecentlyAddedIds] = useState<Set<string>>(new Set());
   const itemsListRef = useRef<HTMLDivElement>(null);
   const [doorWall, setDoorWall] = useState<string>(source?.door_wall || "trasera");
@@ -1552,17 +1568,23 @@ function QuoteBuilder({
   }
 
   function addCatalogItem(item: CatalogItem) {
-    setItems((prev) => [
-      ...prev,
-      {
-        label: item.name,
-        price: item.price,
-        image_url: item.image_url,
-        cost: item.cost || 0,
-        wall: "trasera",
-        width_in: item.width_in,
-      },
-    ]);
+    const totalIn = (selectedSize?.length_ft || 20) * 12;
+    setItems((prev) => {
+      const wall = "trasera";
+      const pos = nextPosForWall(prev, wall, totalIn);
+      return [
+        ...prev,
+        {
+          label: item.name,
+          price: item.price,
+          image_url: item.image_url,
+          cost: item.cost || 0,
+          wall,
+          width_in: item.width_in,
+          pos,
+        },
+      ];
+    });
     setRecentlyAddedIds((prev) => new Set(prev).add(item.id));
     setTimeout(() => {
       setRecentlyAddedIds((prev) => {
@@ -1575,21 +1597,38 @@ function QuoteBuilder({
 
   function addPreset(preset: Preset) {
     const presetLinks = presetItems.filter((pi) => pi.preset_id === preset.id);
-    const itemsToAdd = presetLinks
-      .map((link): QuoteLineItem | null => {
+    const totalIn = (selectedSize?.length_ft || 20) * 12;
+    setItems((prev) => {
+      const wallEnds: Record<string, number> = {};
+      prev.forEach((it) => {
+        const w = it.wall || "trasera";
+        const span = boxSpanFrac(it, w, totalIn, FP_BODY_W, FP_BODY_H);
+        const end = (it.pos ?? 0) + span;
+        wallEnds[w] = Math.max(wallEnds[w] || 0, end);
+      });
+
+      const itemsToAdd: QuoteLineItem[] = [];
+      presetLinks.forEach((link) => {
         const item = catalogItems.find((ci) => ci.id === link.catalog_item_id);
-        if (!item) return null;
-        return {
+        if (!item) return;
+        const wall = (link as PresetItem & { wall?: string }).wall || "trasera";
+        const startPos = Math.min(wallEnds[wall] || 0, 0.95);
+        const tempItem: QuoteLineItem = { label: item.name, price: item.price, width_in: item.width_in };
+        const span = boxSpanFrac(tempItem, wall, totalIn, FP_BODY_W, FP_BODY_H);
+        wallEnds[wall] = startPos + span;
+        itemsToAdd.push({
           label: item.name,
           price: item.price,
           image_url: item.image_url,
           cost: item.cost || 0,
-          wall: (link as PresetItem & { wall?: string }).wall || "trasera",
+          wall,
           width_in: item.width_in,
-        };
-      })
-      .filter((x): x is QuoteLineItem => x !== null);
-    setItems((prev) => [...prev, ...itemsToAdd]);
+          pos: startPos,
+        });
+      });
+
+      return [...prev, ...itemsToAdd];
+    });
   }
 
   const [manualPriceError, setManualPriceError] = useState(false);
@@ -1601,10 +1640,12 @@ function QuoteBuilder({
       return;
     }
     setManualPriceError(false);
-    setItems((prev) => [
-      ...prev,
-      { label: manualLabel, price, cost: 0, wall: "trasera" },
-    ]);
+    const totalIn = (selectedSize?.length_ft || 20) * 12;
+    setItems((prev) => {
+      const wall = "trasera";
+      const pos = nextPosForWall(prev, wall, totalIn);
+      return [...prev, { label: manualLabel, price, cost: 0, wall, pos }];
+    });
     setManualLabel("");
     setManualPrice("");
   }
@@ -1635,6 +1676,44 @@ function QuoteBuilder({
     ? catalogItems.filter((i) => i.name.toLowerCase().includes(catalogSearch.trim().toLowerCase()))
     : catalogItems.filter((i) => i.category_id === activeCategory);
 
+  async function captureFloorPlanImage(): Promise<string | null> {
+    const svgEl = floorPlanCaptureRef.current?.querySelector("svg");
+    if (!svgEl) return null;
+
+    const clone = svgEl.cloneNode(true) as SVGSVGElement;
+    clone.setAttribute("width", "760");
+    clone.setAttribute("height", "340");
+    clone.removeAttribute("style");
+
+    const svgData = new XMLSerializer().serializeToString(clone);
+    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const scale = 2; // más nítido en el PDF
+        const canvas = document.createElement("canvas");
+        canvas.width = 760 * scale;
+        canvas.height = 340 * scale;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.scale(scale, scale);
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, 760, 340);
+          ctx.drawImage(img, 0, 0, 760, 340);
+        }
+        URL.revokeObjectURL(url);
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        resolve(null);
+      };
+      img.src = url;
+    });
+  }
+
   async function generateAndSave() {
     if (combinedItems.length === 0) return;
     setSaving(true);
@@ -1650,6 +1729,9 @@ function QuoteBuilder({
           ).count || 0) + 1
         ).padStart(4, "0");
 
+    const floorPlanImageDataUrl =
+      includeFloorPlan && items.length > 0 ? await captureFloorPlanImage() : null;
+
     const totals = await generateQuotePdf({
       quoteNumber,
       clientName: client.name,
@@ -1660,6 +1742,7 @@ function QuoteBuilder({
       taxRate,
       monthlyEstimate: monthlyEstimate ? parseFloat(monthlyEstimate) : null,
       notes,
+      floorPlanImageDataUrl,
       download: false,
     });
 
@@ -2074,14 +2157,16 @@ function QuoteBuilder({
               {includeFloorPlan && items.length > 0 && (
                 <div className="mb-4 pt-3 border-t border-[var(--a-border)]">
                   <p className="admin-label mb-2">Plano del trailer</p>
-                  <TrailerFloorPlanSVG
-                    items={items}
-                    lengthFt={selectedSize?.length_ft}
-                    doorWall={doorWall}
-                    doorPos={doorPos}
-                    windowWall={windowWall}
-                    windowPos={windowPos}
-                  />
+                  <div ref={floorPlanCaptureRef}>
+                    <TrailerFloorPlanSVG
+                      items={items}
+                      lengthFt={selectedSize?.length_ft}
+                      doorWall={doorWall}
+                      doorPos={doorPos}
+                      windowWall={windowWall}
+                      windowPos={windowPos}
+                    />
+                  </div>
                 </div>
               )}
 
