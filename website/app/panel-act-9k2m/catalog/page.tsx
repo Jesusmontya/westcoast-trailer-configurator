@@ -994,7 +994,15 @@ function ItemsTab() {
 // PRESETS (paquetes de piezas)
 // ============================================
 type Preset = { id: string; name: string; created_at: string };
-type PresetItem = { id: string; preset_id: string; catalog_item_id: string };
+type PresetItem = { id: string; preset_id: string; catalog_item_id: string; wall: string | null };
+
+const PRESET_WALL_OPTIONS = [
+  { value: "trasera", label: "Trasera" },
+  { value: "frontal", label: "Frontal" },
+  { value: "izquierda", label: "Izquierda" },
+  { value: "derecha", label: "Derecha" },
+  { value: "isla", label: "Isla" },
+];
 
 function PresetsTab() {
   const [presets, setPresets] = useState<Preset[]>([]);
@@ -1006,7 +1014,7 @@ function PresetsTab() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [presetName, setPresetName] = useState("");
-  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+  const [itemWalls, setItemWalls] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -1029,14 +1037,24 @@ function PresetsTab() {
   }
 
   function toggleItem(id: string) {
-    setSelectedItemIds((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+    setItemWalls((prev) => {
+      const next = { ...prev };
+      if (id in next) {
+        delete next[id];
+      } else {
+        next[id] = "trasera";
+      }
+      return next;
+    });
+  }
+
+  function setItemWall(id: string, wall: string) {
+    setItemWalls((prev) => ({ ...prev, [id]: wall }));
   }
 
   function resetForm() {
     setPresetName("");
-    setSelectedItemIds([]);
+    setItemWalls({});
     setShowForm(false);
     setEditingId(null);
   }
@@ -1044,13 +1062,18 @@ function PresetsTab() {
   function startEdit(preset: Preset) {
     setEditingId(preset.id);
     setPresetName(preset.name);
-    setSelectedItemIds(
-      presetItems.filter((pi) => pi.preset_id === preset.id).map((pi) => pi.catalog_item_id)
-    );
+    const walls: Record<string, string> = {};
+    presetItems
+      .filter((pi) => pi.preset_id === preset.id)
+      .forEach((pi) => {
+        walls[pi.catalog_item_id] = pi.wall || "trasera";
+      });
+    setItemWalls(walls);
     setShowForm(true);
   }
 
   async function savePreset() {
+    const selectedItemIds = Object.keys(itemWalls);
     if (!presetName || selectedItemIds.length === 0) return;
     setSaving(true);
 
@@ -1059,7 +1082,11 @@ function PresetsTab() {
       // más simple y seguro: borra las relaciones viejas y mete las nuevas
       await supabase.from("catalog_preset_items").delete().eq("preset_id", editingId);
       await supabase.from("catalog_preset_items").insert(
-        selectedItemIds.map((catalog_item_id) => ({ preset_id: editingId, catalog_item_id }))
+        selectedItemIds.map((catalog_item_id) => ({
+          preset_id: editingId,
+          catalog_item_id,
+          wall: itemWalls[catalog_item_id],
+        }))
       );
     } else {
       const { data: preset } = await supabase
@@ -1070,7 +1097,11 @@ function PresetsTab() {
 
       if (preset) {
         await supabase.from("catalog_preset_items").insert(
-          selectedItemIds.map((catalog_item_id) => ({ preset_id: preset.id, catalog_item_id }))
+          selectedItemIds.map((catalog_item_id) => ({
+            preset_id: preset.id,
+            catalog_item_id,
+            wall: itemWalls[catalog_item_id],
+          }))
         );
       }
     }
@@ -1117,7 +1148,7 @@ function PresetsTab() {
             className="admin-input w-full mb-4"
           />
 
-          <label className="admin-label block mb-2">Elige las piezas que incluye</label>
+          <label className="admin-label block mb-2">Elige las piezas que incluye y a qué pared va cada una</label>
           <div className="flex flex-col gap-4 mb-4 max-h-80 overflow-y-auto">
             {categories.map((cat) => {
               const itemsInCat = catalogItems.filter((ci) => ci.category_id === cat.id);
@@ -1127,23 +1158,38 @@ function PresetsTab() {
                   <p className="font-mono text-[10px] uppercase text-[var(--a-text-muted)] mb-1.5">
                     {cat.name}
                   </p>
-                  <div className="flex flex-col gap-1">
-                    {itemsInCat.map((item) => (
-                      <label
-                        key={item.id}
-                        className="flex items-center gap-2 text-sm text-[var(--a-text)] cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={selectedItemIds.includes(item.id)}
-                          onChange={() => toggleItem(item.id)}
-                        />
-                        {item.name}
-                        <span className="font-mono text-xs text-[var(--a-text-muted)]">
-                          ${item.price.toLocaleString()}
-                        </span>
-                      </label>
-                    ))}
+                  <div className="flex flex-col gap-1.5">
+                    {itemsInCat.map((item) => {
+                      const isChecked = item.id in itemWalls;
+                      return (
+                        <div key={item.id} className="flex items-center gap-2 text-sm text-[var(--a-text)]">
+                          <label className="flex items-center gap-2 cursor-pointer flex-1">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleItem(item.id)}
+                            />
+                            {item.name}
+                            <span className="font-mono text-xs text-[var(--a-text-muted)]">
+                              ${item.price.toLocaleString()}
+                            </span>
+                          </label>
+                          {isChecked && (
+                            <select
+                              value={itemWalls[item.id]}
+                              onChange={(e) => setItemWall(item.id, e.target.value)}
+                              className="text-[10px] font-mono bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded px-1.5 py-1 text-[var(--a-text-muted)]"
+                            >
+                              {PRESET_WALL_OPTIONS.map((w) => (
+                                <option key={w.value} value={w.value}>
+                                  {w.label}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               );
@@ -1152,14 +1198,14 @@ function PresetsTab() {
 
           <button
             onClick={savePreset}
-            disabled={saving || !presetName || selectedItemIds.length === 0}
+            disabled={saving || !presetName || Object.keys(itemWalls).length === 0}
             className="w-full admin-btn-primary"
           >
             {saving
               ? "Guardando..."
               : editingId
-              ? `Guardar cambios (${selectedItemIds.length} piezas)`
-              : `Guardar preset (${selectedItemIds.length} piezas)`}
+              ? `Guardar cambios (${Object.keys(itemWalls).length} piezas)`
+              : `Guardar preset (${Object.keys(itemWalls).length} piezas)`}
           </button>
         </div>
       )}

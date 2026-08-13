@@ -1305,6 +1305,7 @@ function QuoteBuilder({
   const [recentlyAddedIds, setRecentlyAddedIds] = useState<Set<string>>(new Set());
   const itemsListRef = useRef<HTMLDivElement>(null);
   const [doorWall, setDoorWall] = useState<string>(source?.door_wall || "trasera");
+  const [catalogSearch, setCatalogSearch] = useState("");
 
   useEffect(() => {
     loadCatalog();
@@ -1374,11 +1375,18 @@ function QuoteBuilder({
     setItems((prev) => [...prev, ...itemsToAdd]);
   }
 
+  const [manualPriceError, setManualPriceError] = useState(false);
+
   function addManualItem() {
-    if (!manualLabel || !manualPrice) return;
+    const price = parseFloat(manualPrice);
+    if (!manualLabel || !manualPrice || isNaN(price) || price <= 0) {
+      setManualPriceError(true);
+      return;
+    }
+    setManualPriceError(false);
     setItems((prev) => [
       ...prev,
-      { label: manualLabel, price: parseFloat(manualPrice) || 0, cost: 0, wall: "trasera" },
+      { label: manualLabel, price, cost: 0, wall: "trasera" },
     ]);
     setManualLabel("");
     setManualPrice("");
@@ -1406,7 +1414,9 @@ function QuoteBuilder({
   const total = subtotal + taxAmount;
   const margin = combinedItems.reduce((sum, i) => sum + ((i.price || 0) - (i.cost || 0)), 0);
 
-  const visibleItems = catalogItems.filter((i) => i.category_id === activeCategory);
+  const visibleItems = catalogSearch.trim()
+    ? catalogItems.filter((i) => i.name.toLowerCase().includes(catalogSearch.trim().toLowerCase()))
+    : catalogItems.filter((i) => i.category_id === activeCategory);
 
   async function generateAndSave() {
     if (combinedItems.length === 0) return;
@@ -1554,24 +1564,37 @@ function QuoteBuilder({
       <label className="block font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)] mb-1.5">
         Catálogo
       </label>
-      <div className="flex flex-wrap gap-2 mb-2">
-        {categories.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => setActiveCategory(c.id)}
-            className={`px-3 py-1.5 rounded-full text-xs font-mono font-semibold ${
-              activeCategory === c.id
-                ? "bg-[var(--a-text)] text-[var(--a-surface)]"
-                : "bg-[var(--a-surface)] text-[var(--a-text-muted)] border border-[var(--a-border)]"
-            }`}
-          >
-            {c.name}
-          </button>
-        ))}
-      </div>
+      <input
+        value={catalogSearch}
+        onChange={(e) => setCatalogSearch(e.target.value)}
+        placeholder="Buscar pieza por nombre..."
+        className="w-full mb-2 px-3 py-2 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
+      />
+      {!catalogSearch.trim() && (
+        <div className="flex flex-wrap gap-2 mb-2">
+          {categories.map((c) => (
+            <button
+              key={c.id}
+              onClick={() => setActiveCategory(c.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-mono font-semibold ${
+                activeCategory === c.id
+                  ? "bg-[var(--a-text)] text-[var(--a-surface)]"
+                  : "bg-[var(--a-surface)] text-[var(--a-text-muted)] border border-[var(--a-border)]"
+              }`}
+            >
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {activeCategory && (
+      {(activeCategory || catalogSearch.trim()) && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-5">
+          {visibleItems.length === 0 && (
+            <p className="col-span-full text-xs text-[var(--a-text-muted)]">
+              Sin resultados para "{catalogSearch}".
+            </p>
+          )}
           {visibleItems.map((item) => {
             const justAdded = recentlyAddedIds.has(item.id);
             return (
@@ -1618,7 +1641,7 @@ function QuoteBuilder({
         </div>
       )}
 
-      <div className="flex gap-2 mb-5">
+      <div className="flex gap-2 mb-1">
         <input
           placeholder="Item suelto (no está en catálogo)"
           value={manualLabel}
@@ -1629,8 +1652,13 @@ function QuoteBuilder({
           type="number"
           placeholder="Precio"
           value={manualPrice}
-          onChange={(e) => setManualPrice(e.target.value)}
-          className="w-24 px-3 py-2 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
+          onChange={(e) => {
+            setManualPrice(e.target.value);
+            setManualPriceError(false);
+          }}
+          className={`w-24 px-3 py-2 bg-[var(--a-surface)] border rounded text-sm text-[var(--a-text)] ${
+            manualPriceError ? "border-[var(--a-danger)]" : "border-[var(--a-border)]"
+          }`}
         />
         <button
           onClick={addManualItem}
@@ -1639,6 +1667,12 @@ function QuoteBuilder({
           Agregar
         </button>
       </div>
+      {manualPriceError && (
+        <p className="text-xs text-[var(--a-danger)] mb-4">
+          Ponle un precio mayor a $0 antes de agregarlo.
+        </p>
+      )}
+      <div className="mb-5" />
 
       <div className="flex items-center justify-between mb-2">
         <p ref={itemsListRef} className="font-mono text-[10px] uppercase tracking-wide text-[var(--a-text-muted)]">
