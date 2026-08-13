@@ -805,6 +805,8 @@ function FloorPlanEditorModal({
   doorWall,
   windowWall,
   onReorder,
+  onSetDoorWall,
+  onSetWindowWall,
   onClose,
 }: {
   items: QuoteLineItem[];
@@ -812,11 +814,16 @@ function FloorPlanEditorModal({
   doorWall: string;
   windowWall?: string;
   onReorder: (newItems: QuoteLineItem[]) => void;
+  onSetDoorWall: (wall: string) => void;
+  onSetWindowWall: (wall: string) => void;
   onClose: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chipRefs = useRef<Record<number, SVGGElement | null>>({});
-  const [draggingIndex, setDraggingIndex] = useState<number | null>(null);
+
+  type DragKind = { kind: "item"; index: number } | { kind: "door" } | { kind: "window" };
+  const [dragging, setDragging] = useState<DragKind | null>(null);
+  const [grabOffset, setGrabOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [ghostScreen, setGhostScreen] = useState<{ x: number; y: number } | null>(null);
   const [hoverWall, setHoverWall] = useState<string | null>(null);
 
@@ -843,6 +850,7 @@ function FloorPlanEditorModal({
     return { x: (clientX - r.left) / scale, y: (clientY - r.top) / scale };
   }
 
+  // Solo las 4 orillas cuentan — el centro (isla) ya no es un lugar donde soltar.
   function pointToWall(svgX: number, svgY: number): string | null {
     const candidates = [
       { wall: "trasera", d: svgY - bodyY, valid: svgY - bodyY < WALL_MARGIN },
@@ -853,9 +861,6 @@ function FloorPlanEditorModal({
     if (candidates.length > 0) {
       candidates.sort((a, b) => a.d - b.d);
       return candidates[0].wall;
-    }
-    if (svgX >= bodyX && svgX <= bodyX + bodyW && svgY >= bodyY && svgY <= bodyY + bodyH) {
-      return "isla";
     }
     return null;
   }
@@ -890,37 +895,56 @@ function FloorPlanEditorModal({
     return null;
   }
 
-  function handlePointerDown(e: React.PointerEvent, index: number) {
+  function handleItemPointerDown(e: React.PointerEvent, index: number) {
     (e.target as Element).setPointerCapture(e.pointerId);
-    setDraggingIndex(index);
+    const r = (e.currentTarget as SVGGElement).getBoundingClientRect();
+    setGrabOffset({ x: e.clientX - r.left, y: e.clientY - r.top });
+    setDragging({ kind: "item", index });
+    setGhostScreen({ x: e.clientX, y: e.clientY });
+  }
+
+  function handleMarkerPointerDown(e: React.PointerEvent, kind: "door" | "window") {
+    (e.target as Element).setPointerCapture(e.pointerId);
+    const r = (e.currentTarget as Element).getBoundingClientRect();
+    setGrabOffset({ x: e.clientX - r.left, y: e.clientY - r.top });
+    setDragging({ kind });
     setGhostScreen({ x: e.clientX, y: e.clientY });
   }
 
   function handlePointerMove(e: React.PointerEvent) {
-    if (draggingIndex === null) return;
+    if (!dragging) return;
     setGhostScreen({ x: e.clientX, y: e.clientY });
     const { x, y } = screenToSvg(e.clientX, e.clientY);
     setHoverWall(pointToWall(x, y));
   }
 
   function handlePointerUp(e: React.PointerEvent) {
-    if (draggingIndex === null) return;
+    if (!dragging) return;
     const { x, y } = screenToSvg(e.clientX, e.clientY);
     const wall = pointToWall(x, y);
+
     if (wall) {
-      const insertBeforeGlobalIndex = findInsertBeforeIndex(wall, x, y, draggingIndex);
-      const movedItem: QuoteLineItem = { ...items[draggingIndex], wall };
-      const remaining = items.filter((_, i) => i !== draggingIndex);
-      let insertPos = remaining.length;
-      if (insertBeforeGlobalIndex !== null) {
-        const targetRef = items[insertBeforeGlobalIndex];
-        const foundPos = remaining.indexOf(targetRef);
-        if (foundPos !== -1) insertPos = foundPos;
+      if (dragging.kind === "item") {
+        const draggingIndex = dragging.index;
+        const insertBeforeGlobalIndex = findInsertBeforeIndex(wall, x, y, draggingIndex);
+        const movedItem: QuoteLineItem = { ...items[draggingIndex], wall };
+        const remaining = items.filter((_, i) => i !== draggingIndex);
+        let insertPos = remaining.length;
+        if (insertBeforeGlobalIndex !== null) {
+          const targetRef = items[insertBeforeGlobalIndex];
+          const foundPos = remaining.indexOf(targetRef);
+          if (foundPos !== -1) insertPos = foundPos;
+        }
+        remaining.splice(insertPos, 0, movedItem);
+        onReorder(remaining);
+      } else if (dragging.kind === "door") {
+        onSetDoorWall(wall);
+      } else if (dragging.kind === "window") {
+        onSetWindowWall(wall);
       }
-      remaining.splice(insertPos, 0, movedItem);
-      onReorder(remaining);
     }
-    setDraggingIndex(null);
+
+    setDragging(null);
     setGhostScreen(null);
     setHoverWall(null);
   }
@@ -946,12 +970,13 @@ function FloorPlanEditorModal({
     return entries.map(({ it, i }) => {
       const widthIn = it.width_in || 24;
       const w = Math.max(40, widthIn * scaleLong);
+      const isDragging = dragging?.kind === "item" && dragging.index === i;
       const box = (
         <g
           key={i}
           ref={(el) => { chipRefs.current[i] = el; }}
-          onPointerDown={(e) => handlePointerDown(e, i)}
-          style={{ cursor: "grab", opacity: draggingIndex === i ? 0.25 : 1, touchAction: "none" }}
+          onPointerDown={(e) => handleItemPointerDown(e, i)}
+          style={{ cursor: "grab", opacity: isDragging ? 0.25 : 1, touchAction: "none" }}
         >
           <rect x={cursor} y={y} width={w} height={36} rx={4} fill="rgba(31,58,92,0.1)" stroke="#1f3a5c" strokeWidth={0.75} />
           <text x={cursor + w / 2} y={y + 22} textAnchor="middle" fontSize={8} fill="#1b1f23" style={{ pointerEvents: "none" }}>
@@ -968,12 +993,13 @@ function FloorPlanEditorModal({
     let cursor = bodyY + 12;
     return entries.map(({ it, i }) => {
       const h = 32;
+      const isDragging = dragging?.kind === "item" && dragging.index === i;
       const box = (
         <g
           key={i}
           ref={(el) => { chipRefs.current[i] = el; }}
-          onPointerDown={(e) => handlePointerDown(e, i)}
-          style={{ cursor: "grab", opacity: draggingIndex === i ? 0.25 : 1, touchAction: "none" }}
+          onPointerDown={(e) => handleItemPointerDown(e, i)}
+          style={{ cursor: "grab", opacity: isDragging ? 0.25 : 1, touchAction: "none" }}
         >
           <rect x={x} y={cursor} width={70} height={h} rx={4} fill="rgba(31,58,92,0.1)" stroke="#1f3a5c" strokeWidth={0.75} />
           <text x={x + 35} y={cursor + h / 2 + 3} textAnchor="middle" fontSize={7.5} fill="#1b1f23" style={{ pointerEvents: "none" }}>
@@ -993,28 +1019,23 @@ function FloorPlanEditorModal({
     frontal: { x: bodyX + bodyW, y: bodyY + bodyH / 2 },
   };
   const doorPos = doorPositions[doorWall] || doorPositions.trasera;
-  const windowPos = windowWall
-    ? {
-        trasera: { x: bodyX + bodyW * 0.28, y: bodyY },
-        derecha: { x: bodyX + bodyW * 0.28, y: bodyY + bodyH },
-        izquierda: { x: bodyX, y: bodyY + bodyH * 0.28 },
-        frontal: { x: bodyX + bodyW, y: bodyY + bodyH * 0.28 },
-      }[windowWall]
-    : null;
+  const windowPositions: Record<string, { x: number; y: number }> = {
+    trasera: { x: bodyX + bodyW * 0.28, y: bodyY },
+    derecha: { x: bodyX + bodyW * 0.28, y: bodyY + bodyH },
+    izquierda: { x: bodyX, y: bodyY + bodyH * 0.28 },
+    frontal: { x: bodyX + bodyW, y: bodyY + bodyH * 0.28 },
+  };
+  const windowPos = windowWall ? windowPositions[windowWall] || windowPositions.frontal : null;
 
-  const draggingItem = draggingIndex !== null ? items[draggingIndex] : null;
+  const draggingItemObj = dragging?.kind === "item" ? items[dragging.index] : null;
+  const ghostLabel =
+    dragging?.kind === "door" ? "🚪 Puerta" : dragging?.kind === "window" ? "🪟 Ventana" : draggingItemObj?.label;
 
   const wallHighlightRects: Record<string, { x: number; y: number; w: number; h: number }> = {
     trasera: { x: bodyX, y: bodyY, w: bodyW, h: WALL_MARGIN },
     derecha: { x: bodyX, y: bodyY + bodyH - WALL_MARGIN, w: bodyW, h: WALL_MARGIN },
     izquierda: { x: bodyX, y: bodyY, w: WALL_MARGIN, h: bodyH },
     frontal: { x: bodyX + bodyW - WALL_MARGIN, y: bodyY, w: WALL_MARGIN, h: bodyH },
-    isla: {
-      x: bodyX + WALL_MARGIN,
-      y: bodyY + WALL_MARGIN,
-      w: bodyW - WALL_MARGIN * 2,
-      h: bodyH - WALL_MARGIN * 2,
-    },
   };
 
   return (
@@ -1027,7 +1048,8 @@ function FloorPlanEditorModal({
           </button>
         </div>
         <p className="text-xs text-[var(--a-text-muted)] mb-4">
-          Arrastra cada pieza directo sobre el plano, a la posición donde va.
+          Arrastra cada pieza a una orilla del plano. La puerta 🚪 y la ventana 🪟
+          también se arrastran, a cualquier pared.
         </p>
 
         <div ref={containerRef} style={{ touchAction: "none" }}>
@@ -1058,21 +1080,46 @@ function FloorPlanEditorModal({
               strokeWidth={1}
             />
 
-            <circle cx={doorPos.x} cy={doorPos.y} r={4} fill="#c0392b" />
-            {windowPos && <rect x={windowPos.x - 5} y={windowPos.y - 5} width={10} height={10} fill="#3d6690" />}
+            <circle
+              cx={doorPos.x}
+              cy={doorPos.y}
+              r={7}
+              fill="#c0392b"
+              opacity={dragging?.kind === "door" ? 0.25 : 1}
+              onPointerDown={(e) => handleMarkerPointerDown(e, "door")}
+              style={{ cursor: "grab", touchAction: "none" }}
+            />
+            {windowPos && (
+              <rect
+                x={windowPos.x - 7}
+                y={windowPos.y - 7}
+                width={14}
+                height={14}
+                fill="#3d6690"
+                opacity={dragging?.kind === "window" ? 0.25 : 1}
+                onPointerDown={(e) => handleMarkerPointerDown(e, "window")}
+                style={{ cursor: "grab", touchAction: "none" }}
+              />
+            )}
 
             {renderLongRow(byWall.trasera, bodyY + 6)}
             {renderLongRow(byWall.derecha, bodyY + bodyH - 42)}
             {renderShortColumn(byWall.izquierda, bodyX + 6)}
             {renderShortColumn(byWall.frontal, bodyX + bodyW - 76)}
 
+            {/* piezas viejas que ya estaban en "isla" de antes — se muestran, pero ya no
+                se puede soltar nada nuevo aquí */}
             {byWall.isla.map(({ it, i }, idx) => (
               <g
                 key={i}
                 ref={(el) => { chipRefs.current[i] = el; }}
-                onPointerDown={(e) => handlePointerDown(e, i)}
+                onPointerDown={(e) => handleItemPointerDown(e, i)}
                 transform={`translate(${bodyX + bodyW / 2 - 40 + idx * 85}, ${bodyY + bodyH / 2 - 18})`}
-                style={{ cursor: "grab", opacity: draggingIndex === i ? 0.25 : 1, touchAction: "none" }}
+                style={{
+                  cursor: "grab",
+                  opacity: dragging?.kind === "item" && dragging.index === i ? 0.25 : 1,
+                  touchAction: "none",
+                }}
               >
                 <rect width={75} height={36} rx={4} fill="rgba(31,58,92,0.14)" stroke="#1f3a5c" strokeWidth={0.75} />
                 <text x={37} y={22} textAnchor="middle" fontSize={7.5} fill="#1b1f23" style={{ pointerEvents: "none" }}>
@@ -1083,12 +1130,12 @@ function FloorPlanEditorModal({
           </svg>
         </div>
 
-        {draggingItem && ghostScreen && (
+        {dragging && ghostScreen && (
           <div
             className="fixed pointer-events-none px-3 py-1.5 rounded bg-[var(--a-accent)] text-white text-xs font-semibold shadow-lg z-50"
-            style={{ left: ghostScreen.x - 40, top: ghostScreen.y - 40 }}
+            style={{ left: ghostScreen.x - grabOffset.x, top: ghostScreen.y - grabOffset.y }}
           >
-            {draggingItem.label}
+            {ghostLabel}
           </div>
         )}
       </div>
@@ -2009,6 +2056,8 @@ function QuoteBuilder({
           doorWall={doorWall}
           windowWall={windowWall}
           onReorder={setItems}
+          onSetDoorWall={setDoorWall}
+          onSetWindowWall={setWindowWall}
           onClose={() => setShowPlanEditor(false)}
         />
       )}
