@@ -1865,7 +1865,7 @@ function QuoteBuilder({
 
       {items.length > 0 && (
         <div
-          className="sticky top-2 z-20 mb-4 flex items-center justify-between px-4 py-2.5 rounded-lg"
+          className="sticky top-[72px] z-20 mb-4 flex items-center justify-between px-4 py-2.5 rounded-lg"
           style={{
             background: "var(--a-surface)",
             border: "1px solid var(--a-accent)",
