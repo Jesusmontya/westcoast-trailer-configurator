@@ -799,23 +799,57 @@ const WALL_ZONES: { key: string; label: string }[] = [
   { key: "derecha", label: "Pared derecha" },
 ];
 
+const CORNER_MARGIN_FRAC = 0.18; // qué tan cerca de la esquina no se voltea sola
+const TAP_THRESHOLD_PX = 6; // si te mueves menos que esto, cuenta como "tap", no arrastre
+
+function isRotatedForWall(item: QuoteLineItem, wall: string): boolean {
+  if (wall !== "frontal" && wall !== "izquierda") return false;
+  if (item.rotated !== undefined) return item.rotated; // el usuario ya lo decidió a mano
+  const center = (item.pos ?? 0.5) + 0.001;
+  return center > CORNER_MARGIN_FRAC && center < 1 - CORNER_MARGIN_FRAC;
+}
+
+function boxSpanFrac(
+  item: QuoteLineItem,
+  wall: string,
+  totalIn: number,
+  bodyW: number,
+  bodyH: number
+): number {
+  const widthIn = item.width_in || 24;
+  if (wall === "trasera" || wall === "derecha") {
+    return Math.max(40 / bodyW, widthIn / totalIn);
+  }
+  const rotated = isRotatedForWall(item, wall);
+  if (rotated) return Math.max(28 / bodyH, widthIn / totalIn);
+  return 32 / bodyH;
+}
+
 function FloorPlanEditorModal({
   items,
   lengthFt,
   doorWall,
+  doorPos,
   windowWall,
+  windowPos,
   onReorder,
   onSetDoorWall,
+  onSetDoorPos,
   onSetWindowWall,
+  onSetWindowPos,
   onClose,
 }: {
   items: QuoteLineItem[];
   lengthFt: number | null | undefined;
   doorWall: string;
+  doorPos: number;
   windowWall?: string;
+  windowPos: number;
   onReorder: (newItems: QuoteLineItem[]) => void;
   onSetDoorWall: (wall: string) => void;
+  onSetDoorPos: (pos: number) => void;
   onSetWindowWall: (wall: string) => void;
+  onSetWindowPos: (pos: number) => void;
   onClose: () => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -824,6 +858,7 @@ function FloorPlanEditorModal({
   type DragKind = { kind: "item"; index: number } | { kind: "door" } | { kind: "window" };
   const [dragging, setDragging] = useState<DragKind | null>(null);
   const [grabOffset, setGrabOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [pointerDownScreen, setPointerDownScreen] = useState<{ x: number; y: number } | null>(null);
   const [ghostScreen, setGhostScreen] = useState<{ x: number; y: number } | null>(null);
   const [hoverWall, setHoverWall] = useState<string | null>(null);
 
@@ -834,7 +869,9 @@ function FloorPlanEditorModal({
   const bodyY = 50;
   const bodyW = 520;
   const bodyH = 200;
-  const WALL_MARGIN = 55; // qué tan cerca de una pared cuenta como "pegado a ella"
+  const WALL_MARGIN = 55;
+
+  const totalIn = (lengthFt || 20) * 12;
 
   function svgScale() {
     const el = containerRef.current;
@@ -850,7 +887,7 @@ function FloorPlanEditorModal({
     return { x: (clientX - r.left) / scale, y: (clientY - r.top) / scale };
   }
 
-  // Solo las 4 orillas cuentan — el centro (isla) ya no es un lugar donde soltar.
+  // Solo las 4 orillas cuentan — el centro ya no es un lugar donde soltar.
   function pointToWall(svgX: number, svgY: number): string | null {
     const candidates = [
       { wall: "trasera", d: svgY - bodyY, valid: svgY - bodyY < WALL_MARGIN },
@@ -865,40 +902,11 @@ function FloorPlanEditorModal({
     return null;
   }
 
-  // Dentro de una pared, ¿antes de cuál pieza (índice global) va la que sueltas?
-  function findInsertBeforeIndex(
-    zoneKey: string,
-    svgX: number,
-    svgY: number,
-    excludeIndex: number
-  ): number | null {
-    const horizontal = zoneKey === "trasera" || zoneKey === "derecha";
-    const scale = svgScale();
-    const zoneEntries = items
-      .map((it, i) => ({ it, i }))
-      .filter(({ it, i }) => i !== excludeIndex && (it.wall || "trasera") === zoneKey);
-
-    for (const { i } of zoneEntries) {
-      const el = chipRefs.current[i];
-      if (!el) continue;
-      const r = el.getBoundingClientRect();
-      const cont = containerRef.current?.getBoundingClientRect();
-      if (!cont) continue;
-      if (horizontal) {
-        const midXSvg = (r.left + r.width / 2 - cont.left) / scale;
-        if (svgX < midXSvg) return i;
-      } else {
-        const midYSvg = (r.top + r.height / 2 - cont.top) / scale;
-        if (svgY < midYSvg) return i;
-      }
-    }
-    return null;
-  }
-
   function handleItemPointerDown(e: React.PointerEvent, index: number) {
     (e.target as Element).setPointerCapture(e.pointerId);
     const r = (e.currentTarget as SVGGElement).getBoundingClientRect();
     setGrabOffset({ x: e.clientX - r.left, y: e.clientY - r.top });
+    setPointerDownScreen({ x: e.clientX, y: e.clientY });
     setDragging({ kind: "item", index });
     setGhostScreen({ x: e.clientX, y: e.clientY });
   }
@@ -907,6 +915,7 @@ function FloorPlanEditorModal({
     (e.target as Element).setPointerCapture(e.pointerId);
     const r = (e.currentTarget as Element).getBoundingClientRect();
     setGrabOffset({ x: e.clientX - r.left, y: e.clientY - r.top });
+    setPointerDownScreen({ x: e.clientX, y: e.clientY });
     setDragging({ kind });
     setGhostScreen({ x: e.clientX, y: e.clientY });
   }
@@ -920,33 +929,91 @@ function FloorPlanEditorModal({
 
   function handlePointerUp(e: React.PointerEvent) {
     if (!dragging) return;
+
+    const movedDistance = pointerDownScreen
+      ? Math.hypot(e.clientX - pointerDownScreen.x, e.clientY - pointerDownScreen.y)
+      : 999;
+
+    // Un tap (casi sin movimiento) sobre una pieza ya colocada = voltearla a mano.
+    if (movedDistance < TAP_THRESHOLD_PX && dragging.kind === "item") {
+      const idx = dragging.index;
+      const current = items[idx];
+      const wall = current.wall || "trasera";
+      const currentlyRotated = isRotatedForWall(current, wall);
+      const updated = items.map((it, i) => (i === idx ? { ...it, rotated: !currentlyRotated } : it));
+      onReorder(updated);
+      setDragging(null);
+      setGhostScreen(null);
+      setHoverWall(null);
+      setPointerDownScreen(null);
+      return;
+    }
+
     const { x, y } = screenToSvg(e.clientX, e.clientY);
     const wall = pointToWall(x, y);
 
     if (wall) {
+      const scale = svgScale();
+      const grabSvg = { x: grabOffset.x / scale, y: grabOffset.y / scale };
+      const horizontal = wall === "trasera" || wall === "derecha";
+
       if (dragging.kind === "item") {
         const draggingIndex = dragging.index;
-        const insertBeforeGlobalIndex = findInsertBeforeIndex(wall, x, y, draggingIndex);
-        const movedItem: QuoteLineItem = { ...items[draggingIndex], wall };
-        const remaining = items.filter((_, i) => i !== draggingIndex);
-        let insertPos = remaining.length;
-        if (insertBeforeGlobalIndex !== null) {
-          const targetRef = items[insertBeforeGlobalIndex];
-          const foundPos = remaining.indexOf(targetRef);
-          if (foundPos !== -1) insertPos = foundPos;
+        const movedItemBase: QuoteLineItem = { ...items[draggingIndex], wall };
+        const span = boxSpanFrac(movedItemBase, wall, totalIn, bodyW, bodyH);
+
+        let posFrac: number;
+        if (horizontal) {
+          const boxLeftSvg = x - grabSvg.x;
+          posFrac = (boxLeftSvg - bodyX) / bodyW;
+        } else {
+          const boxTopSvg = y - grabSvg.y;
+          posFrac = (boxTopSvg - bodyY) / bodyH;
         }
-        remaining.splice(insertPos, 0, movedItem);
-        onReorder(remaining);
+        posFrac = Math.min(Math.max(posFrac, 0), 1 - span);
+        const movedItem: QuoteLineItem = { ...movedItemBase, pos: posFrac };
+
+        // Resuelve encimados: empuja lo mínimo necesario, solo si de verdad se topan.
+        const sameWallOthers = items
+          .map((it, i) => ({ it, i }))
+          .filter(({ i }) => i !== draggingIndex)
+          .filter(({ it }) => (it.wall || "trasera") === wall)
+          .map(({ it, i }) => ({ item: it, i, pos: it.pos ?? 0 }));
+
+        const combined = [...sameWallOthers, { item: movedItem, i: draggingIndex, pos: posFrac }].sort(
+          (a, b) => a.pos - b.pos
+        );
+
+        let cursor = 0;
+        const resolved: Record<number, number> = {};
+        for (const entry of combined) {
+          const entrySpan = boxSpanFrac(entry.item, wall, totalIn, bodyW, bodyH);
+          const p = Math.max(entry.pos, cursor);
+          resolved[entry.i] = Math.min(p, 1 - entrySpan);
+          cursor = resolved[entry.i] + entrySpan;
+        }
+
+        const updated = items.map((it, i) => {
+          if (i === draggingIndex) return { ...movedItem, pos: resolved[i] };
+          if (i in resolved) return { ...it, pos: resolved[i] };
+          return it;
+        });
+        onReorder(updated);
       } else if (dragging.kind === "door") {
+        const posFrac = horizontal ? (x - bodyX) / bodyW : (y - bodyY) / bodyH;
         onSetDoorWall(wall);
+        onSetDoorPos(Math.min(Math.max(posFrac, 0.04), 0.96));
       } else if (dragging.kind === "window") {
+        const posFrac = horizontal ? (x - bodyX) / bodyW : (y - bodyY) / bodyH;
         onSetWindowWall(wall);
+        onSetWindowPos(Math.min(Math.max(posFrac, 0.04), 0.96));
       }
     }
 
     setDragging(null);
     setGhostScreen(null);
     setHoverWall(null);
+    setPointerDownScreen(null);
   }
 
   const knownWalls = new Set(["trasera", "frontal", "izquierda", "derecha"]);
@@ -962,70 +1029,74 @@ function FloorPlanEditorModal({
     byWall[w].push({ it, i });
   });
 
-  const totalIn = (lengthFt || 20) * 12;
-  const scaleLong = bodyW / totalIn;
+  function renderWallItems(entries: { it: QuoteLineItem; i: number }[], wall: string) {
+    const horizontal = wall === "trasera" || wall === "derecha";
+    const sorted = [...entries].sort((a, b) => (a.it.pos ?? 0) - (b.it.pos ?? 0));
 
-  function renderLongRow(entries: { it: QuoteLineItem; i: number }[], y: number) {
-    let cursor = bodyX + 12;
-    return entries.map(({ it, i }) => {
-      const widthIn = it.width_in || 24;
-      const w = Math.max(40, widthIn * scaleLong);
+    return sorted.map(({ it, i }) => {
+      const span = boxSpanFrac(it, wall, totalIn, bodyW, bodyH);
+      const posFrac = Math.min(Math.max(it.pos ?? 0, 0), 1 - span);
       const isDragging = dragging?.kind === "item" && dragging.index === i;
-      const box = (
+      const label = it.label.length > 12 ? it.label.slice(0, 11) + "…" : it.label;
+
+      if (horizontal) {
+        const boxX = bodyX + posFrac * bodyW;
+        const boxW = span * bodyW;
+        const y = wall === "trasera" ? bodyY + 6 : bodyY + bodyH - 42;
+        return (
+          <g
+            key={i}
+            ref={(el) => { chipRefs.current[i] = el; }}
+            onPointerDown={(e) => handleItemPointerDown(e, i)}
+            style={{ cursor: "grab", opacity: isDragging ? 0.25 : 1, touchAction: "none" }}
+          >
+            <rect x={boxX} y={y} width={boxW} height={36} rx={4} fill="rgba(31,58,92,0.1)" stroke="#1f3a5c" strokeWidth={0.75} />
+            <text x={boxX + boxW / 2} y={y + 22} textAnchor="middle" fontSize={8} fill="#1b1f23" style={{ pointerEvents: "none" }}>
+              {label}
+            </text>
+          </g>
+        );
+      }
+
+      const rotated = isRotatedForWall(it, wall);
+      const boxY = bodyY + posFrac * bodyH;
+      const boxH = span * bodyH;
+      const depthW = rotated ? 36 : 70;
+      const boxX = wall === "izquierda" ? bodyX + 6 : bodyX + bodyW - 6 - depthW;
+
+      return (
         <g
           key={i}
           ref={(el) => { chipRefs.current[i] = el; }}
           onPointerDown={(e) => handleItemPointerDown(e, i)}
           style={{ cursor: "grab", opacity: isDragging ? 0.25 : 1, touchAction: "none" }}
         >
-          <rect x={cursor} y={y} width={w} height={36} rx={4} fill="rgba(31,58,92,0.1)" stroke="#1f3a5c" strokeWidth={0.75} />
-          <text x={cursor + w / 2} y={y + 22} textAnchor="middle" fontSize={8} fill="#1b1f23" style={{ pointerEvents: "none" }}>
-            {it.label.length > 12 ? it.label.slice(0, 11) + "…" : it.label}
+          <rect x={boxX} y={boxY} width={depthW} height={boxH} rx={4} fill="rgba(31,58,92,0.1)" stroke="#1f3a5c" strokeWidth={0.75} />
+          <text
+            x={boxX + depthW / 2}
+            y={boxY + boxH / 2}
+            textAnchor="middle"
+            fontSize={8}
+            fill="#1b1f23"
+            style={{ pointerEvents: "none" }}
+            transform={rotated ? `rotate(-90, ${boxX + depthW / 2}, ${boxY + boxH / 2})` : undefined}
+          >
+            {label}
           </text>
         </g>
       );
-      cursor += w + 6;
-      return box;
     });
   }
 
-  function renderShortColumn(entries: { it: QuoteLineItem; i: number }[], x: number) {
-    let cursor = bodyY + 12;
-    return entries.map(({ it, i }) => {
-      const h = 32;
-      const isDragging = dragging?.kind === "item" && dragging.index === i;
-      const box = (
-        <g
-          key={i}
-          ref={(el) => { chipRefs.current[i] = el; }}
-          onPointerDown={(e) => handleItemPointerDown(e, i)}
-          style={{ cursor: "grab", opacity: isDragging ? 0.25 : 1, touchAction: "none" }}
-        >
-          <rect x={x} y={cursor} width={70} height={h} rx={4} fill="rgba(31,58,92,0.1)" stroke="#1f3a5c" strokeWidth={0.75} />
-          <text x={x + 35} y={cursor + h / 2 + 3} textAnchor="middle" fontSize={7.5} fill="#1b1f23" style={{ pointerEvents: "none" }}>
-            {it.label.length > 10 ? it.label.slice(0, 9) + "…" : it.label}
-          </text>
-        </g>
-      );
-      cursor += h + 6;
-      return box;
-    });
+  function markerScreenPos(wall: string, pos: number) {
+    if (wall === "trasera") return { x: bodyX + pos * bodyW, y: bodyY };
+    if (wall === "derecha") return { x: bodyX + pos * bodyW, y: bodyY + bodyH };
+    if (wall === "izquierda") return { x: bodyX, y: bodyY + pos * bodyH };
+    return { x: bodyX + bodyW, y: bodyY + pos * bodyH };
   }
 
-  const doorPositions: Record<string, { x: number; y: number }> = {
-    trasera: { x: bodyX + bodyW / 2, y: bodyY },
-    derecha: { x: bodyX + bodyW / 2, y: bodyY + bodyH },
-    izquierda: { x: bodyX, y: bodyY + bodyH / 2 },
-    frontal: { x: bodyX + bodyW, y: bodyY + bodyH / 2 },
-  };
-  const doorPos = doorPositions[doorWall] || doorPositions.trasera;
-  const windowPositions: Record<string, { x: number; y: number }> = {
-    trasera: { x: bodyX + bodyW * 0.28, y: bodyY },
-    derecha: { x: bodyX + bodyW * 0.28, y: bodyY + bodyH },
-    izquierda: { x: bodyX, y: bodyY + bodyH * 0.28 },
-    frontal: { x: bodyX + bodyW, y: bodyY + bodyH * 0.28 },
-  };
-  const windowPos = windowWall ? windowPositions[windowWall] || windowPositions.frontal : null;
+  const doorScreenPos = markerScreenPos(doorWall, doorPos);
+  const windowScreenPos = windowWall ? markerScreenPos(windowWall, windowPos) : null;
 
   const draggingItemObj = dragging?.kind === "item" ? items[dragging.index] : null;
   const ghostLabel =
@@ -1048,8 +1119,9 @@ function FloorPlanEditorModal({
           </button>
         </div>
         <p className="text-xs text-[var(--a-text-muted)] mb-4">
-          Arrastra cada pieza a una orilla del plano. La puerta 🚪 y la ventana 🪟
-          también se arrastran, a cualquier pared.
+          Arrastra cada pieza a la posición exacta donde va. La puerta 🚪 y la
+          ventana 🪟 también se arrastran. Un tap sobre una pieza ya puesta en
+          la pared corta la voltea a mano.
         </p>
 
         <div ref={containerRef} style={{ touchAction: "none" }}>
@@ -1060,7 +1132,6 @@ function FloorPlanEditorModal({
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
           >
-            {/* zona resaltada mientras arrastras, para que sea obvio dónde va a caer */}
             {hoverWall && (
               <rect
                 {...wallHighlightRects[hoverWall]}
@@ -1081,18 +1152,18 @@ function FloorPlanEditorModal({
             />
 
             <circle
-              cx={doorPos.x}
-              cy={doorPos.y}
+              cx={doorScreenPos.x}
+              cy={doorScreenPos.y}
               r={7}
               fill="#c0392b"
               opacity={dragging?.kind === "door" ? 0.25 : 1}
               onPointerDown={(e) => handleMarkerPointerDown(e, "door")}
               style={{ cursor: "grab", touchAction: "none" }}
             />
-            {windowPos && (
+            {windowScreenPos && (
               <rect
-                x={windowPos.x - 7}
-                y={windowPos.y - 7}
+                x={windowScreenPos.x - 7}
+                y={windowScreenPos.y - 7}
                 width={14}
                 height={14}
                 fill="#3d6690"
@@ -1102,13 +1173,12 @@ function FloorPlanEditorModal({
               />
             )}
 
-            {renderLongRow(byWall.trasera, bodyY + 6)}
-            {renderLongRow(byWall.derecha, bodyY + bodyH - 42)}
-            {renderShortColumn(byWall.izquierda, bodyX + 6)}
-            {renderShortColumn(byWall.frontal, bodyX + bodyW - 76)}
+            {renderWallItems(byWall.trasera, "trasera")}
+            {renderWallItems(byWall.derecha, "derecha")}
+            {renderWallItems(byWall.izquierda, "izquierda")}
+            {renderWallItems(byWall.frontal, "frontal")}
 
-            {/* piezas viejas que ya estaban en "isla" de antes — se muestran, pero ya no
-                se puede soltar nada nuevo aquí */}
+            {/* piezas viejas que ya estaban en "isla" de antes de este cambio */}
             {byWall.isla.map(({ it, i }, idx) => (
               <g
                 key={i}
@@ -1147,12 +1217,16 @@ function TrailerFloorPlanSVG({
   items,
   lengthFt,
   doorWall,
+  doorPos,
   windowWall,
+  windowPos,
 }: {
   items: QuoteLineItem[];
   lengthFt: number | null | undefined;
   doorWall: string;
+  doorPos?: number;
   windowWall?: string;
+  windowPos?: number;
 }) {
   const knownWalls = new Set(["trasera", "frontal", "izquierda", "derecha"]);
 
@@ -1173,93 +1247,81 @@ function TrailerFloorPlanSVG({
   const bodyY = 50;
   const bodyW = 520;
   const bodyH = 200;
-  const scaleLong = bodyW / totalIn;
 
-  function longRow(wallItems: QuoteLineItem[], y: number, dimAbove: boolean) {
-    let cursor = bodyX + 12;
-    const boxes: React.ReactNode[] = [];
-    wallItems.forEach((it, idx) => {
+  function renderWall(wallItems: QuoteLineItem[], wall: string) {
+    const horizontal = wall === "trasera" || wall === "derecha";
+    const sorted = [...wallItems].sort((a, b) => (a.pos ?? 0) - (b.pos ?? 0));
+
+    return sorted.map((it, idx) => {
+      const span = boxSpanFrac(it, wall, totalIn, bodyW, bodyH);
+      const posFrac = Math.min(Math.max(it.pos ?? 0, 0), 1 - span);
+      const label = it.label.length > 12 ? it.label.slice(0, 11) + "…" : it.label;
       const widthIn = it.width_in || 24;
-      const w = Math.max(34, widthIn * scaleLong);
-      const dimY = dimAbove ? y - 8 : y + 44;
-      const labelY = dimAbove ? y - 12 : y + 56;
-      boxes.push(
+
+      if (horizontal) {
+        const boxX = bodyX + posFrac * bodyW;
+        const boxW = span * bodyW;
+        const y = wall === "trasera" ? bodyY + 6 : bodyY + bodyH - 42;
+        const dimY = wall === "trasera" ? y - 8 : y + 44;
+        const labelY = wall === "trasera" ? y - 12 : y + 56;
+        return (
+          <g key={idx}>
+            <line
+              x1={boxX}
+              y1={dimY}
+              x2={boxX + boxW}
+              y2={dimY}
+              stroke="#5b6570"
+              strokeWidth={0.5}
+              markerStart="url(#fp-arrow)"
+              markerEnd="url(#fp-arrow)"
+            />
+            <text x={boxX + boxW / 2} y={labelY} textAnchor="middle" fontSize={8} fill="#5b6570">
+              {Math.round(widthIn)}"
+            </text>
+            <rect x={boxX} y={y} width={boxW} height={36} rx={4} fill="rgba(31,58,92,0.08)" stroke="#1f3a5c" strokeWidth={0.75} />
+            <text x={boxX + boxW / 2} y={y + 22} textAnchor="middle" fontSize={8} fill="#1b1f23">
+              {label}
+            </text>
+          </g>
+        );
+      }
+
+      const rotated = isRotatedForWall(it, wall);
+      const boxY = bodyY + posFrac * bodyH;
+      const boxH = span * bodyH;
+      const depthW = rotated ? 36 : 70;
+      const boxX = wall === "izquierda" ? bodyX + 6 : bodyX + bodyW - 6 - depthW;
+
+      return (
         <g key={idx}>
-          <line
-            x1={cursor}
-            y1={dimY}
-            x2={cursor + w}
-            y2={dimY}
-            stroke="#5b6570"
-            strokeWidth={0.5}
-            markerStart="url(#fp-arrow)"
-            markerEnd="url(#fp-arrow)"
-          />
-          <text x={cursor + w / 2} y={labelY} textAnchor="middle" fontSize={8} fill="#5b6570">
-            {Math.round(widthIn)}"
-          </text>
-          <rect
-            x={cursor}
-            y={y}
-            width={w}
-            height={36}
-            rx={4}
-            fill="rgba(31,58,92,0.08)"
-            stroke="#1f3a5c"
-            strokeWidth={0.75}
-          />
-          <text x={cursor + w / 2} y={y + 22} textAnchor="middle" fontSize={8} fill="#1b1f23">
-            {it.label.length > 12 ? it.label.slice(0, 11) + "…" : it.label}
+          <rect x={boxX} y={boxY} width={depthW} height={boxH} rx={4} fill="rgba(31,58,92,0.08)" stroke="#1f3a5c" strokeWidth={0.75} />
+          <text
+            x={boxX + depthW / 2}
+            y={boxY + boxH / 2}
+            textAnchor="middle"
+            fontSize={7.5}
+            fill="#1b1f23"
+            transform={rotated ? `rotate(-90, ${boxX + depthW / 2}, ${boxY + boxH / 2})` : undefined}
+          >
+            {label}
           </text>
         </g>
       );
-      cursor += w + 6;
     });
-    return boxes;
   }
 
-  function shortColumn(wallItems: QuoteLineItem[], x: number, alignLabelRight: boolean) {
-    let cursor = bodyY + 12;
-    const boxes: React.ReactNode[] = [];
-    wallItems.forEach((it, idx) => {
-      const h = 32;
-      boxes.push(
-        <g key={idx}>
-          <rect
-            x={x}
-            y={cursor}
-            width={70}
-            height={h}
-            rx={4}
-            fill="rgba(31,58,92,0.08)"
-            stroke="#1f3a5c"
-            strokeWidth={0.75}
-          />
-          <text x={x + 35} y={cursor + h / 2 + 3} textAnchor="middle" fontSize={7.5} fill="#1b1f23">
-            {it.label.length > 10 ? it.label.slice(0, 9) + "…" : it.label}
-          </text>
-        </g>
-      );
-      cursor += h + 6;
-    });
-    return boxes;
+  function markerPos(wall: string, pos: number) {
+    if (wall === "trasera") return { x: bodyX + pos * bodyW, y: bodyY, label: { x: bodyX + pos * bodyW, y: bodyY - 12 } };
+    if (wall === "derecha")
+      return { x: bodyX + pos * bodyW, y: bodyY + bodyH, label: { x: bodyX + pos * bodyW, y: bodyY + bodyH + 16 } };
+    if (wall === "izquierda")
+      return { x: bodyX, y: bodyY + pos * bodyH, label: { x: bodyX - 28, y: bodyY + pos * bodyH } };
+    return { x: bodyX + bodyW, y: bodyY + pos * bodyH, label: { x: bodyX + bodyW + 28, y: bodyY + pos * bodyH } };
   }
 
-  const doorPositions: Record<string, { x: number; y: number; label: { x: number; y: number } }> = {
-    trasera: { x: bodyX + bodyW / 2, y: bodyY, label: { x: bodyX + bodyW / 2, y: bodyY - 30 } },
-    derecha: { x: bodyX + bodyW / 2, y: bodyY + bodyH, label: { x: bodyX + bodyW / 2, y: bodyY + bodyH + 42 } },
-    izquierda: { x: bodyX, y: bodyY + bodyH / 2, label: { x: bodyX - 30, y: bodyY + bodyH / 2 } },
-    frontal: { x: bodyX + bodyW, y: bodyY + bodyH / 2, label: { x: bodyX + bodyW + 30, y: bodyY + bodyH / 2 } },
-  };
-  const doorPos = doorPositions[doorWall] || doorPositions.trasera;
-
-  const windowPositions: Record<string, { x: number; y: number; label: { x: number; y: number } }> = {
-    trasera: { x: bodyX + bodyW * 0.28, y: bodyY, label: { x: bodyX + bodyW * 0.28, y: bodyY - 16 } },
-    derecha: { x: bodyX + bodyW * 0.28, y: bodyY + bodyH, label: { x: bodyX + bodyW * 0.28, y: bodyY + bodyH + 56 } },
-    izquierda: { x: bodyX, y: bodyY + bodyH * 0.28, label: { x: bodyX - 30, y: bodyY + bodyH * 0.28 - 14 } },
-    frontal: { x: bodyX + bodyW, y: bodyY + bodyH * 0.28, label: { x: bodyX + bodyW + 30, y: bodyY + bodyH * 0.28 - 14 } },
-  };
-  const windowPos = windowWall ? windowPositions[windowWall] || windowPositions.frontal : null;
+  const doorMarker = markerPos(doorWall, doorPos ?? 0.5);
+  const windowMarker = windowWall ? markerPos(windowWall, windowPos ?? 0.5) : null;
 
   return (
     <svg viewBox="0 0 760 340" width="100%" style={{ maxHeight: 340 }}>
@@ -1292,28 +1354,28 @@ function TrailerFloorPlanSVG({
       </text>
 
       {/* puerta */}
-      <circle cx={doorPos.x} cy={doorPos.y} r={4} fill="#c0392b" />
-      <text x={doorPos.label.x} y={doorPos.label.y} fontSize={8} fill="#c0392b" textAnchor="middle">
+      <circle cx={doorMarker.x} cy={doorMarker.y} r={4} fill="#c0392b" />
+      <text x={doorMarker.label.x} y={doorMarker.label.y} fontSize={8} fill="#c0392b" textAnchor="middle">
         🚪 Puerta
       </text>
 
       {/* ventana de servicio */}
-      {windowPos && (
+      {windowMarker && (
         <>
-          <rect x={windowPos.x - 5} y={windowPos.y - 5} width={10} height={10} fill="#3d6690" />
-          <text x={windowPos.label.x} y={windowPos.label.y} fontSize={8} fill="#3d6690" textAnchor="middle">
+          <rect x={windowMarker.x - 5} y={windowMarker.y - 5} width={10} height={10} fill="#3d6690" />
+          <text x={windowMarker.label.x} y={windowMarker.label.y} fontSize={8} fill="#3d6690" textAnchor="middle">
             🪟 Ventana
           </text>
         </>
       )}
 
       {/* piezas por pared */}
-      {longRow(byWall.trasera, bodyY + 6, true)}
-      {longRow(byWall.derecha, bodyY + bodyH - 42, false)}
-      {shortColumn(byWall.izquierda, bodyX + 6, false)}
-      {shortColumn(byWall.frontal, bodyX + bodyW - 76, true)}
+      {renderWall(byWall.trasera, "trasera")}
+      {renderWall(byWall.derecha, "derecha")}
+      {renderWall(byWall.izquierda, "izquierda")}
+      {renderWall(byWall.frontal, "frontal")}
 
-      {/* isla, flotando al centro */}
+      {/* piezas viejas que ya estaban en "isla" de antes de este cambio */}
       {byWall.isla.length > 0 && (
         <g>
           {byWall.isla.map((it, idx) => (
@@ -1451,8 +1513,14 @@ function QuoteBuilder({
   const [recentlyAddedIds, setRecentlyAddedIds] = useState<Set<string>>(new Set());
   const itemsListRef = useRef<HTMLDivElement>(null);
   const [doorWall, setDoorWall] = useState<string>(source?.door_wall || "trasera");
+  const [doorPos, setDoorPos] = useState<number>(
+    (source as (Quote & { door_pos?: number | null }) | null)?.door_pos ?? 0.5
+  );
   const [windowWall, setWindowWall] = useState<string>(
     (source as (Quote & { window_wall?: string | null }) | null)?.window_wall || "frontal"
+  );
+  const [windowPos, setWindowPos] = useState<number>(
+    (source as (Quote & { window_pos?: number | null }) | null)?.window_pos ?? 0.5
   );
   const [catalogSearch, setCatalogSearch] = useState("");
 
@@ -1613,6 +1681,8 @@ function QuoteBuilder({
       pdf_url: uploadError ? null : pdfPath,
       door_wall: doorWall,
       window_wall: windowWall,
+      door_pos: doorPos,
+      window_pos: windowPos,
       monthly_estimate: monthlyEstimate ? parseFloat(monthlyEstimate) : null,
       notes: notes || null,
     };
@@ -2008,7 +2078,9 @@ function QuoteBuilder({
                     items={items}
                     lengthFt={selectedSize?.length_ft}
                     doorWall={doorWall}
+                    doorPos={doorPos}
                     windowWall={windowWall}
+                    windowPos={windowPos}
                   />
                 </div>
               )}
@@ -2054,10 +2126,14 @@ function QuoteBuilder({
           items={items}
           lengthFt={selectedSize?.length_ft}
           doorWall={doorWall}
+          doorPos={doorPos}
           windowWall={windowWall}
+          windowPos={windowPos}
           onReorder={setItems}
           onSetDoorWall={setDoorWall}
+          onSetDoorPos={setDoorPos}
           onSetWindowWall={setWindowWall}
+          onSetWindowPos={setWindowPos}
           onClose={() => setShowPlanEditor(false)}
         />
       )}
