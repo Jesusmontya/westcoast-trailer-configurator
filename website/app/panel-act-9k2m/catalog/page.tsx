@@ -13,6 +13,7 @@ type TrailerSize = {
   cost: number | null;
   price: number;
   length_ft: number | null;
+  width_in: number | null;
 };
 type Category = { id: string; name: string; sort_order: number };
 type CatalogItem = {
@@ -38,6 +39,7 @@ function SizesTab() {
   const [cost, setCost] = useState("");
   const [price, setPrice] = useState("");
   const [lengthFt, setLengthFt] = useState("");
+  const [widthIn, setWidthIn] = useState("");
   const [uploading, setUploading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
@@ -59,6 +61,7 @@ function SizesTab() {
     setCost("");
     setPrice("");
     setLengthFt("");
+    setWidthIn("");
     setPendingFile(null);
     if (fileRef.current) fileRef.current.value = "";
     setEditingId(null);
@@ -70,6 +73,7 @@ function SizesTab() {
     setCost(s.cost != null ? String(s.cost) : "");
     setPrice(String(s.price));
     setLengthFt(s.length_ft != null ? String(s.length_ft) : "");
+    setWidthIn(s.width_in != null ? String(s.width_in) : "");
   }
 
   async function saveSize() {
@@ -86,6 +90,7 @@ function SizesTab() {
         cost: cost ? parseFloat(cost) : null,
         price: parseFloat(price),
         length_ft: lengthFt ? parseFloat(lengthFt) : null,
+        width_in: widthIn ? parseFloat(widthIn) : null,
       };
       if (image_url) updates.image_url = image_url;
       await supabase.from("trailer_sizes").update(updates).eq("id", editingId);
@@ -96,6 +101,7 @@ function SizesTab() {
         cost: cost ? parseFloat(cost) : null,
         price: parseFloat(price),
         length_ft: lengthFt ? parseFloat(lengthFt) : null,
+        width_in: widthIn ? parseFloat(widthIn) : null,
         sort_order: sizes.length,
       });
     }
@@ -156,6 +162,13 @@ function SizesTab() {
             placeholder="Largo real (ft)"
             value={lengthFt}
             onChange={(e) => setLengthFt(e.target.value)}
+            className="w-36 px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
+          />
+          <input
+            type="number"
+            placeholder="Ancho real (in)"
+            value={widthIn}
+            onChange={(e) => setWidthIn(e.target.value)}
             className="w-36 px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
           />
         </div>

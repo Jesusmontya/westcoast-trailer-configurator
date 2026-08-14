@@ -66,6 +66,7 @@ type TrailerSize = {
   price: number;
   cost: number | null;
   length_ft: number | null;
+  width_in: number | null;
 };
 type Category = { id: string; name: string };
 type CatalogItem = {
@@ -832,7 +833,7 @@ function boxDims(
   wall: string
 ): { alongWallIn: number; intoRoomIn: number } {
   const widthIn = item.width_in || 24;
-  const depthIn = item.depth_in || 24;
+  const depthIn = item.depth_in || widthIn;
   if (isLongWall(wall)) return { alongWallIn: widthIn, intoRoomIn: depthIn };
   const rotated = isRotatedForWall(item, wall);
   if (rotated) return { alongWallIn: widthIn, intoRoomIn: depthIn };
@@ -854,9 +855,10 @@ function boxSpanFrac(
 }
 
 // Qué tanto se mete hacia adentro del trailer, ya convertido a pixeles.
-function boxDepthPx(item: QuoteLineItem, wall: string, bodyH: number): number {
+// trailerWidthIn = ancho real del trailer (de lado a lado), viene del tamaño elegido.
+function boxDepthPx(item: QuoteLineItem, wall: string, bodyH: number, trailerWidthIn: number): number {
   const { intoRoomIn } = boxDims(item, wall);
-  return Math.max(24, (intoRoomIn / DEPTH_TOTAL_IN) * bodyH);
+  return Math.max(24, (intoRoomIn / trailerWidthIn) * bodyH);
 }
 
 // Calcula dónde debería caer una pieza nueva, justo después de la última
@@ -875,6 +877,7 @@ function nextPosForWall(itemsList: QuoteLineItem[], wall: string, totalIn: numbe
 function FloorPlanEditorModal({
   items,
   lengthFt,
+  trailerWidthIn,
   doorWall,
   doorPos,
   windowWall,
@@ -888,6 +891,7 @@ function FloorPlanEditorModal({
 }: {
   items: QuoteLineItem[];
   lengthFt: number | null | undefined;
+  trailerWidthIn: number | null | undefined;
   doorWall: string;
   doorPos: number;
   windowWall?: string;
@@ -919,6 +923,7 @@ function FloorPlanEditorModal({
   const WALL_MARGIN = 55;
 
   const totalIn = (lengthFt || 20) * 12;
+  const widthTotalIn = trailerWidthIn || DEPTH_TOTAL_IN;
 
   function svgScale() {
     const el = containerRef.current;
@@ -1085,7 +1090,7 @@ function FloorPlanEditorModal({
       const posFrac = Math.min(Math.max(it.pos ?? 0, 0), 1 - span);
       const isDragging = dragging?.kind === "item" && dragging.index === i;
       const label = it.label.length > 12 ? it.label.slice(0, 11) + "…" : it.label;
-      const depthPx = boxDepthPx(it, wall, bodyH);
+      const depthPx = boxDepthPx(it, wall, bodyH, widthTotalIn);
 
       if (horizontal) {
         const boxX = bodyX + posFrac * bodyW;
@@ -1263,6 +1268,7 @@ function FloorPlanEditorModal({
 function TrailerFloorPlanSVG({
   items,
   lengthFt,
+  trailerWidthIn,
   doorWall,
   doorPos,
   windowWall,
@@ -1270,6 +1276,7 @@ function TrailerFloorPlanSVG({
 }: {
   items: QuoteLineItem[];
   lengthFt: number | null | undefined;
+  trailerWidthIn?: number | null;
   doorWall: string;
   doorPos?: number;
   windowWall?: string;
@@ -1290,6 +1297,7 @@ function TrailerFloorPlanSVG({
   });
 
   const totalIn = (lengthFt || 20) * 12;
+  const widthTotalIn = trailerWidthIn || DEPTH_TOTAL_IN;
   const bodyX = 110;
   const bodyY = 50;
   const bodyW = 520;
@@ -1304,7 +1312,7 @@ function TrailerFloorPlanSVG({
       const posFrac = Math.min(Math.max(it.pos ?? 0, 0), 1 - span);
       const label = it.label.length > 12 ? it.label.slice(0, 11) + "…" : it.label;
       const { alongWallIn } = boxDims(it, wall);
-      const depthPx = boxDepthPx(it, wall, bodyH);
+      const depthPx = boxDepthPx(it, wall, bodyH, widthTotalIn);
 
       if (horizontal) {
         const boxX = bodyX + posFrac * bodyW;
@@ -2199,6 +2207,7 @@ function QuoteBuilder({
                     <TrailerFloorPlanSVG
                       items={items}
                       lengthFt={selectedSize?.length_ft}
+                      trailerWidthIn={selectedSize?.width_in}
                       doorWall={doorWall}
                       doorPos={doorPos}
                       windowWall={windowWall}
@@ -2248,6 +2257,7 @@ function QuoteBuilder({
         <FloorPlanEditorModal
           items={items}
           lengthFt={selectedSize?.length_ft}
+          trailerWidthIn={selectedSize?.width_in}
           doorWall={doorWall}
           doorPos={doorPos}
           windowWall={windowWall}
