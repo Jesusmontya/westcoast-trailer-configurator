@@ -801,13 +801,8 @@ const WALL_ZONES: { key: string; label: string }[] = [
   { key: "derecha", label: "Pared larga derecha" },
 ];
 
-const CORNER_MARGIN_FRAC = 0.18; // qué tan cerca de la esquina no se voltea sola
-const TAP_THRESHOLD_PX = 6; // si te mueves menos que esto, cuenta como "tap", no arrastre
-const FP_BODY_W = 780;
-const FP_BODY_H = 300;
-// Ancho real del trailer — no lo capturamos todavía en Catálogo, así que usamos
-// un estimado razonable (8 ft) para poder dibujar la profundidad a escala.
-const DEPTH_TOTAL_IN = 96;
+const CORNER_MARGIN_IN = 18; // pulgadas desde esquina donde no se voltea sola
+const TAP_THRESHOLD_PX = 6;  // si te mueves menos que esto, es tap
 
 function isLongWall(wall: string): boolean {
   return wall === "izquierda" || wall === "derecha";
@@ -816,64 +811,63 @@ function isShortWall(wall: string): boolean {
   return wall === "trasera" || wall === "frontal";
 }
 
-function isRotatedForWall(item: QuoteLineItem, wall: string): boolean {
+// Decide si la pieza debe verse girada (texto vertical) en paredes cortas.
+// Usa pos en inches reales comparado con el ancho del trailer.
+function isRotatedForWall(
+  item: QuoteLineItem,
+  wall: string,
+  trailerWidthIn: number
+): boolean {
   if (!isShortWall(wall)) return false;
-  if (item.rotated !== undefined) return item.rotated; // el usuario ya lo decidió a mano
-  // aproximamos el centro real de la pieza (no solo su borde inicial)
-  const approxHalfSpan = 16 / FP_BODY_H;
-  const center = (item.pos ?? 0.5 - approxHalfSpan) + approxHalfSpan;
-  return center > CORNER_MARGIN_FRAC && center < 1 - CORNER_MARGIN_FRAC;
+  if (item.rotated !== undefined) return item.rotated;
+  const widthIn = item.width_in || 24;
+  const halfSpan = widthIn / 2;
+  const centerIn = (item.pos ?? trailerWidthIn / 2 - halfSpan) + halfSpan;
+  return centerIn > CORNER_MARGIN_IN && centerIn < trailerWidthIn - CORNER_MARGIN_IN;
 }
 
-// En pared larga, el ancho real corre a lo largo de la pared y la
-// profundidad real se mete hacia adentro. En pared corta, si está volteada
-// (orientación correcta) es igual; si no, se intercambian.
+// Devuelve ancho/profundidad de la pieza según en qué pared esté.
 function boxDims(
   item: QuoteLineItem,
-  wall: string
+  wall: string,
+  trailerWidthIn: number
 ): { alongWallIn: number; intoRoomIn: number } {
   const widthIn = item.width_in || 24;
   const depthIn = item.depth_in || widthIn;
   if (isLongWall(wall)) return { alongWallIn: widthIn, intoRoomIn: depthIn };
-  const rotated = isRotatedForWall(item, wall);
+  const rotated = isRotatedForWall(item, wall, trailerWidthIn);
   if (rotated) return { alongWallIn: widthIn, intoRoomIn: depthIn };
   return { alongWallIn: depthIn, intoRoomIn: widthIn };
 }
 
-function boxSpanFrac(
-  item: QuoteLineItem,
+// Calcula dónde cae la siguiente pieza, en pulgadas reales.
+function nextPosForWall(
+  itemsList: QuoteLineItem[],
   wall: string,
-  totalIn: number,
-  bodyW: number,
-  bodyH: number
+  trailerLengthIn: number,
+  trailerWidthIn: number
 ): number {
-  const { alongWallIn } = boxDims(item, wall);
-  if (isLongWall(wall)) {
-    return Math.max(60 / bodyW, alongWallIn / totalIn);
-  }
-  return Math.max(36 / bodyH, alongWallIn / totalIn);
-}
-
-// Qué tanto se mete hacia adentro del trailer, ya convertido a pixeles.
-// trailerWidthIn = ancho real del trailer (de lado a lado), viene del tamaño elegido.
-function boxDepthPx(item: QuoteLineItem, wall: string, bodyH: number, trailerWidthIn: number): number {
-  const { intoRoomIn } = boxDims(item, wall);
-  return Math.max(36, (intoRoomIn / trailerWidthIn) * bodyH);
-}
-
-// Calcula dónde debería caer una pieza nueva, justo después de la última
-// que ya ocupa esa pared — para que no nazca encimada con las demás.
-function nextPosForWall(itemsList: QuoteLineItem[], wall: string, totalIn: number): number {
+  const wallLengthIn = isLongWall(wall) ? trailerLengthIn : trailerWidthIn;
   const sameWall = itemsList.filter((it) => (it.wall || "trasera") === wall);
   let maxEnd = 0;
   sameWall.forEach((it) => {
-    const span = boxSpanFrac(it, wall, totalIn, FP_BODY_W, FP_BODY_H);
-    const end = (it.pos ?? 0) + span;
+    const { alongWallIn } = boxDims(it, wall, trailerWidthIn);
+    const end = (it.pos ?? 0) + alongWallIn;
     if (end > maxEnd) maxEnd = end;
   });
-  return Math.min(maxEnd, 0.95);
+  return Math.min(maxEnd, wallLengthIn * 0.95);
 }
 
+// Geometría del SVG — todo en pulgadas.
+// viewBox = "0 0 trailerLength trailerWidth"
+// El navegador escala solo, sin convertir manualmente a píxeles.
+const DEFAULT_TRAILER_LENGTH_IN = 240; // 20 ft por default
+const DEFAULT_TRAILER_WIDTH_IN  = 96;
+
+
+// ============================================
+// EDITOR DE PLANO — viewBox en pulgadas reales
+// ============================================
 function FloorPlanEditorModal({
   items,
   lengthFt,
@@ -903,61 +897,56 @@ function FloorPlanEditorModal({
   onSetWindowPos: (pos: number) => void;
   onClose: () => void;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const chipRefs = useRef<Record<number, SVGGElement | null>>({});
+  const svgRef = useRef<SVGSVGElement>(null);
 
   type DragKind = { kind: "item"; index: number } | { kind: "door" } | { kind: "window" };
   const [dragging, setDragging] = useState<DragKind | null>(null);
-  const [grabOffset, setGrabOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [grabOffsetIn, setGrabOffsetIn] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [pointerDownScreen, setPointerDownScreen] = useState<{ x: number; y: number } | null>(null);
   const [ghostScreen, setGhostScreen] = useState<{ x: number; y: number } | null>(null);
   const [hoverWall, setHoverWall] = useState<string | null>(null);
 
-  // Misma geometría que el dibujo final — el editor ES el dibujo final.
-  const VB_W = 1140;
-  const VB_H = 510;
-  const bodyX = 165;
-  const bodyY = 75;
-  const bodyW = 780;
-  const bodyH = 300;
-  const WALL_MARGIN = 83;
+  const lengthIn = (lengthFt || 20) * 12;
+  const widthIn  = trailerWidthIn || DEFAULT_TRAILER_WIDTH_IN;
 
-  const totalIn = (lengthFt || 20) * 12;
-  const widthTotalIn = trailerWidthIn || DEPTH_TOTAL_IN;
-
-  function svgScale() {
-    const el = containerRef.current;
-    if (!el) return 1;
-    return el.getBoundingClientRect().width / VB_W;
+  // Convierte coordenadas de pantalla a pulgadas reales en el SVG
+  function screenToIn(clientX: number, clientY: number): { x: number; y: number } {
+    const svg = svgRef.current;
+    if (!svg) return { x: 0, y: 0 };
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const svgPt = pt.matrixTransform(svg.getScreenCTM()!.inverse());
+    return { x: svgPt.x, y: svgPt.y };
   }
 
-  function screenToSvg(clientX: number, clientY: number) {
-    const el = containerRef.current;
-    if (!el) return { x: 0, y: 0 };
-    const r = el.getBoundingClientRect();
-    const scale = r.width / VB_W;
-    return { x: (clientX - r.left) / scale, y: (clientY - r.top) / scale };
-  }
+  // Margen de detección de pared = 15% del ancho del trailer, en pulgadas
+  const MARGIN_IN = widthIn * 0.15;
 
-  // Solo las 4 orillas cuentan — el centro ya no es un lugar donde soltar.
-  function pointToWall(svgX: number, svgY: number): string | null {
+  function pointToWall(inX: number, inY: number): string | null {
+    // inX = posición a lo largo del trailer (0..lengthIn)
+    // inY = posición de lado a lado (0..widthIn)
+    const fromLeft  = inX;
+    const fromRight = lengthIn - inX;
+    const fromTop   = inY;
+    const fromBot   = widthIn - inY;
+
     const candidates = [
-      { wall: "izquierda", d: svgY - bodyY, valid: svgY - bodyY < WALL_MARGIN },
-      { wall: "derecha", d: bodyY + bodyH - svgY, valid: bodyY + bodyH - svgY < WALL_MARGIN },
-      { wall: "trasera", d: svgX - bodyX, valid: svgX - bodyX < WALL_MARGIN },
-      { wall: "frontal", d: bodyX + bodyW - svgX, valid: bodyX + bodyW - svgX < WALL_MARGIN },
-    ].filter((c) => c.valid);
-    if (candidates.length > 0) {
-      candidates.sort((a, b) => a.d - b.d);
-      return candidates[0].wall;
-    }
-    return null;
+      { wall: "trasera",   d: fromLeft,  valid: fromLeft  < MARGIN_IN },
+      { wall: "frontal",   d: fromRight, valid: fromRight < MARGIN_IN },
+      { wall: "izquierda", d: fromTop,   valid: fromTop   < MARGIN_IN },
+      { wall: "derecha",   d: fromBot,   valid: fromBot   < MARGIN_IN },
+    ].filter(c => c.valid);
+    if (!candidates.length) return null;
+    candidates.sort((a, b) => a.d - b.d);
+    return candidates[0].wall;
   }
 
   function handleItemPointerDown(e: React.PointerEvent, index: number) {
     (e.target as Element).setPointerCapture(e.pointerId);
-    const r = (e.currentTarget as SVGGElement).getBoundingClientRect();
-    setGrabOffset({ x: e.clientX - r.left, y: e.clientY - r.top });
+    const inCoords = screenToIn(e.clientX, e.clientY);
+    const item = items[index];
+    setGrabOffsetIn({ x: inCoords.x - (item.pos ?? 0), y: 0 });
     setPointerDownScreen({ x: e.clientX, y: e.clientY });
     setDragging({ kind: "item", index });
     setGhostScreen({ x: e.clientX, y: e.clientY });
@@ -965,8 +954,7 @@ function FloorPlanEditorModal({
 
   function handleMarkerPointerDown(e: React.PointerEvent, kind: "door" | "window") {
     (e.target as Element).setPointerCapture(e.pointerId);
-    const r = (e.currentTarget as Element).getBoundingClientRect();
-    setGrabOffset({ x: e.clientX - r.left, y: e.clientY - r.top });
+    setGrabOffsetIn({ x: 0, y: 0 });
     setPointerDownScreen({ x: e.clientX, y: e.clientY });
     setDragging({ kind });
     setGhostScreen({ x: e.clientX, y: e.clientY });
@@ -975,164 +963,139 @@ function FloorPlanEditorModal({
   function handlePointerMove(e: React.PointerEvent) {
     if (!dragging) return;
     setGhostScreen({ x: e.clientX, y: e.clientY });
-    const { x, y } = screenToSvg(e.clientX, e.clientY);
+    const { x, y } = screenToIn(e.clientX, e.clientY);
     setHoverWall(pointToWall(x, y));
   }
 
   function handlePointerUp(e: React.PointerEvent) {
     if (!dragging) return;
 
-    const movedDistance = pointerDownScreen
+    const moved = pointerDownScreen
       ? Math.hypot(e.clientX - pointerDownScreen.x, e.clientY - pointerDownScreen.y)
       : 999;
 
-    // Un tap (casi sin movimiento) sobre una pieza ya colocada = voltearla a mano.
-    if (movedDistance < TAP_THRESHOLD_PX && dragging.kind === "item") {
+    // Tap = voltear pieza manualmente
+    if (moved < TAP_THRESHOLD_PX && dragging.kind === "item") {
       const idx = dragging.index;
       const current = items[idx];
       const wall = current.wall || "trasera";
-      const currentlyRotated = isRotatedForWall(current, wall);
-      const updated = items.map((it, i) => (i === idx ? { ...it, rotated: !currentlyRotated } : it));
-      onReorder(updated);
-      setDragging(null);
-      setGhostScreen(null);
-      setHoverWall(null);
-      setPointerDownScreen(null);
+      const currentRotated = isRotatedForWall(current, wall, widthIn);
+      onReorder(items.map((it, i) => i === idx ? { ...it, rotated: !currentRotated } : it));
+      cleanup();
       return;
     }
 
-    const { x, y } = screenToSvg(e.clientX, e.clientY);
-    const wall = pointToWall(x, y);
+    const { x: inX, y: inY } = screenToIn(e.clientX, e.clientY);
+    const wall = pointToWall(inX, inY);
 
     if (wall) {
-      const scale = svgScale();
-      const grabSvg = { x: grabOffset.x / scale, y: grabOffset.y / scale };
-      const horizontal = wall === "izquierda" || wall === "derecha";
+      const wallLengthIn = isLongWall(wall) ? lengthIn : widthIn;
 
       if (dragging.kind === "item") {
-        const draggingIndex = dragging.index;
-        const movedItemBase: QuoteLineItem = { ...items[draggingIndex], wall };
-        const span = boxSpanFrac(movedItemBase, wall, totalIn, bodyW, bodyH);
+        const idx = dragging.index;
+        const movedItemBase = { ...items[idx], wall };
+        const { alongWallIn } = boxDims(movedItemBase, wall, widthIn);
+        const rawPos = inX - grabOffsetIn.x;
+        let pos = Math.min(Math.max(rawPos, 0), wallLengthIn - alongWallIn);
 
-        let posFrac: number;
-        if (horizontal) {
-          const boxLeftSvg = x - grabSvg.x;
-          posFrac = (boxLeftSvg - bodyX) / bodyW;
-        } else {
-          const boxTopSvg = y - grabSvg.y;
-          posFrac = (boxTopSvg - bodyY) / bodyH;
-        }
-        posFrac = Math.min(Math.max(posFrac, 0), 1 - span);
-        const movedItem: QuoteLineItem = { ...movedItemBase, pos: posFrac };
-
-        // Resuelve encimados: empuja lo mínimo necesario, solo si de verdad se topan.
-        const sameWallOthers = items
+        // Resolver colisiones: empujar mínimo necesario
+        const others = items
           .map((it, i) => ({ it, i }))
-          .filter(({ i }) => i !== draggingIndex)
+          .filter(({ i }) => i !== idx)
           .filter(({ it }) => (it.wall || "trasera") === wall)
-          .map(({ it, i }) => ({ item: it, i, pos: it.pos ?? 0 }));
+          .map(({ it, i }) => ({ it, i, pos: it.pos ?? 0 }))
+          .sort((a, b) => a.pos - b.pos);
 
-        const combined = [...sameWallOthers, { item: movedItem, i: draggingIndex, pos: posFrac }].sort(
-          (a, b) => a.pos - b.pos
-        );
-
-        let cursor = 0;
-        const resolved: Record<number, number> = {};
-        for (const entry of combined) {
-          const entrySpan = boxSpanFrac(entry.item, wall, totalIn, bodyW, bodyH);
-          const p = Math.max(entry.pos, cursor);
-          resolved[entry.i] = Math.min(p, 1 - entrySpan);
-          cursor = resolved[entry.i] + entrySpan;
+        const { alongWallIn: mySpan } = boxDims(movedItemBase, wall, widthIn);
+        const myEnd = pos + mySpan;
+        for (const { it, i: _i } of others) {
+          const { alongWallIn: span } = boxDims(it, wall, widthIn);
+          const oPos = it.pos ?? 0;
+          // overlap check
+          if (pos < oPos + span && myEnd > oPos) {
+            // push apart — simplest resolution
+            if (pos < oPos) {
+              pos = oPos - mySpan - 1;
+            } else {
+              pos = oPos + span + 1;
+            }
+            pos = Math.min(Math.max(pos, 0), wallLengthIn - mySpan);
+          }
         }
 
-        const updated = items.map((it, i) => {
-          if (i === draggingIndex) return { ...movedItem, pos: resolved[i] };
-          if (i in resolved) return { ...it, pos: resolved[i] };
-          return it;
-        });
+        const updated = items.map((it, i) =>
+          i === idx ? { ...movedItemBase, pos } : it
+        );
         onReorder(updated);
       } else if (dragging.kind === "door") {
-        const posFrac = horizontal ? (x - bodyX) / bodyW : (y - bodyY) / bodyH;
+        const pos = isLongWall(wall) ? inX / lengthIn : inY / widthIn;
         onSetDoorWall(wall);
-        onSetDoorPos(Math.min(Math.max(posFrac, 0.04), 0.96));
+        onSetDoorPos(Math.min(Math.max(pos, 0.04), 0.96));
       } else if (dragging.kind === "window") {
-        const posFrac = horizontal ? (x - bodyX) / bodyW : (y - bodyY) / bodyH;
+        const pos = isLongWall(wall) ? inX / lengthIn : inY / widthIn;
         onSetWindowWall(wall);
-        onSetWindowPos(Math.min(Math.max(posFrac, 0.04), 0.96));
+        onSetWindowPos(Math.min(Math.max(pos, 0.04), 0.96));
       }
     }
+    cleanup();
+  }
 
+  function cleanup() {
     setDragging(null);
     setGhostScreen(null);
     setHoverWall(null);
     setPointerDownScreen(null);
   }
 
-  const knownWalls = new Set(["trasera", "frontal", "izquierda", "derecha"]);
-  const byWall: Record<string, { it: QuoteLineItem; i: number }[]> = {
-    trasera: [],
-    frontal: [],
-    izquierda: [],
-    derecha: [],
-    isla: [],
-  };
-  items.forEach((it, i) => {
-    const w = it.wall === "isla" ? "isla" : knownWalls.has(it.wall || "") ? (it.wall as string) : "trasera";
-    byWall[w].push({ it, i });
-  });
+  // Posiciones en pulgadas reales
+  function markerPosIn(wall: string, posFrac: number) {
+    if (wall === "izquierda") return { x: posFrac * lengthIn, y: 0 };
+    if (wall === "derecha")   return { x: posFrac * lengthIn, y: widthIn };
+    if (wall === "trasera")   return { x: 0, y: posFrac * widthIn };
+    return { x: lengthIn, y: posFrac * widthIn };
+  }
 
-  function renderWallItems(entries: { it: QuoteLineItem; i: number }[], wall: string) {
-    const horizontal = wall === "izquierda" || wall === "derecha";
-    const sorted = [...entries].sort((a, b) => (a.it.pos ?? 0) - (b.it.pos ?? 0));
+  const doorPt   = markerPosIn(doorWall, doorPos);
+  const windowPt = windowWall ? markerPosIn(windowWall, windowPos) : null;
 
-    return sorted.map(({ it, i }) => {
-      const span = boxSpanFrac(it, wall, totalIn, bodyW, bodyH);
-      const posFrac = Math.min(Math.max(it.pos ?? 0, 0), 1 - span);
+  const HITCH_LEN = widthIn * 0.3;
+
+  function renderItems() {
+    return items.map((it, i) => {
+      const wall = it.wall || "trasera";
+      const { alongWallIn, intoRoomIn } = boxDims(it, wall, widthIn);
+      const posIn = it.pos ?? 0;
       const isDragging = dragging?.kind === "item" && dragging.index === i;
-      const label = it.label.length > 12 ? it.label.slice(0, 11) + "…" : it.label;
-      const depthPx = boxDepthPx(it, wall, bodyH, widthTotalIn);
+      const rotated = isRotatedForWall(it, wall, widthIn);
+      const label = it.label.length > 14 ? it.label.slice(0, 13) + "…" : it.label;
 
-      if (horizontal) {
-        const boxX = bodyX + posFrac * bodyW;
-        const boxW = span * bodyW;
-        const y = wall === "izquierda" ? bodyY + 4 : bodyY + bodyH - 4 - depthPx;
-        return (
-          <g
-            key={i}
-            ref={(el) => { chipRefs.current[i] = el; }}
-            onPointerDown={(e) => handleItemPointerDown(e, i)}
-            style={{ cursor: "grab", opacity: isDragging ? 0.25 : 1, touchAction: "none" }}
-          >
-            <rect x={boxX} y={y} width={boxW} height={depthPx} rx={4} fill="rgba(31,58,92,0.1)" stroke="#1f3a5c" strokeWidth={0.75} />
-            <text x={boxX + boxW / 2} y={y + depthPx / 2 + 3} textAnchor="middle" fontSize={11} fill="#1b1f23" style={{ pointerEvents: "none" }}>
-              {label}
-            </text>
-          </g>
-        );
+      let rx = 0, ry = 0, rw = 0, rh = 0;
+      if (isLongWall(wall)) {
+        rw = alongWallIn; rh = intoRoomIn;
+        rx = posIn;
+        ry = wall === "izquierda" ? 0 : widthIn - intoRoomIn;
+      } else {
+        rw = intoRoomIn; rh = alongWallIn;
+        rx = wall === "trasera" ? 0 : lengthIn - intoRoomIn;
+        ry = posIn;
       }
 
-      const rotated = isRotatedForWall(it, wall);
-      const boxY = bodyY + posFrac * bodyH;
-      const boxH = span * bodyH;
-      const boxX = wall === "trasera" ? bodyX + 4 : bodyX + bodyW - 4 - depthPx;
+      const cx = rx + rw / 2;
+      const cy = ry + rh / 2;
+      const fontSize = Math.min(rw, rh) * 0.28;
+      const transform = rotated ? `rotate(-90 ${cx} ${cy})` : undefined;
 
       return (
         <g
           key={i}
-          ref={(el) => { chipRefs.current[i] = el; }}
           onPointerDown={(e) => handleItemPointerDown(e, i)}
           style={{ cursor: "grab", opacity: isDragging ? 0.25 : 1, touchAction: "none" }}
         >
-          <rect x={boxX} y={boxY} width={depthPx} height={boxH} rx={4} fill="rgba(31,58,92,0.1)" stroke="#1f3a5c" strokeWidth={0.75} />
-          <text
-            x={boxX + depthPx / 2}
-            y={boxY + boxH / 2}
-            textAnchor="middle"
-            fontSize={11}
-            fill="#1b1f23"
-            style={{ pointerEvents: "none" }}
-            transform={rotated ? `rotate(-90, ${boxX + depthPx / 2}, ${boxY + boxH / 2})` : undefined}
-          >
+          <rect x={rx} y={ry} width={rw} height={rh} rx={1}
+            fill="rgba(31,58,92,0.1)" stroke="#1f3a5c" strokeWidth={0.5} />
+          <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
+            fontSize={fontSize} fill="#1b1f23" transform={transform}
+            style={{ pointerEvents: "none" }}>
             {label}
           </text>
         </g>
@@ -1140,124 +1103,104 @@ function FloorPlanEditorModal({
     });
   }
 
-  function markerScreenPos(wall: string, pos: number) {
-    if (wall === "izquierda") return { x: bodyX + pos * bodyW, y: bodyY };
-    if (wall === "derecha") return { x: bodyX + pos * bodyW, y: bodyY + bodyH };
-    if (wall === "trasera") return { x: bodyX, y: bodyY + pos * bodyH };
-    return { x: bodyX + bodyW, y: bodyY + pos * bodyH };
+  // Resaltado de la zona activa mientras arrastras
+  function hoverRect() {
+    if (!hoverWall) return null;
+    const m = MARGIN_IN;
+    const zones: Record<string, { x: number; y: number; w: number; h: number }> = {
+      izquierda: { x: 0,            y: 0,          w: lengthIn, h: m },
+      derecha:   { x: 0,            y: widthIn - m, w: lengthIn, h: m },
+      trasera:   { x: 0,            y: 0,          w: m,        h: widthIn },
+      frontal:   { x: lengthIn - m, y: 0,          w: m,        h: widthIn },
+    };
+    const z = zones[hoverWall];
+    if (!z) return null;
+    return (
+      <rect x={z.x} y={z.y} width={z.w} height={z.h}
+        fill="rgba(31,58,92,0.15)" stroke="#1f3a5c" strokeDasharray={`${widthIn * 0.03} ${widthIn * 0.02}`} strokeWidth={0.4} />
+    );
   }
 
-  const doorScreenPos = markerScreenPos(doorWall, doorPos);
-  const windowScreenPos = windowWall ? markerScreenPos(windowWall, windowPos) : null;
-
-  const draggingItemObj = dragging?.kind === "item" ? items[dragging.index] : null;
-  const ghostLabel =
-    dragging?.kind === "door" ? "🚪 Puerta" : dragging?.kind === "window" ? "🪟 Ventana" : draggingItemObj?.label;
-
-  const wallHighlightRects: Record<string, { x: number; y: number; w: number; h: number }> = {
-    izquierda: { x: bodyX, y: bodyY, w: bodyW, h: WALL_MARGIN },
-    derecha: { x: bodyX, y: bodyY + bodyH - WALL_MARGIN, w: bodyW, h: WALL_MARGIN },
-    trasera: { x: bodyX, y: bodyY, w: WALL_MARGIN, h: bodyH },
-    frontal: { x: bodyX + bodyW - WALL_MARGIN, y: bodyY, w: WALL_MARGIN, h: bodyH },
-  };
+  const draggingLabel =
+    dragging?.kind === "door" ? "🚪 Puerta"
+    : dragging?.kind === "window" ? "🪟 Ventana"
+    : dragging?.kind === "item" ? items[dragging.index]?.label
+    : null;
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4 py-8">
-      <div className="admin-card bg-[var(--a-surface)] w-full max-w-2xl p-5">
+      <div className="admin-card bg-[var(--a-surface)] w-full max-w-3xl p-5">
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-lg font-semibold text-[var(--a-text)]">Editar plano</h3>
-          <button onClick={onClose} className="admin-btn-secondary">
-            Listo
-          </button>
+          <button onClick={onClose} className="admin-btn-secondary">Listo</button>
         </div>
-        <p className="text-xs text-[var(--a-text-muted)] mb-4">
-          Arrastra cada pieza a la posición exacta donde va. La puerta 🚪 y la
-          ventana 🪟 también se arrastran. Un tap sobre una pieza ya puesta en
-          la pared corta la voltea a mano.
+        <p className="text-xs text-[var(--a-text-muted)] mb-3">
+          Arrastra cada pieza a la posición exacta. Tap sobre una pieza en la pared corta = voltear.
+          La 🚪 y la 🪟 también se arrastran.
         </p>
 
-        <div ref={containerRef} style={{ touchAction: "none" }}>
+        <div style={{ touchAction: "none" }}>
           <svg
-            viewBox={`0 0 ${VB_W} ${VB_H}`}
+            ref={svgRef}
+            viewBox={`0 0 ${lengthIn} ${widthIn}`}
+            preserveAspectRatio="xMidYMid meet"
             width="100%"
-            style={{ maxHeight: 340 }}
+            style={{ border: "1px solid var(--a-border)", borderRadius: 6, background: "#f8f9fa" }}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
           >
-            {hoverWall && (
-              <rect
-                {...wallHighlightRects[hoverWall]}
-                fill="rgba(31,58,92,0.15)"
-                stroke="#1f3a5c"
-                strokeDasharray="4 3"
-                strokeWidth={1}
-              />
-            )}
+            {hoverRect()}
 
-            <rect x={bodyX} y={bodyY} width={bodyW} height={bodyH} rx={8} fill="none" stroke="#1b1f23" strokeWidth={1} />
+            {/* cuerpo del trailer */}
+            <rect x={0} y={0} width={lengthIn} height={widthIn}
+              fill="none" stroke="#1b1f23" strokeWidth={0.8} />
 
-            <path
-              d={`M${bodyX + bodyW} ${bodyY} L${bodyX + bodyW + 83} ${bodyY + bodyH / 2} L${bodyX + bodyW} ${bodyY + bodyH}`}
-              fill="none"
-              stroke="#1b1f23"
-              strokeWidth={1}
-            />
+            {/* lengüeta (lado frontal = X máximo) */}
+            <polygon
+              points={`${lengthIn},0 ${lengthIn + HITCH_LEN},${widthIn / 2} ${lengthIn},${widthIn}`}
+              fill="none" stroke="#1b1f23" strokeWidth={0.8} />
+            <text x={lengthIn + HITCH_LEN * 0.4} y={widthIn / 2}
+              textAnchor="middle" dominantBaseline="central"
+              fontSize={widthIn * 0.09} fill="#5b6570">
+              Lengüeta
+            </text>
 
-            <circle
-              cx={doorScreenPos.x}
-              cy={doorScreenPos.y}
-              r={10}
+            {/* puerta */}
+            <circle cx={doorPt.x} cy={doorPt.y} r={widthIn * 0.05}
               fill="#c0392b"
-              opacity={dragging?.kind === "door" ? 0.25 : 1}
+              opacity={dragging?.kind === "door" ? 0.3 : 1}
               onPointerDown={(e) => handleMarkerPointerDown(e, "door")}
-              style={{ cursor: "grab", touchAction: "none" }}
-            />
-            {windowScreenPos && (
+              style={{ cursor: "grab", touchAction: "none" }} />
+
+            {/* ventana */}
+            {windowPt && (
               <rect
-                x={windowScreenPos.x - 10}
-                y={windowScreenPos.y - 10}
-                width={21}
-                height={21}
+                x={windowPt.x - widthIn * 0.04}
+                y={windowPt.y - widthIn * 0.04}
+                width={widthIn * 0.08}
+                height={widthIn * 0.08}
                 fill="#3d6690"
-                opacity={dragging?.kind === "window" ? 0.25 : 1}
+                opacity={dragging?.kind === "window" ? 0.3 : 1}
                 onPointerDown={(e) => handleMarkerPointerDown(e, "window")}
-                style={{ cursor: "grab", touchAction: "none" }}
-              />
+                style={{ cursor: "grab", touchAction: "none" }} />
             )}
 
-            {renderWallItems(byWall.trasera, "trasera")}
-            {renderWallItems(byWall.derecha, "derecha")}
-            {renderWallItems(byWall.izquierda, "izquierda")}
-            {renderWallItems(byWall.frontal, "frontal")}
+            {renderItems()}
 
-            {/* piezas viejas que ya estaban en "isla" de antes de este cambio */}
-            {byWall.isla.map(({ it, i }, idx) => (
-              <g
-                key={i}
-                ref={(el) => { chipRefs.current[i] = el; }}
-                onPointerDown={(e) => handleItemPointerDown(e, i)}
-                transform={`translate(${bodyX + bodyW / 2 - 60 + idx * 127}, ${bodyY + bodyH / 2 - 27})`}
-                style={{
-                  cursor: "grab",
-                  opacity: dragging?.kind === "item" && dragging.index === i ? 0.25 : 1,
-                  touchAction: "none",
-                }}
-              >
-                <rect width={112} height={54} rx={4} fill="rgba(31,58,92,0.14)" stroke="#1f3a5c" strokeWidth={0.75} />
-                <text x={56} y={32} textAnchor="middle" fontSize={10} fill="#1b1f23" style={{ pointerEvents: "none" }}>
-                  {it.label.length > 11 ? it.label.slice(0, 10) + "…" : it.label}
-                </text>
-              </g>
-            ))}
+            {/* medida total */}
+            <text x={lengthIn / 2} y={widthIn + widthIn * 0.08}
+              textAnchor="middle" dominantBaseline="central"
+              fontSize={widthIn * 0.1} fill="#1b1f23">
+              {lengthFt || 20} ft
+            </text>
           </svg>
         </div>
 
-        {dragging && ghostScreen && (
-          <div
-            className="fixed pointer-events-none px-3 py-1.5 rounded bg-[var(--a-accent)] text-white text-xs font-semibold shadow-lg z-50"
-            style={{ left: ghostScreen.x - grabOffset.x, top: ghostScreen.y - grabOffset.y }}
-          >
-            {ghostLabel}
+        {dragging && ghostScreen && draggingLabel && (
+          <div className="fixed pointer-events-none px-3 py-1.5 rounded bg-[var(--a-accent)]
+            text-white text-xs font-semibold shadow-lg z-50"
+            style={{ left: ghostScreen.x - 40, top: ghostScreen.y - 30 }}>
+            {draggingLabel}
           </div>
         )}
       </div>
@@ -1265,6 +1208,9 @@ function FloorPlanEditorModal({
   );
 }
 
+// ============================================
+// PLANO ESTÁTICO — viewBox en pulgadas reales
+// ============================================
 function TrailerFloorPlanSVG({
   items,
   lengthFt,
@@ -1282,83 +1228,75 @@ function TrailerFloorPlanSVG({
   windowWall?: string;
   windowPos?: number;
 }) {
-  const knownWalls = new Set(["trasera", "frontal", "izquierda", "derecha"]);
+  const lengthIn = (lengthFt || 20) * 12;
+  const widthIn  = trailerWidthIn || DEFAULT_TRAILER_WIDTH_IN;
+  const HITCH_LEN = widthIn * 0.3;
 
+  const knownWalls = new Set(["trasera", "frontal", "izquierda", "derecha"]);
   const byWall: Record<string, QuoteLineItem[]> = {
-    trasera: [],
-    frontal: [],
-    izquierda: [],
-    derecha: [],
-    isla: [],
+    trasera: [], frontal: [], izquierda: [], derecha: [], isla: [],
   };
   items.forEach((it) => {
-    const w = it.wall === "isla" ? "isla" : knownWalls.has(it.wall || "") ? (it.wall as string) : "trasera";
+    const w = it.wall === "isla" ? "isla"
+      : knownWalls.has(it.wall || "") ? (it.wall as string)
+      : "trasera";
     byWall[w].push(it);
   });
 
-  const totalIn = (lengthFt || 20) * 12;
-  const widthTotalIn = trailerWidthIn || DEPTH_TOTAL_IN;
-  const bodyX = 165;
-  const bodyY = 75;
-  const bodyW = 780;
-  const bodyH = 300;
+  function markerPosIn(wall: string, posFrac: number) {
+    if (wall === "izquierda") return { x: posFrac * lengthIn, y: 0 };
+    if (wall === "derecha")   return { x: posFrac * lengthIn, y: widthIn };
+    if (wall === "trasera")   return { x: 0, y: posFrac * widthIn };
+    return { x: lengthIn, y: posFrac * widthIn };
+  }
+
+  const doorPt   = markerPosIn(doorWall, doorPos ?? 0.5);
+  const windowPt = windowWall ? markerPosIn(windowWall, windowPos ?? 0.5) : null;
 
   function renderWall(wallItems: QuoteLineItem[], wall: string) {
-    const horizontal = wall === "izquierda" || wall === "derecha";
     const sorted = [...wallItems].sort((a, b) => (a.pos ?? 0) - (b.pos ?? 0));
-
     return sorted.map((it, idx) => {
-      const span = boxSpanFrac(it, wall, totalIn, bodyW, bodyH);
-      const posFrac = Math.min(Math.max(it.pos ?? 0, 0), 1 - span);
-      const label = it.label.length > 12 ? it.label.slice(0, 11) + "…" : it.label;
-      const { alongWallIn } = boxDims(it, wall);
-      const depthPx = boxDepthPx(it, wall, bodyH, widthTotalIn);
+      const { alongWallIn, intoRoomIn } = boxDims(it, wall, widthIn);
+      const posIn = it.pos ?? 0;
+      const rotated = isRotatedForWall(it, wall, widthIn);
+      const label = it.label.length > 14 ? it.label.slice(0, 13) + "…" : it.label;
 
-      if (horizontal) {
-        const boxX = bodyX + posFrac * bodyW;
-        const boxW = span * bodyW;
-        const y = wall === "izquierda" ? bodyY + 4 : bodyY + bodyH - 4 - depthPx;
-        const dimY = wall === "izquierda" ? y - 8 : y + depthPx + 12;
-        const labelY = wall === "izquierda" ? y - 12 : y + depthPx + 24;
-        return (
-          <g key={idx}>
-            <line
-              x1={boxX}
-              y1={dimY}
-              x2={boxX + boxW}
-              y2={dimY}
-              stroke="#5b6570"
-              strokeWidth={0.5}
-              markerStart="url(#fp-arrow)"
-              markerEnd="url(#fp-arrow)"
-            />
-            <text x={boxX + boxW / 2} y={labelY} textAnchor="middle" fontSize={11} fill="#5b6570">
-              {Math.round(alongWallIn)}"
-            </text>
-            <rect x={boxX} y={y} width={boxW} height={depthPx} rx={4} fill="rgba(31,58,92,0.08)" stroke="#1f3a5c" strokeWidth={0.75} />
-            <text x={boxX + boxW / 2} y={y + depthPx / 2 + 3} textAnchor="middle" fontSize={11} fill="#1b1f23">
-              {label}
-            </text>
-          </g>
-        );
+      let rx = 0, ry = 0, rw = 0, rh = 0;
+      if (isLongWall(wall)) {
+        rw = alongWallIn; rh = intoRoomIn;
+        rx = posIn;
+        ry = wall === "izquierda" ? 0 : widthIn - intoRoomIn;
+      } else {
+        rw = intoRoomIn; rh = alongWallIn;
+        rx = wall === "trasera" ? 0 : lengthIn - intoRoomIn;
+        ry = posIn;
       }
 
-      const rotated = isRotatedForWall(it, wall);
-      const boxY = bodyY + posFrac * bodyH;
-      const boxH = span * bodyH;
-      const boxX = wall === "trasera" ? bodyX + 4 : bodyX + bodyW - 4 - depthPx;
+      const cx = rx + rw / 2;
+      const cy = ry + rh / 2;
+      const fontSize = Math.min(rw, rh) * 0.28;
+      const transform = rotated ? `rotate(-90 ${cx} ${cy})` : undefined;
+
+      // Dimensión a lo largo de la pared, en pulgadas
+      const dimLabel = `${Math.round(alongWallIn)}"`;
+      const dimY = wall === "izquierda" ? -(widthIn * 0.05) : widthIn + widthIn * 0.05;
+      const dimFontSize = widthIn * 0.07;
 
       return (
         <g key={idx}>
-          <rect x={boxX} y={boxY} width={depthPx} height={boxH} rx={4} fill="rgba(31,58,92,0.08)" stroke="#1f3a5c" strokeWidth={0.75} />
-          <text
-            x={boxX + depthPx / 2}
-            y={boxY + boxH / 2}
-            textAnchor="middle"
-            fontSize={10}
-            fill="#1b1f23"
-            transform={rotated ? `rotate(-90, ${boxX + depthPx / 2}, ${boxY + boxH / 2})` : undefined}
-          >
+          {isLongWall(wall) && (
+            <>
+              <line x1={rx} y1={wall === "izquierda" ? -(widthIn * 0.03) : widthIn + widthIn * 0.03}
+                x2={rx + rw} y2={wall === "izquierda" ? -(widthIn * 0.03) : widthIn + widthIn * 0.03}
+                stroke="#5b6570" strokeWidth={0.3} markerStart="url(#arr)" markerEnd="url(#arr)" />
+              <text x={cx} y={dimY} textAnchor="middle" dominantBaseline="central"
+                fontSize={dimFontSize} fill="#5b6570">{dimLabel}</text>
+            </>
+          )}
+          <rect x={rx} y={ry} width={rw} height={rh} rx={1}
+            fill="rgba(31,58,92,0.08)" stroke="#1f3a5c" strokeWidth={0.5} />
+          <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
+            fontSize={fontSize} fill="#1b1f23" transform={transform}>
             {label}
           </text>
         </g>
@@ -1366,101 +1304,63 @@ function TrailerFloorPlanSVG({
     });
   }
 
-  function markerPos(wall: string, pos: number) {
-    if (wall === "izquierda") return { x: bodyX + pos * bodyW, y: bodyY, label: { x: bodyX + pos * bodyW, y: bodyY - 12 } };
-    if (wall === "derecha")
-      return { x: bodyX + pos * bodyW, y: bodyY + bodyH, label: { x: bodyX + pos * bodyW, y: bodyY + bodyH + 16 } };
-    if (wall === "trasera")
-      return { x: bodyX, y: bodyY + pos * bodyH, label: { x: bodyX - 28, y: bodyY + pos * bodyH } };
-    return { x: bodyX + bodyW, y: bodyY + pos * bodyH, label: { x: bodyX + bodyW + 28, y: bodyY + pos * bodyH } };
-  }
-
-  const doorMarker = markerPos(doorWall, doorPos ?? 0.5);
-  const windowMarker = windowWall ? markerPos(windowWall, windowPos ?? 0.5) : null;
-
   return (
-    <svg viewBox="0 0 1140 510" width="100%" style={{ maxHeight: 510 }}>
+    <svg
+      viewBox={`-${widthIn * 0.12} -${widthIn * 0.15} ${lengthIn + widthIn * 0.55} ${widthIn + widthIn * 0.35}`}
+      preserveAspectRatio="xMidYMid meet"
+      width="100%"
+      style={{ maxHeight: 420 }}
+    >
       <defs>
-        <marker
-          id="fp-arrow"
-          viewBox="0 0 10 10"
-          refX="8"
-          refY="5"
-          markerWidth="5"
-          markerHeight="5"
-          orient="auto-start-reverse"
-        >
+        <marker id="arr" viewBox="0 0 10 10" refX="8" refY="5"
+          markerWidth="4" markerHeight="4" orient="auto-start-reverse">
           <path d="M2 1L8 5L2 9" fill="none" stroke="#5b6570" strokeWidth="1.5" />
         </marker>
       </defs>
 
-      {/* cuerpo del trailer */}
-      <rect x={bodyX} y={bodyY} width={bodyW} height={bodyH} rx={8} fill="none" stroke="#1b1f23" strokeWidth={1} />
+      {/* trailer */}
+      <rect x={0} y={0} width={lengthIn} height={widthIn}
+        fill="none" stroke="#1b1f23" strokeWidth={0.8} />
 
-      {/* lengüeta, siempre del lado frontal */}
-      <path
-        d={`M${bodyX + bodyW} ${bodyY} L${bodyX + bodyW + 83} ${bodyY + bodyH / 2} L${bodyX + bodyW} ${bodyY + bodyH}`}
-        fill="none"
-        stroke="#1b1f23"
-        strokeWidth={1}
-      />
-      <text x={bodyX + bodyW + 30} y={bodyY + bodyH / 2 + 5} fontSize={12} fill="#5b6570" textAnchor="middle">
-        Lengüeta
-      </text>
+      {/* lengüeta */}
+      <polygon
+        points={`${lengthIn},0 ${lengthIn + HITCH_LEN},${widthIn / 2} ${lengthIn},${widthIn}`}
+        fill="none" stroke="#1b1f23" strokeWidth={0.8} />
+      <text x={lengthIn + HITCH_LEN * 0.45} y={widthIn / 2}
+        textAnchor="middle" dominantBaseline="central"
+        fontSize={widthIn * 0.09} fill="#5b6570">Lengüeta</text>
 
       {/* puerta */}
-      <circle cx={doorMarker.x} cy={doorMarker.y} r={6} fill="#c0392b" />
-      <text x={doorMarker.label.x} y={doorMarker.label.y} fontSize={12} fill="#c0392b" textAnchor="middle">
-        🚪 Puerta
-      </text>
+      <circle cx={doorPt.x} cy={doorPt.y} r={widthIn * 0.04} fill="#c0392b" />
+      <text x={doorPt.x} y={doorPt.y - widthIn * 0.07}
+        textAnchor="middle" fontSize={widthIn * 0.08} fill="#c0392b">🚪</text>
 
-      {/* ventana de servicio */}
-      {windowMarker && (
+      {/* ventana */}
+      {windowPt && (
         <>
-          <rect x={windowMarker.x - 8} y={windowMarker.y - 8} width={15} height={15} fill="#3d6690" />
-          <text x={windowMarker.label.x} y={windowMarker.label.y} fontSize={12} fill="#3d6690" textAnchor="middle">
-            🪟 Ventana
-          </text>
+          <rect x={windowPt.x - widthIn * 0.035} y={windowPt.y - widthIn * 0.035}
+            width={widthIn * 0.07} height={widthIn * 0.07} fill="#3d6690" />
+          <text x={windowPt.x} y={windowPt.y - widthIn * 0.07}
+            textAnchor="middle" fontSize={widthIn * 0.08} fill="#3d6690">🪟</text>
         </>
       )}
 
-      {/* piezas por pared */}
-      {renderWall(byWall.trasera, "trasera")}
-      {renderWall(byWall.derecha, "derecha")}
+      {/* piezas */}
       {renderWall(byWall.izquierda, "izquierda")}
-      {renderWall(byWall.frontal, "frontal")}
-
-      {/* piezas viejas que ya estaban en "isla" de antes de este cambio */}
-      {byWall.isla.length > 0 && (
-        <g>
-          {byWall.isla.map((it, idx) => (
-            <g key={idx} transform={`translate(${bodyX + bodyW / 2 - 60 + idx * 127}, ${bodyY + bodyH / 2 - 27})`}>
-              <rect width={112} height={54} rx={4} fill="rgba(31,58,92,0.12)" stroke="#1f3a5c" strokeWidth={0.75} />
-              <text x={56} y={32} textAnchor="middle" fontSize={10} fill="#1b1f23">
-                {it.label.length > 11 ? it.label.slice(0, 10) + "…" : it.label}
-              </text>
-            </g>
-          ))}
-        </g>
-      )}
+      {renderWall(byWall.derecha,   "derecha")}
+      {renderWall(byWall.trasera,   "trasera")}
+      {renderWall(byWall.frontal,   "frontal")}
 
       {/* medida total */}
-      <line
-        x1={bodyX}
-        y1={bodyY + bodyH + 30}
-        x2={bodyX + bodyW}
-        y2={bodyY + bodyH + 30}
-        stroke="#5b6570"
-        strokeWidth={0.5}
-        markerStart="url(#fp-arrow)"
-        markerEnd="url(#fp-arrow)"
-      />
-      <text x={bodyX + bodyW / 2} y={bodyY + bodyH + 50} textAnchor="middle" fontSize={13} fill="#1b1f23">
+      <text x={lengthIn / 2} y={widthIn + widthIn * 0.18}
+        textAnchor="middle" dominantBaseline="central"
+        fontSize={widthIn * 0.11} fill="#1b1f23">
         {lengthFt || 20} ft
       </text>
     </svg>
   );
 }
+
 
 function ViewQuoteModal({
   quote,
@@ -1608,10 +1508,11 @@ function QuoteBuilder({
   }
 
   function addCatalogItem(item: CatalogItem) {
-    const totalIn = (selectedSize?.length_ft || 20) * 12;
+    const trailerLengthIn = (selectedSize?.length_ft || 20) * 12;
+    const trailerWidthIn = selectedSize?.width_in || DEFAULT_TRAILER_WIDTH_IN;
     setItems((prev) => {
       const wall = "trasera";
-      const pos = nextPosForWall(prev, wall, totalIn);
+      const pos = nextPosForWall(prev, wall, trailerLengthIn, trailerWidthIn);
       return [
         ...prev,
         {
@@ -1638,25 +1539,32 @@ function QuoteBuilder({
 
   function addPreset(preset: Preset) {
     const presetLinks = presetItems.filter((pi) => pi.preset_id === preset.id);
-    const totalIn = (selectedSize?.length_ft || 20) * 12;
+    const trailerLengthIn = (selectedSize?.length_ft || 20) * 12;
+    const trailerWidthIn = selectedSize?.width_in || DEFAULT_TRAILER_WIDTH_IN;
     setItems((prev) => {
       const wallEnds: Record<string, number> = {};
       prev.forEach((it) => {
         const w = it.wall || "trasera";
-        const span = boxSpanFrac(it, w, totalIn, FP_BODY_W, FP_BODY_H);
-        const end = (it.pos ?? 0) + span;
+        const { alongWallIn } = boxDims(it, w, trailerWidthIn);
+        const end = (it.pos ?? 0) + alongWallIn;
         wallEnds[w] = Math.max(wallEnds[w] || 0, end);
       });
+
+      const wallMaxIn = (w: string) =>
+        isLongWall(w) ? trailerLengthIn : trailerWidthIn;
 
       const itemsToAdd: QuoteLineItem[] = [];
       presetLinks.forEach((link) => {
         const item = catalogItems.find((ci) => ci.id === link.catalog_item_id);
         if (!item) return;
         const wall = (link as PresetItem & { wall?: string }).wall || "trasera";
-        const startPos = Math.min(wallEnds[wall] || 0, 0.95);
-        const tempItem: QuoteLineItem = { label: item.name, price: item.price, width_in: item.width_in };
-        const span = boxSpanFrac(tempItem, wall, totalIn, FP_BODY_W, FP_BODY_H);
-        wallEnds[wall] = startPos + span;
+        const startPos = Math.min(wallEnds[wall] || 0, wallMaxIn(wall) * 0.95);
+        const { alongWallIn } = boxDims(
+          { label: item.name, price: item.price, width_in: item.width_in },
+          wall,
+          trailerWidthIn
+        );
+        wallEnds[wall] = startPos + alongWallIn;
         itemsToAdd.push({
           label: item.name,
           price: item.price,
@@ -1682,10 +1590,11 @@ function QuoteBuilder({
       return;
     }
     setManualPriceError(false);
-    const totalIn = (selectedSize?.length_ft || 20) * 12;
+    const trailerLengthIn = (selectedSize?.length_ft || 20) * 12;
+    const trailerWidthIn = selectedSize?.width_in || DEFAULT_TRAILER_WIDTH_IN;
     setItems((prev) => {
       const wall = "trasera";
-      const pos = nextPosForWall(prev, wall, totalIn);
+      const pos = nextPosForWall(prev, wall, trailerLengthIn, trailerWidthIn);
       return [...prev, { label: manualLabel, price, cost: 0, wall, pos }];
     });
     setManualLabel("");
