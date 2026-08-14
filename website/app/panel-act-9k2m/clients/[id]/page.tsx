@@ -76,6 +76,7 @@ type CatalogItem = {
   price: number;
   cost: number | null;
   width_in: number | null;
+  depth_in: number | null;
 };
 type Preset = { id: string; name: string };
 type PresetItem = { id: string; preset_id: string; catalog_item_id: string };
@@ -792,25 +793,50 @@ function QuoteSection({ client }: { client: Client }) {
 // EDITOR DEL PLANO — arrastrar y soltar cada pieza a su pared
 // ============================================
 const WALL_ZONES: { key: string; label: string }[] = [
-  { key: "trasera", label: "Pared trasera" },
-  { key: "izquierda", label: "Pared izquierda" },
+  { key: "izquierda", label: "Pared larga izquierda" },
+  { key: "trasera", label: "Lado de la puerta" },
   { key: "isla", label: "Isla / centro" },
-  { key: "frontal", label: "Pared frontal" },
-  { key: "derecha", label: "Pared derecha" },
+  { key: "frontal", label: "Lado de la lengüeta" },
+  { key: "derecha", label: "Pared larga derecha" },
 ];
 
 const CORNER_MARGIN_FRAC = 0.18; // qué tan cerca de la esquina no se voltea sola
 const TAP_THRESHOLD_PX = 6; // si te mueves menos que esto, cuenta como "tap", no arrastre
 const FP_BODY_W = 520;
 const FP_BODY_H = 200;
+// Ancho real del trailer — no lo capturamos todavía en Catálogo, así que usamos
+// un estimado razonable (8 ft) para poder dibujar la profundidad a escala.
+const DEPTH_TOTAL_IN = 96;
+
+function isLongWall(wall: string): boolean {
+  return wall === "izquierda" || wall === "derecha";
+}
+function isShortWall(wall: string): boolean {
+  return wall === "trasera" || wall === "frontal";
+}
 
 function isRotatedForWall(item: QuoteLineItem, wall: string): boolean {
-  if (wall !== "frontal" && wall !== "izquierda") return false;
+  if (!isShortWall(wall)) return false;
   if (item.rotated !== undefined) return item.rotated; // el usuario ya lo decidió a mano
   // aproximamos el centro real de la pieza (no solo su borde inicial)
   const approxHalfSpan = 16 / FP_BODY_H;
   const center = (item.pos ?? 0.5 - approxHalfSpan) + approxHalfSpan;
   return center > CORNER_MARGIN_FRAC && center < 1 - CORNER_MARGIN_FRAC;
+}
+
+// En pared larga, el ancho real corre a lo largo de la pared y la
+// profundidad real se mete hacia adentro. En pared corta, si está volteada
+// (orientación correcta) es igual; si no, se intercambian.
+function boxDims(
+  item: QuoteLineItem,
+  wall: string
+): { alongWallIn: number; intoRoomIn: number } {
+  const widthIn = item.width_in || 24;
+  const depthIn = item.depth_in || 24;
+  if (isLongWall(wall)) return { alongWallIn: widthIn, intoRoomIn: depthIn };
+  const rotated = isRotatedForWall(item, wall);
+  if (rotated) return { alongWallIn: widthIn, intoRoomIn: depthIn };
+  return { alongWallIn: depthIn, intoRoomIn: widthIn };
 }
 
 function boxSpanFrac(
@@ -820,13 +846,17 @@ function boxSpanFrac(
   bodyW: number,
   bodyH: number
 ): number {
-  const widthIn = item.width_in || 24;
-  if (wall === "trasera" || wall === "derecha") {
-    return Math.max(40 / bodyW, widthIn / totalIn);
+  const { alongWallIn } = boxDims(item, wall);
+  if (isLongWall(wall)) {
+    return Math.max(40 / bodyW, alongWallIn / totalIn);
   }
-  const rotated = isRotatedForWall(item, wall);
-  if (rotated) return Math.max(28 / bodyH, widthIn / totalIn);
-  return 32 / bodyH;
+  return Math.max(24 / bodyH, alongWallIn / totalIn);
+}
+
+// Qué tanto se mete hacia adentro del trailer, ya convertido a pixeles.
+function boxDepthPx(item: QuoteLineItem, wall: string, bodyH: number): number {
+  const { intoRoomIn } = boxDims(item, wall);
+  return Math.max(24, (intoRoomIn / DEPTH_TOTAL_IN) * bodyH);
 }
 
 // Calcula dónde debería caer una pieza nueva, justo después de la última
@@ -907,9 +937,9 @@ function FloorPlanEditorModal({
   // Solo las 4 orillas cuentan — el centro ya no es un lugar donde soltar.
   function pointToWall(svgX: number, svgY: number): string | null {
     const candidates = [
-      { wall: "trasera", d: svgY - bodyY, valid: svgY - bodyY < WALL_MARGIN },
+      { wall: "izquierda", d: svgY - bodyY, valid: svgY - bodyY < WALL_MARGIN },
       { wall: "derecha", d: bodyY + bodyH - svgY, valid: bodyY + bodyH - svgY < WALL_MARGIN },
-      { wall: "izquierda", d: svgX - bodyX, valid: svgX - bodyX < WALL_MARGIN },
+      { wall: "trasera", d: svgX - bodyX, valid: svgX - bodyX < WALL_MARGIN },
       { wall: "frontal", d: bodyX + bodyW - svgX, valid: bodyX + bodyW - svgX < WALL_MARGIN },
     ].filter((c) => c.valid);
     if (candidates.length > 0) {
@@ -972,7 +1002,7 @@ function FloorPlanEditorModal({
     if (wall) {
       const scale = svgScale();
       const grabSvg = { x: grabOffset.x / scale, y: grabOffset.y / scale };
-      const horizontal = wall === "trasera" || wall === "derecha";
+      const horizontal = wall === "izquierda" || wall === "derecha";
 
       if (dragging.kind === "item") {
         const draggingIndex = dragging.index;
@@ -1047,7 +1077,7 @@ function FloorPlanEditorModal({
   });
 
   function renderWallItems(entries: { it: QuoteLineItem; i: number }[], wall: string) {
-    const horizontal = wall === "trasera" || wall === "derecha";
+    const horizontal = wall === "izquierda" || wall === "derecha";
     const sorted = [...entries].sort((a, b) => (a.it.pos ?? 0) - (b.it.pos ?? 0));
 
     return sorted.map(({ it, i }) => {
@@ -1055,11 +1085,12 @@ function FloorPlanEditorModal({
       const posFrac = Math.min(Math.max(it.pos ?? 0, 0), 1 - span);
       const isDragging = dragging?.kind === "item" && dragging.index === i;
       const label = it.label.length > 12 ? it.label.slice(0, 11) + "…" : it.label;
+      const depthPx = boxDepthPx(it, wall, bodyH);
 
       if (horizontal) {
         const boxX = bodyX + posFrac * bodyW;
         const boxW = span * bodyW;
-        const y = wall === "trasera" ? bodyY + 6 : bodyY + bodyH - 42;
+        const y = wall === "izquierda" ? bodyY + 4 : bodyY + bodyH - 4 - depthPx;
         return (
           <g
             key={i}
@@ -1067,8 +1098,8 @@ function FloorPlanEditorModal({
             onPointerDown={(e) => handleItemPointerDown(e, i)}
             style={{ cursor: "grab", opacity: isDragging ? 0.25 : 1, touchAction: "none" }}
           >
-            <rect x={boxX} y={y} width={boxW} height={36} rx={4} fill="rgba(31,58,92,0.1)" stroke="#1f3a5c" strokeWidth={0.75} />
-            <text x={boxX + boxW / 2} y={y + 22} textAnchor="middle" fontSize={8} fill="#1b1f23" style={{ pointerEvents: "none" }}>
+            <rect x={boxX} y={y} width={boxW} height={depthPx} rx={4} fill="rgba(31,58,92,0.1)" stroke="#1f3a5c" strokeWidth={0.75} />
+            <text x={boxX + boxW / 2} y={y + depthPx / 2 + 3} textAnchor="middle" fontSize={8} fill="#1b1f23" style={{ pointerEvents: "none" }}>
               {label}
             </text>
           </g>
@@ -1078,8 +1109,7 @@ function FloorPlanEditorModal({
       const rotated = isRotatedForWall(it, wall);
       const boxY = bodyY + posFrac * bodyH;
       const boxH = span * bodyH;
-      const depthW = rotated ? 36 : 70;
-      const boxX = wall === "izquierda" ? bodyX + 6 : bodyX + bodyW - 6 - depthW;
+      const boxX = wall === "trasera" ? bodyX + 4 : bodyX + bodyW - 4 - depthPx;
 
       return (
         <g
@@ -1088,15 +1118,15 @@ function FloorPlanEditorModal({
           onPointerDown={(e) => handleItemPointerDown(e, i)}
           style={{ cursor: "grab", opacity: isDragging ? 0.25 : 1, touchAction: "none" }}
         >
-          <rect x={boxX} y={boxY} width={depthW} height={boxH} rx={4} fill="rgba(31,58,92,0.1)" stroke="#1f3a5c" strokeWidth={0.75} />
+          <rect x={boxX} y={boxY} width={depthPx} height={boxH} rx={4} fill="rgba(31,58,92,0.1)" stroke="#1f3a5c" strokeWidth={0.75} />
           <text
-            x={boxX + depthW / 2}
+            x={boxX + depthPx / 2}
             y={boxY + boxH / 2}
             textAnchor="middle"
             fontSize={8}
             fill="#1b1f23"
             style={{ pointerEvents: "none" }}
-            transform={rotated ? `rotate(-90, ${boxX + depthW / 2}, ${boxY + boxH / 2})` : undefined}
+            transform={rotated ? `rotate(-90, ${boxX + depthPx / 2}, ${boxY + boxH / 2})` : undefined}
           >
             {label}
           </text>
@@ -1106,9 +1136,9 @@ function FloorPlanEditorModal({
   }
 
   function markerScreenPos(wall: string, pos: number) {
-    if (wall === "trasera") return { x: bodyX + pos * bodyW, y: bodyY };
+    if (wall === "izquierda") return { x: bodyX + pos * bodyW, y: bodyY };
     if (wall === "derecha") return { x: bodyX + pos * bodyW, y: bodyY + bodyH };
-    if (wall === "izquierda") return { x: bodyX, y: bodyY + pos * bodyH };
+    if (wall === "trasera") return { x: bodyX, y: bodyY + pos * bodyH };
     return { x: bodyX + bodyW, y: bodyY + pos * bodyH };
   }
 
@@ -1120,9 +1150,9 @@ function FloorPlanEditorModal({
     dragging?.kind === "door" ? "🚪 Puerta" : dragging?.kind === "window" ? "🪟 Ventana" : draggingItemObj?.label;
 
   const wallHighlightRects: Record<string, { x: number; y: number; w: number; h: number }> = {
-    trasera: { x: bodyX, y: bodyY, w: bodyW, h: WALL_MARGIN },
+    izquierda: { x: bodyX, y: bodyY, w: bodyW, h: WALL_MARGIN },
     derecha: { x: bodyX, y: bodyY + bodyH - WALL_MARGIN, w: bodyW, h: WALL_MARGIN },
-    izquierda: { x: bodyX, y: bodyY, w: WALL_MARGIN, h: bodyH },
+    trasera: { x: bodyX, y: bodyY, w: WALL_MARGIN, h: bodyH },
     frontal: { x: bodyX + bodyW - WALL_MARGIN, y: bodyY, w: WALL_MARGIN, h: bodyH },
   };
 
@@ -1266,21 +1296,22 @@ function TrailerFloorPlanSVG({
   const bodyH = 200;
 
   function renderWall(wallItems: QuoteLineItem[], wall: string) {
-    const horizontal = wall === "trasera" || wall === "derecha";
+    const horizontal = wall === "izquierda" || wall === "derecha";
     const sorted = [...wallItems].sort((a, b) => (a.pos ?? 0) - (b.pos ?? 0));
 
     return sorted.map((it, idx) => {
       const span = boxSpanFrac(it, wall, totalIn, bodyW, bodyH);
       const posFrac = Math.min(Math.max(it.pos ?? 0, 0), 1 - span);
       const label = it.label.length > 12 ? it.label.slice(0, 11) + "…" : it.label;
-      const widthIn = it.width_in || 24;
+      const { alongWallIn } = boxDims(it, wall);
+      const depthPx = boxDepthPx(it, wall, bodyH);
 
       if (horizontal) {
         const boxX = bodyX + posFrac * bodyW;
         const boxW = span * bodyW;
-        const y = wall === "trasera" ? bodyY + 6 : bodyY + bodyH - 42;
-        const dimY = wall === "trasera" ? y - 8 : y + 44;
-        const labelY = wall === "trasera" ? y - 12 : y + 56;
+        const y = wall === "izquierda" ? bodyY + 4 : bodyY + bodyH - 4 - depthPx;
+        const dimY = wall === "izquierda" ? y - 8 : y + depthPx + 12;
+        const labelY = wall === "izquierda" ? y - 12 : y + depthPx + 24;
         return (
           <g key={idx}>
             <line
@@ -1294,10 +1325,10 @@ function TrailerFloorPlanSVG({
               markerEnd="url(#fp-arrow)"
             />
             <text x={boxX + boxW / 2} y={labelY} textAnchor="middle" fontSize={8} fill="#5b6570">
-              {Math.round(widthIn)}"
+              {Math.round(alongWallIn)}"
             </text>
-            <rect x={boxX} y={y} width={boxW} height={36} rx={4} fill="rgba(31,58,92,0.08)" stroke="#1f3a5c" strokeWidth={0.75} />
-            <text x={boxX + boxW / 2} y={y + 22} textAnchor="middle" fontSize={8} fill="#1b1f23">
+            <rect x={boxX} y={y} width={boxW} height={depthPx} rx={4} fill="rgba(31,58,92,0.08)" stroke="#1f3a5c" strokeWidth={0.75} />
+            <text x={boxX + boxW / 2} y={y + depthPx / 2 + 3} textAnchor="middle" fontSize={8} fill="#1b1f23">
               {label}
             </text>
           </g>
@@ -1307,19 +1338,18 @@ function TrailerFloorPlanSVG({
       const rotated = isRotatedForWall(it, wall);
       const boxY = bodyY + posFrac * bodyH;
       const boxH = span * bodyH;
-      const depthW = rotated ? 36 : 70;
-      const boxX = wall === "izquierda" ? bodyX + 6 : bodyX + bodyW - 6 - depthW;
+      const boxX = wall === "trasera" ? bodyX + 4 : bodyX + bodyW - 4 - depthPx;
 
       return (
         <g key={idx}>
-          <rect x={boxX} y={boxY} width={depthW} height={boxH} rx={4} fill="rgba(31,58,92,0.08)" stroke="#1f3a5c" strokeWidth={0.75} />
+          <rect x={boxX} y={boxY} width={depthPx} height={boxH} rx={4} fill="rgba(31,58,92,0.08)" stroke="#1f3a5c" strokeWidth={0.75} />
           <text
-            x={boxX + depthW / 2}
+            x={boxX + depthPx / 2}
             y={boxY + boxH / 2}
             textAnchor="middle"
             fontSize={7.5}
             fill="#1b1f23"
-            transform={rotated ? `rotate(-90, ${boxX + depthW / 2}, ${boxY + boxH / 2})` : undefined}
+            transform={rotated ? `rotate(-90, ${boxX + depthPx / 2}, ${boxY + boxH / 2})` : undefined}
           >
             {label}
           </text>
@@ -1329,10 +1359,10 @@ function TrailerFloorPlanSVG({
   }
 
   function markerPos(wall: string, pos: number) {
-    if (wall === "trasera") return { x: bodyX + pos * bodyW, y: bodyY, label: { x: bodyX + pos * bodyW, y: bodyY - 12 } };
+    if (wall === "izquierda") return { x: bodyX + pos * bodyW, y: bodyY, label: { x: bodyX + pos * bodyW, y: bodyY - 12 } };
     if (wall === "derecha")
       return { x: bodyX + pos * bodyW, y: bodyY + bodyH, label: { x: bodyX + pos * bodyW, y: bodyY + bodyH + 16 } };
-    if (wall === "izquierda")
+    if (wall === "trasera")
       return { x: bodyX, y: bodyY + pos * bodyH, label: { x: bodyX - 28, y: bodyY + pos * bodyH } };
     return { x: bodyX + bodyW, y: bodyY + pos * bodyH, label: { x: bodyX + bodyW + 28, y: bodyY + pos * bodyH } };
   }
@@ -1552,7 +1582,7 @@ function QuoteBuilder({
       supabase.from("catalog_categories").select("*").order("sort_order"),
       supabase
         .from("catalog_items")
-        .select("id,category_id,name,image_url,price,cost,width_in")
+        .select("id,category_id,name,image_url,price,cost,width_in,depth_in")
         .eq("active", true),
       supabase.from("business_settings").select("*").eq("id", 1).single(),
       supabase.from("catalog_presets").select("*").order("created_at", { ascending: false }),
@@ -1583,6 +1613,7 @@ function QuoteBuilder({
           cost: item.cost || 0,
           wall,
           width_in: item.width_in,
+          depth_in: item.depth_in,
           pos,
         },
       ];
@@ -1625,6 +1656,7 @@ function QuoteBuilder({
           cost: item.cost || 0,
           wall,
           width_in: item.width_in,
+          depth_in: item.depth_in,
           pos: startPos,
         });
       });
@@ -1823,10 +1855,10 @@ function QuoteBuilder({
             onChange={(e) => setDoorWall(e.target.value)}
             className="w-full px-3 py-2 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
           >
-            <option value="trasera">Pared trasera</option>
-            <option value="frontal">Pared frontal (lengüeta)</option>
-            <option value="izquierda">Pared izquierda</option>
-            <option value="derecha">Pared derecha</option>
+            <option value="trasera">Lado de la puerta (opuesto a lengüeta)</option>
+            <option value="frontal">Lado de la lengüeta</option>
+            <option value="izquierda">Pared larga izquierda</option>
+            <option value="derecha">Pared larga derecha</option>
           </select>
         </div>
         <div>
@@ -1838,10 +1870,10 @@ function QuoteBuilder({
             onChange={(e) => setWindowWall(e.target.value)}
             className="w-full px-3 py-2 bg-[var(--a-surface)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
           >
-            <option value="trasera">Pared trasera</option>
-            <option value="frontal">Pared frontal (lengüeta)</option>
-            <option value="izquierda">Pared izquierda</option>
-            <option value="derecha">Pared derecha</option>
+            <option value="trasera">Lado de la puerta (opuesto a lengüeta)</option>
+            <option value="frontal">Lado de la lengüeta</option>
+            <option value="izquierda">Pared larga izquierda</option>
+            <option value="derecha">Pared larga derecha</option>
           </select>
         </div>
       </div>
@@ -2070,14 +2102,14 @@ function QuoteBuilder({
               <p className="flex-1 min-w-0 text-sm text-[var(--a-text)] truncate">{item.label}</p>
               <span className="text-[9px] font-mono uppercase text-[var(--a-text-muted)] bg-[var(--a-surface-2)] rounded px-1.5 py-1 flex-shrink-0">
                 {item.wall === "frontal"
-                  ? "Frontal"
+                  ? "Lengüeta"
                   : item.wall === "izquierda"
-                  ? "Izquierda"
+                  ? "Larga izq."
                   : item.wall === "derecha"
-                  ? "Derecha"
+                  ? "Larga der."
                   : item.wall === "isla"
                   ? "Isla"
-                  : "Trasera"}
+                  : "Puerta"}
               </span>
               <p className="font-mono text-sm text-[var(--a-accent)] flex-shrink-0">
                 ${item.price.toLocaleString()}

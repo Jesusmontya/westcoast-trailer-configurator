@@ -24,6 +24,7 @@ type CatalogItem = {
   price: number;
   active: boolean;
   width_in: number | null;
+  depth_in: number | null;
 };
 
 // ============================================
@@ -640,6 +641,7 @@ function ItemsTab() {
   const [cost, setCost] = useState("");
   const [price, setPrice] = useState("");
   const [widthIn, setWidthIn] = useState("");
+  const [depthIn, setDepthIn] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
   const [pendingFile, setPendingFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
@@ -665,6 +667,7 @@ function ItemsTab() {
     setCost("");
     setPrice("");
     setWidthIn("");
+    setDepthIn("");
     setCategoryId("");
     setPendingFile(null);
     if (fileRef.current) fileRef.current.value = "";
@@ -679,6 +682,7 @@ function ItemsTab() {
     setCost(item.cost != null ? String(item.cost) : "");
     setPrice(String(item.price));
     setWidthIn(item.width_in != null ? String(item.width_in) : "");
+    setDepthIn(item.depth_in != null ? String(item.depth_in) : "");
     setShowForm(true);
   }
 
@@ -697,6 +701,7 @@ function ItemsTab() {
         cost: cost ? parseFloat(cost) : null,
         price: parseFloat(price),
         width_in: widthIn ? parseFloat(widthIn) : null,
+        depth_in: depthIn ? parseFloat(depthIn) : null,
       };
       if (image_url) updates.image_url = image_url;
       await supabase.from("catalog_items").update(updates).eq("id", editingId);
@@ -708,6 +713,7 @@ function ItemsTab() {
         cost: cost ? parseFloat(cost) : null,
         price: parseFloat(price),
         width_in: widthIn ? parseFloat(widthIn) : null,
+        depth_in: depthIn ? parseFloat(depthIn) : null,
       });
     }
 
@@ -900,18 +906,35 @@ function ItemsTab() {
               Margen: ${(parseFloat(price) - parseFloat(cost)).toLocaleString()}
             </p>
           )}
-          <div className="mb-2">
-            <label className="block font-mono text-[10px] text-[var(--a-text-muted)] mb-1">
-              Ancho (pulgadas, opcional — para el plano del trailer)
-            </label>
-            <input
-              type="number"
-              placeholder="Ej. 24"
-              value={widthIn}
-              onChange={(e) => setWidthIn(e.target.value)}
-              className="w-full px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
-            />
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div>
+              <label className="block font-mono text-[10px] text-[var(--a-text-muted)] mb-1">
+                Ancho (in, a lo largo de la pared)
+              </label>
+              <input
+                type="number"
+                placeholder="Ej. 24"
+                value={widthIn}
+                onChange={(e) => setWidthIn(e.target.value)}
+                className="w-full px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
+              />
+            </div>
+            <div>
+              <label className="block font-mono text-[10px] text-[var(--a-text-muted)] mb-1">
+                Profundidad (in, hacia adentro)
+              </label>
+              <input
+                type="number"
+                placeholder="Ej. 24"
+                value={depthIn}
+                onChange={(e) => setDepthIn(e.target.value)}
+                className="w-full px-3 py-2 bg-[var(--a-surface-2)] border border-[var(--a-border)] rounded text-sm text-[var(--a-text)]"
+              />
+            </div>
           </div>
+          <p className="text-[10px] text-[var(--a-text-muted)] mb-2">
+            Ambas son opcionales — se usan para dibujar el plano del trailer a escala.
+          </p>
           <input
             ref={fileRef}
             type="file"
@@ -997,10 +1020,10 @@ type Preset = { id: string; name: string; created_at: string };
 type PresetItem = { id: string; preset_id: string; catalog_item_id: string; wall: string | null };
 
 const PRESET_WALL_OPTIONS = [
-  { value: "trasera", label: "Trasera" },
-  { value: "frontal", label: "Frontal" },
-  { value: "izquierda", label: "Izquierda" },
-  { value: "derecha", label: "Derecha" },
+  { value: "trasera", label: "Lado de la puerta" },
+  { value: "frontal", label: "Lado de la lengüeta" },
+  { value: "izquierda", label: "Pared larga izq." },
+  { value: "derecha", label: "Pared larga der." },
   { value: "isla", label: "Isla" },
 ];
 
