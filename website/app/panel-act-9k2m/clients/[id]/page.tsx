@@ -1142,10 +1142,10 @@ function FloorPlanEditorModal({
         <div style={{ touchAction: "none" }}>
           <svg
             ref={svgRef}
-            viewBox={`0 0 ${lengthIn} ${widthIn}`}
+          viewBox={`${-widthIn * 0.08} ${-widthIn * 0.08} ${lengthIn + widthIn * 0.55} ${widthIn + widthIn * 0.16}`}
             preserveAspectRatio="xMidYMid meet"
             width="100%"
-            style={{ border: "1px solid var(--a-border)", borderRadius: 6, background: "#f8f9fa" }}
+            style={{ border: "1px solid var(--a-border)", borderRadius: 6, background: "#f8f9fa", maxHeight: 380 }}
             onPointerMove={handlePointerMove}
             onPointerUp={handlePointerUp}
           >
@@ -1306,7 +1306,7 @@ function TrailerFloorPlanSVG({
 
   return (
     <svg
-      viewBox={`-${widthIn * 0.12} -${widthIn * 0.15} ${lengthIn + widthIn * 0.55} ${widthIn + widthIn * 0.35}`}
+      viewBox={`${-widthIn * 0.08} ${-widthIn * 0.18} ${lengthIn + widthIn * 0.55} ${widthIn + widthIn * 0.38}`}
       preserveAspectRatio="xMidYMid meet"
       width="100%"
       style={{ maxHeight: 420 }}
