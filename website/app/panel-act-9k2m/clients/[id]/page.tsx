@@ -807,7 +807,9 @@ const FP_BODY_H = 200;
 function isRotatedForWall(item: QuoteLineItem, wall: string): boolean {
   if (wall !== "frontal" && wall !== "izquierda") return false;
   if (item.rotated !== undefined) return item.rotated; // el usuario ya lo decidió a mano
-  const center = (item.pos ?? 0.5) + 0.001;
+  // aproximamos el centro real de la pieza (no solo su borde inicial)
+  const approxHalfSpan = 16 / FP_BODY_H;
+  const center = (item.pos ?? 0.5 - approxHalfSpan) + approxHalfSpan;
   return center > CORNER_MARGIN_FRAC && center < 1 - CORNER_MARGIN_FRAC;
 }
 
@@ -819,15 +821,12 @@ function boxSpanFrac(
   bodyH: number
 ): number {
   const widthIn = item.width_in || 24;
-  const widthFrac = Math.min(Math.max(widthIn / Math.max(totalIn, 1), 0.12), 0.28);
-
   if (wall === "trasera" || wall === "derecha") {
-    return Math.max(40 / bodyW, widthFrac * 0.88);
+    return Math.max(40 / bodyW, widthIn / totalIn);
   }
-
   const rotated = isRotatedForWall(item, wall);
-  if (rotated) return Math.max(28 / bodyH, widthFrac * 0.9);
-  return Math.max(32 / bodyH, widthFrac * 0.9);
+  if (rotated) return Math.max(28 / bodyH, widthIn / totalIn);
+  return 32 / bodyH;
 }
 
 // Calcula dónde debería caer una pieza nueva, justo después de la última
@@ -1059,9 +1058,8 @@ function FloorPlanEditorModal({
 
       if (horizontal) {
         const boxX = bodyX + posFrac * bodyW;
-        const boxW = Math.max(56, Math.min(span * bodyW, bodyW * 0.28));
-        const boxH = Math.max(34, Math.min(52, bodyH * 0.24));
-        const y = wall === "trasera" ? bodyY + 10 : bodyY + bodyH - 10 - boxH;
+        const boxW = span * bodyW;
+        const y = wall === "trasera" ? bodyY + 6 : bodyY + bodyH - 42;
         return (
           <g
             key={i}
@@ -1069,8 +1067,8 @@ function FloorPlanEditorModal({
             onPointerDown={(e) => handleItemPointerDown(e, i)}
             style={{ cursor: "grab", opacity: isDragging ? 0.25 : 1, touchAction: "none" }}
           >
-            <rect x={boxX} y={y} width={boxW} height={boxH} rx={4} fill="rgba(31,58,92,0.1)" stroke="#1f3a5c" strokeWidth={0.75} />
-            <text x={boxX + boxW / 2} y={y + boxH / 2 + 2} textAnchor="middle" fontSize={8} fill="#1b1f23" style={{ pointerEvents: "none" }}>
+            <rect x={boxX} y={y} width={boxW} height={36} rx={4} fill="rgba(31,58,92,0.1)" stroke="#1f3a5c" strokeWidth={0.75} />
+            <text x={boxX + boxW / 2} y={y + 22} textAnchor="middle" fontSize={8} fill="#1b1f23" style={{ pointerEvents: "none" }}>
               {label}
             </text>
           </g>
@@ -1080,11 +1078,8 @@ function FloorPlanEditorModal({
       const rotated = isRotatedForWall(it, wall);
       const boxY = bodyY + posFrac * bodyH;
       const boxH = span * bodyH;
-      const blockSize = Math.max(42, Math.min(72, (it.width_in || 24) * 1.6));
-      const depthW = rotated ? Math.max(34, Math.min(52, blockSize * 0.8)) : blockSize;
-      const depthH = rotated ? Math.max(52, Math.min(88, boxH)) : blockSize;
-      const boxX = wall === "izquierda" ? bodyX + 10 : bodyX + bodyW - 10 - depthW;
-      const adjustedY = rotated ? boxY : boxY + (boxH - depthH) / 2;
+      const depthW = rotated ? 36 : 70;
+      const boxX = wall === "izquierda" ? bodyX + 6 : bodyX + bodyW - 6 - depthW;
 
       return (
         <g
@@ -1093,15 +1088,15 @@ function FloorPlanEditorModal({
           onPointerDown={(e) => handleItemPointerDown(e, i)}
           style={{ cursor: "grab", opacity: isDragging ? 0.25 : 1, touchAction: "none" }}
         >
-          <rect x={boxX} y={adjustedY} width={depthW} height={depthH} rx={4} fill="rgba(31,58,92,0.1)" stroke="#1f3a5c" strokeWidth={0.75} />
+          <rect x={boxX} y={boxY} width={depthW} height={boxH} rx={4} fill="rgba(31,58,92,0.1)" stroke="#1f3a5c" strokeWidth={0.75} />
           <text
             x={boxX + depthW / 2}
-            y={adjustedY + depthH / 2 + 2}
+            y={boxY + boxH / 2}
             textAnchor="middle"
             fontSize={8}
             fill="#1b1f23"
             style={{ pointerEvents: "none" }}
-            transform={rotated ? `rotate(-90, ${boxX + depthW / 2}, ${adjustedY + depthH / 2})` : undefined}
+            transform={rotated ? `rotate(-90, ${boxX + depthW / 2}, ${boxY + boxH / 2})` : undefined}
           >
             {label}
           </text>
@@ -1206,16 +1201,16 @@ function FloorPlanEditorModal({
                 key={i}
                 ref={(el) => { chipRefs.current[i] = el; }}
                 onPointerDown={(e) => handleItemPointerDown(e, i)}
-                transform={`translate(${bodyX + bodyW / 2 - 26 + idx * 64}, ${bodyY + bodyH / 2 - 26})`}
+                transform={`translate(${bodyX + bodyW / 2 - 40 + idx * 85}, ${bodyY + bodyH / 2 - 18})`}
                 style={{
                   cursor: "grab",
                   opacity: dragging?.kind === "item" && dragging.index === i ? 0.25 : 1,
                   touchAction: "none",
                 }}
               >
-                <rect width={52} height={52} rx={6} fill="rgba(31,58,92,0.14)" stroke="#1f3a5c" strokeWidth={0.75} />
-                <text x={26} y={29} textAnchor="middle" fontSize={7.5} fill="#1b1f23" style={{ pointerEvents: "none" }}>
-                  {it.label.length > 9 ? it.label.slice(0, 8) + "…" : it.label}
+                <rect width={75} height={36} rx={4} fill="rgba(31,58,92,0.14)" stroke="#1f3a5c" strokeWidth={0.75} />
+                <text x={37} y={22} textAnchor="middle" fontSize={7.5} fill="#1b1f23" style={{ pointerEvents: "none" }}>
+                  {it.label.length > 11 ? it.label.slice(0, 10) + "…" : it.label}
                 </text>
               </g>
             ))}
@@ -1282,9 +1277,8 @@ function TrailerFloorPlanSVG({
 
       if (horizontal) {
         const boxX = bodyX + posFrac * bodyW;
-        const boxW = Math.max(56, Math.min(span * bodyW, bodyW * 0.28));
-        const boxH = Math.max(34, Math.min(52, bodyH * 0.24));
-        const y = wall === "trasera" ? bodyY + 10 : bodyY + bodyH - 10 - boxH;
+        const boxW = span * bodyW;
+        const y = wall === "trasera" ? bodyY + 6 : bodyY + bodyH - 42;
         const dimY = wall === "trasera" ? y - 8 : y + 44;
         const labelY = wall === "trasera" ? y - 12 : y + 56;
         return (
@@ -1302,8 +1296,8 @@ function TrailerFloorPlanSVG({
             <text x={boxX + boxW / 2} y={labelY} textAnchor="middle" fontSize={8} fill="#5b6570">
               {Math.round(widthIn)}"
             </text>
-            <rect x={boxX} y={y} width={boxW} height={boxH} rx={4} fill="rgba(31,58,92,0.08)" stroke="#1f3a5c" strokeWidth={0.75} />
-            <text x={boxX + boxW / 2} y={y + boxH / 2 + 2} textAnchor="middle" fontSize={8} fill="#1b1f23">
+            <rect x={boxX} y={y} width={boxW} height={36} rx={4} fill="rgba(31,58,92,0.08)" stroke="#1f3a5c" strokeWidth={0.75} />
+            <text x={boxX + boxW / 2} y={y + 22} textAnchor="middle" fontSize={8} fill="#1b1f23">
               {label}
             </text>
           </g>
@@ -1313,22 +1307,19 @@ function TrailerFloorPlanSVG({
       const rotated = isRotatedForWall(it, wall);
       const boxY = bodyY + posFrac * bodyH;
       const boxH = span * bodyH;
-      const blockSize = Math.max(42, Math.min(72, (it.width_in || 24) * 1.6));
-      const depthW = rotated ? Math.max(34, Math.min(52, blockSize * 0.8)) : blockSize;
-      const depthH = rotated ? Math.max(52, Math.min(88, boxH)) : blockSize;
-      const boxX = wall === "izquierda" ? bodyX + 10 : bodyX + bodyW - 10 - depthW;
-      const adjustedY = rotated ? boxY : boxY + (boxH - depthH) / 2;
+      const depthW = rotated ? 36 : 70;
+      const boxX = wall === "izquierda" ? bodyX + 6 : bodyX + bodyW - 6 - depthW;
 
       return (
         <g key={idx}>
-          <rect x={boxX} y={adjustedY} width={depthW} height={depthH} rx={4} fill="rgba(31,58,92,0.08)" stroke="#1f3a5c" strokeWidth={0.75} />
+          <rect x={boxX} y={boxY} width={depthW} height={boxH} rx={4} fill="rgba(31,58,92,0.08)" stroke="#1f3a5c" strokeWidth={0.75} />
           <text
             x={boxX + depthW / 2}
-            y={adjustedY + depthH / 2 + 2}
+            y={boxY + boxH / 2}
             textAnchor="middle"
             fontSize={7.5}
             fill="#1b1f23"
-            transform={rotated ? `rotate(-90, ${boxX + depthW / 2}, ${adjustedY + depthH / 2})` : undefined}
+            transform={rotated ? `rotate(-90, ${boxX + depthW / 2}, ${boxY + boxH / 2})` : undefined}
           >
             {label}
           </text>
@@ -1405,10 +1396,10 @@ function TrailerFloorPlanSVG({
       {byWall.isla.length > 0 && (
         <g>
           {byWall.isla.map((it, idx) => (
-            <g key={idx} transform={`translate(${bodyX + bodyW / 2 - 26 + idx * 64}, ${bodyY + bodyH / 2 - 26})`}>
-              <rect width={52} height={52} rx={6} fill="rgba(31,58,92,0.12)" stroke="#1f3a5c" strokeWidth={0.75} />
-              <text x={26} y={29} textAnchor="middle" fontSize={7.5} fill="#1b1f23">
-                {it.label.length > 9 ? it.label.slice(0, 8) + "…" : it.label}
+            <g key={idx} transform={`translate(${bodyX + bodyW / 2 - 40 + idx * 85}, ${bodyY + bodyH / 2 - 18})`}>
+              <rect width={75} height={36} rx={4} fill="rgba(31,58,92,0.12)" stroke="#1f3a5c" strokeWidth={0.75} />
+              <text x={37} y={22} textAnchor="middle" fontSize={7.5} fill="#1b1f23">
+                {it.label.length > 11 ? it.label.slice(0, 10) + "…" : it.label}
               </text>
             </g>
           ))}
