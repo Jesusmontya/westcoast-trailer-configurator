@@ -803,8 +803,8 @@ const WALL_ZONES: { key: string; label: string }[] = [
 
 const CORNER_MARGIN_FRAC = 0.18; // qué tan cerca de la esquina no se voltea sola
 const TAP_THRESHOLD_PX = 6; // si te mueves menos que esto, cuenta como "tap", no arrastre
-const FP_BODY_W = 520;
-const FP_BODY_H = 200;
+const FP_BODY_W = 780;
+const FP_BODY_H = 300;
 // Ancho real del trailer — no lo capturamos todavía en Catálogo, así que usamos
 // un estimado razonable (8 ft) para poder dibujar la profundidad a escala.
 const DEPTH_TOTAL_IN = 96;
@@ -849,16 +849,16 @@ function boxSpanFrac(
 ): number {
   const { alongWallIn } = boxDims(item, wall);
   if (isLongWall(wall)) {
-    return Math.max(40 / bodyW, alongWallIn / totalIn);
+    return Math.max(60 / bodyW, alongWallIn / totalIn);
   }
-  return Math.max(24 / bodyH, alongWallIn / totalIn);
+  return Math.max(36 / bodyH, alongWallIn / totalIn);
 }
 
 // Qué tanto se mete hacia adentro del trailer, ya convertido a pixeles.
 // trailerWidthIn = ancho real del trailer (de lado a lado), viene del tamaño elegido.
 function boxDepthPx(item: QuoteLineItem, wall: string, bodyH: number, trailerWidthIn: number): number {
   const { intoRoomIn } = boxDims(item, wall);
-  return Math.max(24, (intoRoomIn / trailerWidthIn) * bodyH);
+  return Math.max(36, (intoRoomIn / trailerWidthIn) * bodyH);
 }
 
 // Calcula dónde debería caer una pieza nueva, justo después de la última
@@ -914,13 +914,13 @@ function FloorPlanEditorModal({
   const [hoverWall, setHoverWall] = useState<string | null>(null);
 
   // Misma geometría que el dibujo final — el editor ES el dibujo final.
-  const VB_W = 760;
-  const VB_H = 340;
-  const bodyX = 110;
-  const bodyY = 50;
-  const bodyW = 520;
-  const bodyH = 200;
-  const WALL_MARGIN = 55;
+  const VB_W = 1140;
+  const VB_H = 510;
+  const bodyX = 165;
+  const bodyY = 75;
+  const bodyW = 780;
+  const bodyH = 300;
+  const WALL_MARGIN = 83;
 
   const totalIn = (lengthFt || 20) * 12;
   const widthTotalIn = trailerWidthIn || DEPTH_TOTAL_IN;
@@ -1104,7 +1104,7 @@ function FloorPlanEditorModal({
             style={{ cursor: "grab", opacity: isDragging ? 0.25 : 1, touchAction: "none" }}
           >
             <rect x={boxX} y={y} width={boxW} height={depthPx} rx={4} fill="rgba(31,58,92,0.1)" stroke="#1f3a5c" strokeWidth={0.75} />
-            <text x={boxX + boxW / 2} y={y + depthPx / 2 + 3} textAnchor="middle" fontSize={8} fill="#1b1f23" style={{ pointerEvents: "none" }}>
+            <text x={boxX + boxW / 2} y={y + depthPx / 2 + 3} textAnchor="middle" fontSize={11} fill="#1b1f23" style={{ pointerEvents: "none" }}>
               {label}
             </text>
           </g>
@@ -1128,7 +1128,7 @@ function FloorPlanEditorModal({
             x={boxX + depthPx / 2}
             y={boxY + boxH / 2}
             textAnchor="middle"
-            fontSize={8}
+            fontSize={11}
             fill="#1b1f23"
             style={{ pointerEvents: "none" }}
             transform={rotated ? `rotate(-90, ${boxX + depthPx / 2}, ${boxY + boxH / 2})` : undefined}
@@ -1197,7 +1197,7 @@ function FloorPlanEditorModal({
             <rect x={bodyX} y={bodyY} width={bodyW} height={bodyH} rx={8} fill="none" stroke="#1b1f23" strokeWidth={1} />
 
             <path
-              d={`M${bodyX + bodyW} ${bodyY} L${bodyX + bodyW + 55} ${bodyY + bodyH / 2} L${bodyX + bodyW} ${bodyY + bodyH}`}
+              d={`M${bodyX + bodyW} ${bodyY} L${bodyX + bodyW + 83} ${bodyY + bodyH / 2} L${bodyX + bodyW} ${bodyY + bodyH}`}
               fill="none"
               stroke="#1b1f23"
               strokeWidth={1}
@@ -1206,7 +1206,7 @@ function FloorPlanEditorModal({
             <circle
               cx={doorScreenPos.x}
               cy={doorScreenPos.y}
-              r={7}
+              r={10}
               fill="#c0392b"
               opacity={dragging?.kind === "door" ? 0.25 : 1}
               onPointerDown={(e) => handleMarkerPointerDown(e, "door")}
@@ -1214,10 +1214,10 @@ function FloorPlanEditorModal({
             />
             {windowScreenPos && (
               <rect
-                x={windowScreenPos.x - 7}
-                y={windowScreenPos.y - 7}
-                width={14}
-                height={14}
+                x={windowScreenPos.x - 10}
+                y={windowScreenPos.y - 10}
+                width={21}
+                height={21}
                 fill="#3d6690"
                 opacity={dragging?.kind === "window" ? 0.25 : 1}
                 onPointerDown={(e) => handleMarkerPointerDown(e, "window")}
@@ -1236,15 +1236,15 @@ function FloorPlanEditorModal({
                 key={i}
                 ref={(el) => { chipRefs.current[i] = el; }}
                 onPointerDown={(e) => handleItemPointerDown(e, i)}
-                transform={`translate(${bodyX + bodyW / 2 - 40 + idx * 85}, ${bodyY + bodyH / 2 - 18})`}
+                transform={`translate(${bodyX + bodyW / 2 - 60 + idx * 127}, ${bodyY + bodyH / 2 - 27})`}
                 style={{
                   cursor: "grab",
                   opacity: dragging?.kind === "item" && dragging.index === i ? 0.25 : 1,
                   touchAction: "none",
                 }}
               >
-                <rect width={75} height={36} rx={4} fill="rgba(31,58,92,0.14)" stroke="#1f3a5c" strokeWidth={0.75} />
-                <text x={37} y={22} textAnchor="middle" fontSize={7.5} fill="#1b1f23" style={{ pointerEvents: "none" }}>
+                <rect width={112} height={54} rx={4} fill="rgba(31,58,92,0.14)" stroke="#1f3a5c" strokeWidth={0.75} />
+                <text x={56} y={32} textAnchor="middle" fontSize={10} fill="#1b1f23" style={{ pointerEvents: "none" }}>
                   {it.label.length > 11 ? it.label.slice(0, 10) + "…" : it.label}
                 </text>
               </g>
@@ -1298,10 +1298,10 @@ function TrailerFloorPlanSVG({
 
   const totalIn = (lengthFt || 20) * 12;
   const widthTotalIn = trailerWidthIn || DEPTH_TOTAL_IN;
-  const bodyX = 110;
-  const bodyY = 50;
-  const bodyW = 520;
-  const bodyH = 200;
+  const bodyX = 165;
+  const bodyY = 75;
+  const bodyW = 780;
+  const bodyH = 300;
 
   function renderWall(wallItems: QuoteLineItem[], wall: string) {
     const horizontal = wall === "izquierda" || wall === "derecha";
@@ -1332,11 +1332,11 @@ function TrailerFloorPlanSVG({
               markerStart="url(#fp-arrow)"
               markerEnd="url(#fp-arrow)"
             />
-            <text x={boxX + boxW / 2} y={labelY} textAnchor="middle" fontSize={8} fill="#5b6570">
+            <text x={boxX + boxW / 2} y={labelY} textAnchor="middle" fontSize={11} fill="#5b6570">
               {Math.round(alongWallIn)}"
             </text>
             <rect x={boxX} y={y} width={boxW} height={depthPx} rx={4} fill="rgba(31,58,92,0.08)" stroke="#1f3a5c" strokeWidth={0.75} />
-            <text x={boxX + boxW / 2} y={y + depthPx / 2 + 3} textAnchor="middle" fontSize={8} fill="#1b1f23">
+            <text x={boxX + boxW / 2} y={y + depthPx / 2 + 3} textAnchor="middle" fontSize={11} fill="#1b1f23">
               {label}
             </text>
           </g>
@@ -1355,7 +1355,7 @@ function TrailerFloorPlanSVG({
             x={boxX + depthPx / 2}
             y={boxY + boxH / 2}
             textAnchor="middle"
-            fontSize={7.5}
+            fontSize={10}
             fill="#1b1f23"
             transform={rotated ? `rotate(-90, ${boxX + depthPx / 2}, ${boxY + boxH / 2})` : undefined}
           >
@@ -1379,7 +1379,7 @@ function TrailerFloorPlanSVG({
   const windowMarker = windowWall ? markerPos(windowWall, windowPos ?? 0.5) : null;
 
   return (
-    <svg viewBox="0 0 760 340" width="100%" style={{ maxHeight: 340 }}>
+    <svg viewBox="0 0 1140 510" width="100%" style={{ maxHeight: 510 }}>
       <defs>
         <marker
           id="fp-arrow"
@@ -1399,26 +1399,26 @@ function TrailerFloorPlanSVG({
 
       {/* lengüeta, siempre del lado frontal */}
       <path
-        d={`M${bodyX + bodyW} ${bodyY} L${bodyX + bodyW + 55} ${bodyY + bodyH / 2} L${bodyX + bodyW} ${bodyY + bodyH}`}
+        d={`M${bodyX + bodyW} ${bodyY} L${bodyX + bodyW + 83} ${bodyY + bodyH / 2} L${bodyX + bodyW} ${bodyY + bodyH}`}
         fill="none"
         stroke="#1b1f23"
         strokeWidth={1}
       />
-      <text x={bodyX + bodyW + 20} y={bodyY + bodyH / 2 + 4} fontSize={8} fill="#5b6570" textAnchor="middle">
+      <text x={bodyX + bodyW + 30} y={bodyY + bodyH / 2 + 5} fontSize={12} fill="#5b6570" textAnchor="middle">
         Lengüeta
       </text>
 
       {/* puerta */}
-      <circle cx={doorMarker.x} cy={doorMarker.y} r={4} fill="#c0392b" />
-      <text x={doorMarker.label.x} y={doorMarker.label.y} fontSize={8} fill="#c0392b" textAnchor="middle">
+      <circle cx={doorMarker.x} cy={doorMarker.y} r={6} fill="#c0392b" />
+      <text x={doorMarker.label.x} y={doorMarker.label.y} fontSize={12} fill="#c0392b" textAnchor="middle">
         🚪 Puerta
       </text>
 
       {/* ventana de servicio */}
       {windowMarker && (
         <>
-          <rect x={windowMarker.x - 5} y={windowMarker.y - 5} width={10} height={10} fill="#3d6690" />
-          <text x={windowMarker.label.x} y={windowMarker.label.y} fontSize={8} fill="#3d6690" textAnchor="middle">
+          <rect x={windowMarker.x - 8} y={windowMarker.y - 8} width={15} height={15} fill="#3d6690" />
+          <text x={windowMarker.label.x} y={windowMarker.label.y} fontSize={12} fill="#3d6690" textAnchor="middle">
             🪟 Ventana
           </text>
         </>
@@ -1434,9 +1434,9 @@ function TrailerFloorPlanSVG({
       {byWall.isla.length > 0 && (
         <g>
           {byWall.isla.map((it, idx) => (
-            <g key={idx} transform={`translate(${bodyX + bodyW / 2 - 40 + idx * 85}, ${bodyY + bodyH / 2 - 18})`}>
-              <rect width={75} height={36} rx={4} fill="rgba(31,58,92,0.12)" stroke="#1f3a5c" strokeWidth={0.75} />
-              <text x={37} y={22} textAnchor="middle" fontSize={7.5} fill="#1b1f23">
+            <g key={idx} transform={`translate(${bodyX + bodyW / 2 - 60 + idx * 127}, ${bodyY + bodyH / 2 - 27})`}>
+              <rect width={112} height={54} rx={4} fill="rgba(31,58,92,0.12)" stroke="#1f3a5c" strokeWidth={0.75} />
+              <text x={56} y={32} textAnchor="middle" fontSize={10} fill="#1b1f23">
                 {it.label.length > 11 ? it.label.slice(0, 10) + "…" : it.label}
               </text>
             </g>
@@ -1447,15 +1447,15 @@ function TrailerFloorPlanSVG({
       {/* medida total */}
       <line
         x1={bodyX}
-        y1={bodyY + bodyH + 20}
+        y1={bodyY + bodyH + 30}
         x2={bodyX + bodyW}
-        y2={bodyY + bodyH + 20}
+        y2={bodyY + bodyH + 30}
         stroke="#5b6570"
         strokeWidth={0.5}
         markerStart="url(#fp-arrow)"
         markerEnd="url(#fp-arrow)"
       />
-      <text x={bodyX + bodyW / 2} y={bodyY + bodyH + 34} textAnchor="middle" fontSize={9} fill="#1b1f23">
+      <text x={bodyX + bodyW / 2} y={bodyY + bodyH + 50} textAnchor="middle" fontSize={13} fill="#1b1f23">
         {lengthFt || 20} ft
       </text>
     </svg>
