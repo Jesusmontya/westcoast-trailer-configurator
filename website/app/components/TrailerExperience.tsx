@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 type Hotspot = {
   id: string;
-  label: string;
+  number: string;
   title: string;
   text: string;
   position: string;
@@ -12,177 +12,177 @@ type Hotspot = {
 
 const hotspots: Hotspot[] = [
   {
-    id: "service",
-    label: "01",
-    title: "CUSTOM SERVICE WINDOW",
-    text: "Designed around the way your business operates, with the layout, serving height and finish selected for the build.",
-    position: "left-[22%] top-[42%]",
+    id: "window",
+    number: "01",
+    title: "SERVICE WINDOW",
+    text: "The serving window, counter height, awning and exterior layout are designed around how your business serves customers.",
+    position: "left-[20%] top-[45%]",
   },
   {
-    id: "kitchen",
-    label: "02",
-    title: "COMMERCIAL KITCHEN",
-    text: "Commercial cooking equipment, stainless work surfaces, sinks, storage and ventilation can all be configured around your menu.",
-    position: "left-[48%] top-[38%]",
+    id: "equipment",
+    number: "02",
+    title: "CUSTOM EQUIPMENT",
+    text: "Cooking equipment, refrigeration, sinks, storage and prep space can be planned around your menu and workflow.",
+    position: "left-[48%] top-[39%]",
   },
   {
-    id: "electrical",
-    label: "03",
-    title: "ELECTRICAL + PLUMBING",
-    text: "Power distribution, lighting, water tanks, plumbing and utility systems are integrated into the custom build.",
-    position: "left-[68%] top-[57%]",
+    id: "utilities",
+    number: "03",
+    title: "POWER + UTILITIES",
+    text: "Electrical, plumbing, water, HVAC and other systems are integrated into the build instead of added as an afterthought.",
+    position: "left-[68%] top-[56%]",
   },
   {
     id: "custom",
-    label: "04",
-    title: "BUILT AROUND YOU",
-    text: "This trailer is only one example. We can build food, cargo, utility, mobile kitchen and specialty trailers to your requirements.",
-    position: "left-[77%] top-[34%]",
+    number: "04",
+    title: "BUILT YOUR WAY",
+    text: "This is one example. Your trailer can be a food trailer, cargo trailer, mobile kitchen, utility build or something completely different.",
+    position: "left-[78%] top-[33%]",
   },
+];
+
+const ideas = [
+  { title: "BURGER", text: "High-volume cooking", icon: "01" },
+  { title: "TACOS", text: "Efficient mobile kitchen", icon: "02" },
+  { title: "COFFEE", text: "Built for beverages", icon: "03" },
+  { title: "CATERING", text: "Professional mobile kitchen", icon: "04" },
+  { title: "CUSTOM", text: "Something completely different", icon: "05" },
 ];
 
 export default function TrailerExperience() {
   const [active, setActive] = useState<Hotspot | null>(null);
-  const [rotation, setRotation] = useState(0);
-  const [dragging, setDragging] = useState(false);
-  const lastX = useRef(0);
-  const autoRotation = useRef(0);
-
-  useEffect(() => {
-    if (dragging) return;
-    let frame = 0;
-    let last = performance.now();
-    const tick = (now: number) => {
-      const delta = Math.min(now - last, 50);
-      last = now;
-      autoRotation.current += delta * 0.018;
-      setRotation((current) => (current + delta * 0.018) % 360);
-      frame = requestAnimationFrame(tick);
-    };
-    frame = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frame);
-  }, [dragging]);
-
-  function startDrag(clientX: number) {
-    setDragging(true);
-    lastX.current = clientX;
-  }
-
-  function moveDrag(clientX: number) {
-    if (!dragging) return;
-    const delta = clientX - lastX.current;
-    lastX.current = clientX;
-    setRotation((current) => (current + delta * 0.45 + 360) % 360);
-  }
-
-  function stopDrag() {
-    setDragging(false);
-  }
-
-  const backSide = rotation > 135 && rotation < 315;
+  const [activeView, setActiveView] = useState("EXTERIOR");
 
   return (
-    <section className="relative w-full overflow-hidden border-t border-[var(--line)] bg-[#111315] text-white" id="custom-build">
-      <div className="absolute inset-0 opacity-30 [background-image:linear-gradient(rgba(255,255,255,.06)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.06)_1px,transparent_1px)] [background-size:48px_48px]" />
+    <section id="custom-build" className="relative w-full overflow-hidden border-t border-[var(--line)] bg-[#101214] text-white">
+      <div className="absolute inset-0 opacity-25 [background-image:linear-gradient(rgba(255,255,255,.055)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.055)_1px,transparent_1px)] [background-size:56px_56px]" />
+      <div className="absolute -left-40 top-1/3 h-96 w-96 rounded-full bg-[var(--accent)]/10 blur-[120px]" />
+      <div className="absolute -right-40 bottom-0 h-96 w-96 rounded-full bg-[var(--accent-2)]/10 blur-[120px]" />
 
       <div className="relative mx-auto max-w-7xl px-6 py-24 sm:px-10 lg:py-32">
-        <div className="mb-12 max-w-2xl">
-          <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/50">ONE CUSTOM BUILD</span>
-          <h2 className="mt-4 font-display text-4xl font-semibold leading-none tracking-tight sm:text-6xl">
-            Explore what we can build.
+        <div className="mx-auto max-w-3xl text-center">
+          <span className="font-mono text-[10px] uppercase tracking-[0.28em] text-white/45">Explore · Customize · Build</span>
+          <h2 className="mt-4 font-display text-5xl font-semibold leading-[0.95] tracking-tight sm:text-7xl">
+            BUILD YOUR BUSINESS<br className="hidden sm:block" /> ON WHEELS.
           </h2>
-          <p className="mt-5 max-w-xl text-base leading-relaxed text-white/60 sm:text-lg">
-            This is one trailer. The build can be completely different when your business needs something different.
+          <p className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-white/55 sm:text-lg">
+            Start with an idea, explore a real build and imagine what your business could look like on a trailer built specifically for you.
           </p>
         </div>
 
-        <div
-          className="relative mx-auto aspect-[16/9] w-full max-w-5xl select-none touch-none"
-          onPointerDown={(event) => startDrag(event.clientX)}
-          onPointerMove={(event) => moveDrag(event.clientX)}
-          onPointerUp={stopDrag}
-          onPointerCancel={stopDrag}
-          onPointerLeave={stopDrag}
-        >
-          <div className="absolute left-1/2 top-1/2 h-[72%] w-[82%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-black/60 blur-3xl" />
-          <div
-            className="absolute inset-0 flex items-center justify-center"
-            style={{ perspective: "1200px" }}
-          >
-            <div
-              className={`relative h-full w-full transition-transform duration-75 ${dragging ? "cursor-grabbing" : "cursor-grab"}`}
-              style={{ transform: `rotateY(${rotation}deg) scale(${backSide ? 0.97 : 1})` }}
-            >
+        <div className="mx-auto mt-16 max-w-6xl">
+          <div className="relative overflow-hidden rounded-2xl border border-white/10 bg-[#17191c] shadow-2xl">
+            <div className="absolute left-5 top-5 z-30 flex items-center gap-2 rounded-full border border-white/10 bg-black/50 px-3 py-2 backdrop-blur-md">
+              <span className="h-2 w-2 rounded-full bg-[var(--accent)] shadow-[0_0_12px_var(--accent)]" />
+              <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-white/65">Interactive 3D preview</span>
+            </div>
+
+            <div className="relative aspect-[16/8.5] min-h-[360px] overflow-hidden bg-[#111315]">
               <img
                 src="/photos/hero-trailer.jpg"
-                alt="Custom trailer built by All Custom Trailers"
+                alt="Custom trailer build"
+                className="absolute inset-0 h-full w-full object-cover object-center opacity-90"
                 draggable={false}
-                className="absolute left-1/2 top-1/2 max-h-full w-[92%] -translate-x-1/2 -translate-y-1/2 object-contain drop-shadow-[0_30px_45px_rgba(0,0,0,.55)]"
               />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#101214] via-transparent to-black/10" />
+              <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-[#101214] to-transparent" />
+
+              {hotspots.map((hotspot) => (
+                <button
+                  key={hotspot.id}
+                  type="button"
+                  onClick={() => setActive(hotspot)}
+                  className={`absolute ${hotspot.position} z-20 flex h-10 w-10 items-center justify-center rounded-full border border-white/80 bg-black/65 font-mono text-[9px] font-bold text-white shadow-xl backdrop-blur transition hover:scale-110 hover:border-[var(--accent)] hover:bg-[var(--accent)]`}
+                  aria-label={`Explore ${hotspot.title}`}
+                >
+                  {hotspot.number}
+                </button>
+              ))}
+
+              <div className="absolute bottom-5 left-5 right-5 z-20 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-white/45">Current build</p>
+                  <h3 className="mt-1 font-display text-2xl font-semibold sm:text-3xl">Custom Food Trailer</h3>
+                  <p className="mt-1 text-xs text-white/45">Explore the points to see what can be built into your trailer.</p>
+                </div>
+                <div className="flex rounded-full border border-white/10 bg-black/50 p-1 backdrop-blur-md">
+                  {["EXTERIOR", "INTERIOR", "EQUIPMENT", "FLOOR PLAN"].map((view) => (
+                    <button
+                      key={view}
+                      type="button"
+                      onClick={() => setActiveView(view)}
+                      className={`rounded-full px-3 py-2 font-mono text-[8px] tracking-wider transition sm:px-4 ${activeView === view ? "bg-white text-black" : "text-white/50 hover:text-white"}`}
+                    >
+                      {view}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
+          <p className="mt-4 text-center font-mono text-[9px] uppercase tracking-[0.2em] text-white/30">
+            {activeView} · 3D model coming next · Click a point to explore
+          </p>
+        </div>
 
-          <div className="absolute inset-0">
-            {hotspots.map((hotspot) => (
-              <button
-                key={hotspot.id}
-                type="button"
-                onClick={() => setActive(hotspot)}
-                className={`absolute ${hotspot.position} z-20 flex h-9 w-9 items-center justify-center rounded-full border border-white/70 bg-black/70 font-mono text-[10px] font-bold text-white shadow-lg backdrop-blur transition hover:scale-110 hover:bg-[var(--accent)]`}
-                aria-label={`Explore ${hotspot.title}`}
+        <div className="mx-auto mt-24 max-w-6xl">
+          <div className="mb-8 flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+            <div>
+              <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/35">Start with an idea</span>
+              <h3 className="mt-2 font-display text-3xl font-semibold sm:text-4xl">What are you building?</h3>
+            </div>
+            <p className="max-w-md text-sm leading-relaxed text-white/45">You do not have to know exactly what you need. Choose a starting point and we can shape the build around your business.</p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+            {ideas.map((idea) => (
+              <a
+                key={idea.title}
+                href="#contact"
+                className={`group relative min-h-[150px] overflow-hidden rounded-xl border p-5 transition duration-300 ${idea.title === "CUSTOM" ? "border-[var(--accent)]/50 bg-[var(--accent)]/10 hover:bg-[var(--accent)]/20" : "border-white/10 bg-white/[.035] hover:border-white/25 hover:bg-white/[.07]"}`}
               >
-                {hotspot.label}
-              </button>
+                <span className="font-mono text-[9px] text-white/25">{idea.icon}</span>
+                <div className="absolute bottom-5 left-5 right-5">
+                  <p className="font-display text-lg font-semibold">{idea.title}</p>
+                  <p className="mt-1 text-[11px] leading-relaxed text-white/40 group-hover:text-white/60">{idea.text}</p>
+                </div>
+                <span className="absolute right-4 top-4 text-white/20 transition group-hover:translate-x-1 group-hover:text-white">↗</span>
+              </a>
             ))}
           </div>
         </div>
 
-        <div className="mt-2 flex flex-col items-center justify-center text-center">
-          <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/40">Drag to explore · click the points</p>
-          <p className="mt-5 font-display text-2xl font-semibold sm:text-4xl">
-            {backSide ? "NOT JUST FOOD TRAILERS." : "ONE TRAILER. BUILT YOUR WAY."}
+        <div className="mx-auto mt-24 max-w-5xl border-y border-white/10 py-16 text-center">
+          <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-white/35">Custom means custom</span>
+          <h3 className="mt-4 font-display text-4xl font-semibold leading-none sm:text-6xl">
+            YOUR BUSINESS IS UNIQUE.<br />
+            <span className="text-white/45">YOUR TRAILER SHOULD BE TOO.</span>
+          </h3>
+          <p className="mx-auto mt-6 max-w-2xl text-sm leading-relaxed text-white/45 sm:text-base">
+            Food. Cargo. Utility. Mobile kitchens. Specialty builds. We start with what you need and build from there.
           </p>
-          <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-white/50 sm:text-base">
-            {backSide
-              ? "Food. Cargo. Utility. Mobile kitchens. Specialty builds. If you need it on a trailer, talk to us."
-              : "Every detail can be designed around the operation, equipment and purpose of your business."}
-          </p>
-        </div>
-
-        <div className="mt-10 flex flex-wrap justify-center gap-2">
-          {["FOOD TRAILERS", "CARGO", "UTILITY", "MOBILE KITCHENS", "SPECIALTY BUILDS"].map((item) => (
-            <span key={item} className="rounded-full border border-white/10 bg-white/[.04] px-4 py-2 font-mono text-[9px] uppercase tracking-widest text-white/50">
-              {item}
-            </span>
-          ))}
+          <a href="#contact" className="mt-8 inline-flex items-center gap-2 rounded bg-[var(--accent)] px-7 py-3.5 font-semibold text-white transition hover:bg-[var(--accent-glow)]">
+            START YOUR BUILD <span>→</span>
+          </a>
         </div>
       </div>
 
       {active && (
-        <div
-          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/75 px-5 backdrop-blur-md"
-          onClick={() => setActive(null)}
-        >
-          <div
-            className="relative w-full max-w-lg overflow-hidden rounded-2xl border border-white/10 bg-[#191b1d] shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="h-40 bg-cover bg-center opacity-70" style={{ backgroundImage: "url('/photos/hero-trailer.jpg')" }} />
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/80 px-5 backdrop-blur-md" onClick={() => setActive(null)}>
+          <div className="relative w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-[#181a1d] shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <div className="relative h-44 overflow-hidden">
+              <img src="/photos/hero-trailer.jpg" alt="Custom trailer detail" className="h-full w-full object-cover" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#181a1d] to-transparent" />
+            </div>
             <div className="p-7 sm:p-8">
               <div className="flex items-center gap-3">
-                <span className="font-mono text-xs text-[var(--accent)]">{active.label}</span>
+                <span className="font-mono text-xs text-[var(--accent)]">{active.number}</span>
                 <span className="h-px flex-1 bg-white/10" />
                 <button type="button" onClick={() => setActive(null)} className="text-white/40 hover:text-white" aria-label="Close">✕</button>
               </div>
               <h3 className="mt-5 font-display text-2xl font-semibold">{active.title}</h3>
               <p className="mt-4 text-sm leading-relaxed text-white/55">{active.text}</p>
-              <button
-                type="button"
-                onClick={() => setActive(null)}
-                className="mt-7 rounded bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-glow)]"
-              >
-                Continue exploring
-              </button>
+              <a href="#contact" onClick={() => setActive(null)} className="mt-7 inline-flex rounded bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[var(--accent-glow)]">Talk to us about your build →</a>
             </div>
           </div>
         </div>
