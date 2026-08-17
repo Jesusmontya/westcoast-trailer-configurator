@@ -1082,7 +1082,7 @@ function FloorPlanEditorModal({
 
       const cx = rx + rw / 2;
       const cy = ry + rh / 2;
-      const fontSize = Math.min(rw, rh) * 0.28;
+      const fontSize = Math.min(rw, rh) * 0.16;
       const transform = rotated ? `rotate(-90 ${cx} ${cy})` : undefined;
 
       return (
@@ -1091,7 +1091,7 @@ function FloorPlanEditorModal({
           onPointerDown={(e) => handleItemPointerDown(e, i)}
           style={{ cursor: "grab", opacity: isDragging ? 0.25 : 1, touchAction: "none" }}
         >
-          <rect x={rx} y={ry} width={rw} height={rh} rx={1}
+          <rect x={rx} y={ry} width={rw} height={rh} rx={0}
             fill="rgba(31,58,92,0.1)" stroke="#1f3a5c" strokeWidth={0.5} />
           <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
             fontSize={fontSize} fill="#1b1f23" transform={transform}
@@ -1274,7 +1274,7 @@ function TrailerFloorPlanSVG({
 
       const cx = rx + rw / 2;
       const cy = ry + rh / 2;
-      const fontSize = Math.min(rw, rh) * 0.28;
+      const fontSize = Math.min(rw, rh) * 0.16;
       const transform = rotated ? `rotate(-90 ${cx} ${cy})` : undefined;
 
       // Dimensión a lo largo de la pared, en pulgadas
@@ -1293,7 +1293,7 @@ function TrailerFloorPlanSVG({
                 fontSize={dimFontSize} fill="#5b6570">{dimLabel}</text>
             </>
           )}
-          <rect x={rx} y={ry} width={rw} height={rh} rx={1}
+          <rect x={rx} y={ry} width={rw} height={rh} rx={0}
             fill="rgba(31,58,92,0.08)" stroke="#1f3a5c" strokeWidth={0.5} />
           <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
             fontSize={fontSize} fill="#1b1f23" transform={transform}>
