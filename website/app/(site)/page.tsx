@@ -8,7 +8,14 @@ import { submitLead } from "../../lib/leads";
 
 const CONFIGURATOR_URL = "https://3d.allcustomtrailers.com";
 
-function ImagePlaceholder({ label, className }: { label: string; className?: string }) {
+function ImagePlaceholder({ label, className, src }: { label: string; className?: string; src?: string }) {
+  if (src) {
+    return (
+      <div className={`relative overflow-hidden bg-[var(--surface-2)] ${className}`}>
+        <img src={src} alt={label.replace(/[\[\]]/g, "")} className="h-full w-full object-cover" loading="lazy" />
+      </div>
+    );
+  }
   return (
     <div className={`flex items-center justify-center bg-[var(--surface-2)] text-[var(--text-muted)] text-xs font-mono ${className}`}>
       {label}
@@ -16,14 +23,15 @@ function ImagePlaceholder({ label, className }: { label: string; className?: str
   );
 }
 
-const clientNames = ["A La Parrilla", "Los Mandilones", "Pelons Micheladas", "Costa's Tacos"];
+const clientNames = ["Captain Calabash", "Left Coast Pizza", "Pancho's Tacos", "Rico's Mexican Food", "Tortilleria Lupita", "Tortilleria Rey Tacamba"];
 
 const clientWork = [
-  { name: "A La Parrilla", type: "Taco Trailer" },
-  { name: "Los Mandilones", type: "Full Kitchen Trailer" },
-  { name: "Pelons Micheladas", type: "Beverage Trailer" },
-  { name: "Costa's Tacos", type: "Taco Trailer" },
-  { name: "Client Project", type: "Custom Build" },
+  { name: "Captain Calabash", type: "Custom Food Trailer", image: "/photos/captain calabash.jpg" },
+  { name: "Left Coast Pizza", type: "Pizza Trailer", image: "/photos/left coast pizza.jpg" },
+  { name: "Pancho's Tacos", type: "Taco Trailer", image: "/photos/panchos tacos.jpg" },
+  { name: "Rico's Mexican Food", type: "Food Trailer", image: "/photos/ricos mexican food.jpg" },
+  { name: "Tortilleria Lupita", type: "Specialty Food Trailer", image: "/photos/tortilleria lupita.HEIC" },
+  { name: "Tortilleria Rey Tacamba", type: "Custom Food Trailer", image: "/photos/tortilleria rey tacamba.jpg" },
 ];
 
 function LoadingDots() {
@@ -40,7 +48,7 @@ function ClientWorkModal({ work, onClose }: { work: (typeof clientWork)[number];
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#2a2118]/70 backdrop-blur-sm px-6" onClick={onClose}>
       <div className="bg-[var(--surface)] border border-[var(--line)] rounded-lg max-w-2xl w-full overflow-hidden" onClick={(e) => e.stopPropagation()}>
-        <ImagePlaceholder label={`[ Foto: ${work.name} ]`} className="w-full h-80" />
+        <ImagePlaceholder label={`[ Foto: ${work.name} ]`} src={work.image} className="w-full h-80" />
         <div className="p-6 flex items-center justify-between">
           <div>
             <h3 className="font-display text-lg font-semibold text-[var(--text)]">{work.name}</h3>
@@ -159,7 +167,7 @@ function HomeContent() {
             {clientWork.map((work, i) => (
               <button key={i} onClick={() => setActiveWork(work)} className="stacked-card text-left overflow-hidden">
                 <span className="corner-mark tl" /><span className="corner-mark br" />
-                <ImagePlaceholder label={`[ ${work.name} ]`} className="h-40 w-full" />
+                <ImagePlaceholder label={`[ ${work.name} ]`} src={work.image} className="h-40 w-full" />
                 <div className="p-4"><p className="text-sm font-semibold text-[var(--text)]">{work.name}</p><p className="font-mono text-xs text-[var(--text-muted)] mt-1">{work.type}</p></div>
               </button>
             ))}
