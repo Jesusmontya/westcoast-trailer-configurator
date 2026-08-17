@@ -80,7 +80,7 @@ type CatalogItem = {
   depth_in: number | null;
 };
 type Preset = { id: string; name: string };
-type PresetItem = { id: string; preset_id: string; catalog_item_id: string };
+type PresetItem = { id: string; preset_id: string; catalog_item_id: string; wall?: string; pos?: number; rotated?: boolean };
 
 export default function ClientDetailPage() {
   const params = useParams();
@@ -864,6 +864,26 @@ function nextPosForWall(
 const DEFAULT_TRAILER_LENGTH_IN = 240; // 20 ft por default
 const DEFAULT_TRAILER_WIDTH_IN  = 96;
 
+// Parte un nombre en líneas que quepan dentro de la caja.
+// maxChars = cuántos caracteres caben en una línea (estimado por ancho de caja / fontSize).
+function splitLabel(label: string, boxW: number, fontSize: number): string[] {
+  const charsPerLine = Math.max(3, Math.floor(boxW / (fontSize * 0.6)));
+  if (label.length <= charsPerLine) return [label];
+  const words = label.split(" ");
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    if (current && (current + " " + word).length > charsPerLine) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = current ? current + " " + word : word;
+    }
+  }
+  if (current) lines.push(current);
+  return lines.length > 0 ? lines : [label];
+}
+
 
 // ============================================
 // EDITOR DE PLANO — viewBox en pulgadas reales
@@ -881,6 +901,7 @@ function FloorPlanEditorModal({
   onSetDoorPos,
   onSetWindowWall,
   onSetWindowPos,
+  onSaveAsPreset,
   onClose,
 }: {
   items: QuoteLineItem[];
@@ -895,6 +916,7 @@ function FloorPlanEditorModal({
   onSetDoorPos: (pos: number) => void;
   onSetWindowWall: (wall: string) => void;
   onSetWindowPos: (pos: number) => void;
+  onSaveAsPreset: () => void;
   onClose: () => void;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -1084,6 +1106,10 @@ function FloorPlanEditorModal({
       const cy = ry + rh / 2;
       const fontSize = Math.min(rw, rh) * 0.16;
       const transform = rotated ? `rotate(-90 ${cx} ${cy})` : undefined;
+      const textW = rotated ? rh : rw;
+      const lines = splitLabel(it.label, textW, fontSize);
+      const lineH = fontSize * 1.2;
+      const textStartY = cy - ((lines.length - 1) * lineH) / 2;
 
       return (
         <g
@@ -1093,10 +1119,12 @@ function FloorPlanEditorModal({
         >
           <rect x={rx} y={ry} width={rw} height={rh} rx={0}
             fill="rgba(31,58,92,0.1)" stroke="#1f3a5c" strokeWidth={0.5} />
-          <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
+          <text x={cx} y={textStartY} textAnchor="middle" dominantBaseline="central"
             fontSize={fontSize} fill="#1b1f23" transform={transform}
             style={{ pointerEvents: "none" }}>
-            {label}
+            {lines.map((line, li) => (
+              <tspan key={li} x={cx} dy={li === 0 ? 0 : lineH}>{line}</tspan>
+            ))}
           </text>
         </g>
       );
@@ -1132,7 +1160,12 @@ function FloorPlanEditorModal({
       <div className="admin-card bg-[var(--a-surface)] w-full max-w-3xl p-5">
         <div className="flex items-center justify-between mb-1">
           <h3 className="text-lg font-semibold text-[var(--a-text)]">Editar plano</h3>
-          <button onClick={onClose} className="admin-btn-secondary">Listo</button>
+          <div className="flex items-center gap-2">
+            <button onClick={onSaveAsPreset} className="admin-btn-ghost text-xs">
+              💾 Guardar como preset
+            </button>
+            <button onClick={onClose} className="admin-btn-secondary">Listo</button>
+          </div>
         </div>
         <p className="text-xs text-[var(--a-text-muted)] mb-3">
           Arrastra cada pieza a la posición exacta. Tap sobre una pieza en la pared corta = voltear.
@@ -1276,6 +1309,10 @@ function TrailerFloorPlanSVG({
       const cy = ry + rh / 2;
       const fontSize = Math.min(rw, rh) * 0.16;
       const transform = rotated ? `rotate(-90 ${cx} ${cy})` : undefined;
+      const textW = rotated ? rh : rw;
+      const lines = splitLabel(it.label, textW, fontSize);
+      const lineH = fontSize * 1.2;
+      const textStartY = cy - ((lines.length - 1) * lineH) / 2;
 
       // Dimensión a lo largo de la pared, en pulgadas
       const dimLabel = `${Math.round(alongWallIn)}"`;
@@ -1295,9 +1332,11 @@ function TrailerFloorPlanSVG({
           )}
           <rect x={rx} y={ry} width={rw} height={rh} rx={0}
             fill="rgba(31,58,92,0.08)" stroke="#1f3a5c" strokeWidth={0.5} />
-          <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
+          <text x={cx} y={textStartY} textAnchor="middle" dominantBaseline="central"
             fontSize={fontSize} fill="#1b1f23" transform={transform}>
-            {label}
+            {lines.map((line, li) => (
+              <tspan key={li} x={cx} dy={li === 0 ? 0 : lineH}>{line}</tspan>
+            ))}
           </text>
         </g>
       );
@@ -1557,14 +1596,18 @@ function QuoteBuilder({
       presetLinks.forEach((link) => {
         const item = catalogItems.find((ci) => ci.id === link.catalog_item_id);
         if (!item) return;
-        const wall = (link as PresetItem & { wall?: string }).wall || "trasera";
-        const startPos = Math.min(wallEnds[wall] || 0, wallMaxIn(wall) * 0.95);
+        const wall = link.wall || "trasera";
+        // Si el preset tiene posición guardada, usarla; si no, calcular
+        const hasPos = link.pos != null;
+        const startPos = hasPos
+          ? link.pos!
+          : Math.min(wallEnds[wall] || 0, wallMaxIn(wall) * 0.95);
         const { alongWallIn } = boxDims(
           { label: item.name, price: item.price, width_in: item.width_in },
           wall,
           trailerWidthIn
         );
-        wallEnds[wall] = startPos + alongWallIn;
+        if (!hasPos) wallEnds[wall] = startPos + alongWallIn;
         itemsToAdd.push({
           label: item.name,
           price: item.price,
@@ -1574,6 +1617,7 @@ function QuoteBuilder({
           width_in: item.width_in,
           depth_in: item.depth_in,
           pos: startPos,
+          rotated: link.rotated ?? undefined,
         });
       });
 
@@ -2176,6 +2220,34 @@ function QuoteBuilder({
           onSetDoorPos={setDoorPos}
           onSetWindowWall={setWindowWall}
           onSetWindowPos={setWindowPos}
+          onSaveAsPreset={async () => {
+            const name = prompt("Nombre del preset:");
+            if (!name) return;
+            const { data: preset } = await supabase
+              .from("catalog_presets")
+              .insert({ name })
+              .select("id")
+              .single();
+            if (!preset) return;
+            // Buscar el catalog_item_id que corresponde a cada pieza por nombre
+            const rows = items
+              .map((it) => {
+                const found = catalogItems.find((ci) => ci.name === it.label);
+                if (!found) return null;
+                return {
+                  preset_id: preset.id,
+                  catalog_item_id: found.id,
+                  wall: it.wall || "trasera",
+                  pos: it.pos ?? 0,
+                  rotated: it.rotated ?? null,
+                };
+              })
+              .filter((r): r is NonNullable<typeof r> => r !== null);
+            if (rows.length > 0) {
+              await supabase.from("catalog_preset_items").insert(rows);
+            }
+            alert(`Preset "${name}" guardado con ${rows.length} piezas y posiciones.`);
+          }}
           onClose={() => setShowPlanEditor(false)}
         />
       )}

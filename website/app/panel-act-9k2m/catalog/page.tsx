@@ -1030,7 +1030,7 @@ function ItemsTab() {
 // PRESETS (paquetes de piezas)
 // ============================================
 type Preset = { id: string; name: string; created_at: string };
-type PresetItem = { id: string; preset_id: string; catalog_item_id: string; wall: string | null };
+type PresetItem = { id: string; preset_id: string; catalog_item_id: string; wall: string | null; pos: number | null; rotated: boolean | null };
 
 const PRESET_WALL_OPTIONS = [
   { value: "trasera", label: "Lado de la puerta" },
