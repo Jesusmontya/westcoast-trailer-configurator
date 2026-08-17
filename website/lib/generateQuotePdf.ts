@@ -1,7 +1,7 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-export type QuoteLineItem = { label: string; price: number; image_url?: string | null; cost?: number; wall?: string; width_in?: number | null; pos?: number; rotated?: boolean; depth_in?: number | null };
+export type QuoteLineItem = { label: string; price: number; image_url?: string | null; cost?: number; wall?: string; width_in?: number | null; pos?: number; rotated?: boolean };
 
 export type QuotePdfInput = {
   quoteNumber: string;
@@ -33,6 +33,39 @@ async function loadImageAsDataUrl(url: string): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+async function rotateImageDataUrl(dataUrl: string, degrees: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      const angle = ((degrees % 360) + 360) % 360;
+
+      if (angle === 90 || angle === 270) {
+        canvas.width = img.height;
+        canvas.height = img.width;
+      } else {
+        canvas.width = img.width;
+        canvas.height = img.height;
+      }
+
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        reject(new Error("No 2D context available"));
+        return;
+      }
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.translate(canvas.width / 2, canvas.height / 2);
+      ctx.rotate((angle * Math.PI) / 180);
+      ctx.drawImage(img, -img.width / 2, -img.height / 2);
+
+      resolve(canvas.toDataURL("image/png"));
+    };
+    img.onerror = () => reject(new Error("Image load failed"));
+    img.src = dataUrl;
+  });
 }
 
 export async function generateQuotePdf(input: QuotePdfInput): Promise<QuoteTotals> {
@@ -201,43 +234,18 @@ export async function generateQuotePdf(input: QuotePdfInput): Promise<QuoteTotal
     doc.setFont("helvetica", "bold");
     doc.text("Floor Plan", margin, 20);
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(90, 90, 90);
-    doc.text(`All Custom Trailers — Quote #${input.quoteNumber}`, margin, 27);
+    const rotatedFloorPlan = await rotateImageDataUrl(input.floorPlanImageDataUrl, 90);
+    const usableWidth = pageWidth - margin * 2;
+    const usableHeight = 240;
+    const rotatedWidth = 340;
+    const rotatedHeight = 760;
+    const scale = Math.min(usableWidth / rotatedWidth, usableHeight / rotatedHeight);
+    const imgW = rotatedWidth * scale;
+    const imgH = rotatedHeight * scale;
+    const x = pageWidth / 2 - imgW / 2;
+    const y = 36;
 
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.4);
-    doc.line(margin, 32, pageWidth - margin, 32);
-
-    // el plano se dibujó en un lienzo de 760x340 — mantenemos esa proporción
-    const imgW = pageWidth - margin * 2;
-    const imgH = (imgW * 340) / 760;
-    const imgY = 42;
-
-    // marco alrededor del dibujo, para que se sienta como plano formal
-    doc.setDrawColor(180, 180, 180);
-    doc.setLineWidth(0.3);
-    doc.rect(margin, imgY, imgW, imgH);
-
-    doc.addImage(input.floorPlanImageDataUrl, "PNG", margin, imgY, imgW, imgH);
-
-    doc.setFontSize(8);
-    doc.setTextColor(130, 130, 130);
-    doc.text(
-      "Layout shown for planning reference. Actual placement may vary slightly during build.",
-      margin,
-      imgY + imgH + 10
-    );
-
-    // footer, igual que la primera hoja
-    doc.setDrawColor(180, 180, 180);
-    doc.setLineWidth(0.2);
-    doc.line(margin, 285, pageWidth - margin, 285);
-    doc.setFontSize(8);
-    doc.setTextColor(130, 130, 130);
-    doc.text("This quote is valid for 30 days.", margin, 291);
-    doc.text("allcustomtrailers.com", pageWidth - margin, 291, { align: "right" });
+    doc.addImage(rotatedFloorPlan, "PNG", x, y, imgW, imgH);
   }
 
   if (input.download !== false) {
