@@ -20,6 +20,7 @@ body {
 
 html {
   overscroll-behavior-x: none;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -158,6 +159,10 @@ body {
 
 /* Keep the success state from changing page position on mobile. */
 @media (max-width: 639px) {
+  #contact {
+    scroll-margin-top: 18vh;
+  }
+
   #contact .stacked-card.ticket-notch {
     min-height: 390px;
   }
