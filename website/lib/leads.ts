@@ -20,24 +20,17 @@ function getUtmParams() {
   };
 }
 
-function getCustomTrailerIdea() {
-  if (typeof window === "undefined") return "";
-  return (window as typeof window & { __allCustomTrailerIdea?: string }).__allCustomTrailerIdea?.trim() || "";
-}
-
 /**
  * Guarda a alguien que llenó el formulario de contacto de la landing.
  */
 export async function submitLead(input: SubmitContactInput) {
   const { utm_source, utm_campaign } = getUtmParams();
-  const customIdea = input.interest === "Custom / Other" ? getCustomTrailerIdea() : "";
-  const interest = customIdea ? `${input.interest} — ${customIdea}` : input.interest || null;
 
   const { error } = await supabase.rpc("submit_client_lead", {
     p_name: input.name,
     p_phone: input.phone,
     p_email: input.email || null,
-    p_interest: interest,
+    p_interest: input.interest || null,
     p_heard_from: "sitio_web_contacto",
     p_utm_source: utm_source,
     p_utm_campaign: utm_campaign,
