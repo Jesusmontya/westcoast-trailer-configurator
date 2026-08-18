@@ -32,8 +32,8 @@ export default function Footer() {
             {t.footer.contactHeading}
           </p>
           <div className="flex flex-col gap-2 text-sm text-white/60 font-mono">
-            <span>{t.footer.phone}</span>
-            <span>{t.footer.email}</span>
+            <a href="tel:+17754096847" className="hover:text-white transition-colors">{t.footer.phone}</a>
+            <a href="mailto:luisinfante@allcustomtrailers.com" className="hover:text-white transition-colors">{t.footer.email}</a>
             <span>{t.footer.location}</span>
           </div>
         </div>
