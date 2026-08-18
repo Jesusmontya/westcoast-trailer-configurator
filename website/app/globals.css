@@ -160,7 +160,7 @@ body {
 /* Keep the success state from changing page position on mobile. */
 @media (max-width: 639px) {
   #contact {
-    scroll-margin-top: -70px;
+    scroll-margin-top: -40px;
   }
 
   #contact .stacked-card.ticket-notch {
