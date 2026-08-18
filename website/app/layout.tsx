@@ -1,8 +1,7 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "./context/LanguageContext";
-import LeadIdeaEnhancer from "./components/LeadIdeaEnhancer";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -28,13 +27,6 @@ export const metadata: Metadata = {
   description: "Custom food trailers built in Nevada.",
 };
 
-export const viewport: Viewport = {
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-  userScalable: false,
-};
-
 export default function RootLayout({
   children,
 }: {
@@ -43,10 +35,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${fraunces.variable} ${inter.variable} ${mono.variable}`}>
-        <LanguageProvider>
-          {children}
-          <LeadIdeaEnhancer />
-        </LanguageProvider>
+        <LanguageProvider>{children}</LanguageProvider>
       </body>
     </html>
   );
