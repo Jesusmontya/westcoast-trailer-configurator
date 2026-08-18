@@ -32,7 +32,6 @@ body {
     var(--bg);
 }
 
-/* Tarjeta base tipo ficha de papel apilada */
 .stacked-card {
   position: relative;
   background: var(--surface);
@@ -84,11 +83,6 @@ body {
   display: inline-block;
 }
 
-/* ============================================
-   NUEVO: motivo de "ticket de cocina"
-   ============================================ */
-
-/* Borde superior perforado, como el talón que se arranca de una comanda */
 .ticket-notch {
   position: relative;
 }
@@ -105,7 +99,6 @@ body {
   background-position: top left;
 }
 
-/* Etiqueta de esquina tipo boleto, para fotos/hero */
 .corner-ticket {
   font-family: var(--font-mono), monospace;
   font-size: 11px;
@@ -119,7 +112,6 @@ body {
   box-shadow: 0 8px 20px -8px rgba(42, 33, 24, 0.3);
 }
 
-/* Línea punteada entre pasos del proceso, como perforado de hoja */
 .perforated-line {
   background-image: repeating-linear-gradient(
     to right,
@@ -131,7 +123,6 @@ body {
   height: 1px;
 }
 
-/* Punto de "tachuela" para la nota de testimonio */
 .pin-dot {
   width: 12px;
   height: 12px;
@@ -140,7 +131,6 @@ body {
   box-shadow: 0 2px 4px rgba(42, 33, 24, 0.3);
 }
 
-/* Tira de recibo térmico para el marquee de clientes */
 .receipt-strip {
   background: var(--surface-2);
   border-top: 1px dashed var(--line);
@@ -153,4 +143,17 @@ body {
 }
 .animate-marquee-left {
   animation: marquee-left 35s linear infinite;
+}
+
+/* Mobile: keep the hero fast and clean instead of showing a stalled video. */
+@media (max-width: 639px) {
+  #home > div:first-child {
+    background-image: linear-gradient(rgba(20, 23, 26, 0.28), rgba(20, 23, 26, 0.28)), url("/photos/captain calabash.jpg");
+    background-size: cover;
+    background-position: center;
+  }
+
+  #home video {
+    display: none;
+  }
 }
