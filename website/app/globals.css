@@ -30,13 +30,8 @@ body {
   touch-action: pan-y;
 }
 
-.font-display {
-  font-family: var(--font-display), serif;
-}
-
-.font-mono {
-  font-family: var(--font-mono), monospace;
-}
+.font-display { font-family: var(--font-display), serif; }
+.font-mono { font-family: var(--font-mono), monospace; }
 
 .blueprint-bg {
   background:
@@ -95,9 +90,7 @@ body {
   display: inline-block;
 }
 
-.ticket-notch {
-  position: relative;
-}
+.ticket-notch { position: relative; }
 .ticket-notch::before {
   content: "";
   position: absolute;
@@ -125,13 +118,7 @@ body {
 }
 
 .perforated-line {
-  background-image: repeating-linear-gradient(
-    to right,
-    var(--line) 0,
-    var(--line) 6px,
-    transparent 6px,
-    transparent 12px
-  );
+  background-image: repeating-linear-gradient(to right, var(--line) 0, var(--line) 6px, transparent 6px, transparent 12px);
   height: 1px;
 }
 
@@ -153,17 +140,10 @@ body {
   0% { transform: translateX(0); }
   100% { transform: translateX(-50%); }
 }
-.animate-marquee-left {
-  animation: marquee-left 35s linear infinite;
-}
+.animate-marquee-left { animation: marquee-left 35s linear infinite; }
 
 /* Keep the success state from changing page position on mobile. */
 @media (max-width: 639px) {
-  #contact {
-    scroll-margin-top: -40px;
-  }
-
-  #contact .stacked-card.ticket-notch {
-    min-height: 390px;
-  }
+  #contact { scroll-margin-top: -50px; }
+  #contact .stacked-card.ticket-notch { min-height: 390px; }
 }
