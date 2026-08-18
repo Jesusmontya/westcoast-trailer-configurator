@@ -98,7 +98,6 @@ function HomeContent() {
 
   return (
     <main className="flex flex-col pb-16 md:pb-0">
-      {/* 1. HERO — keep the real build video as the emotional first impression */}
       <section className="relative w-full min-h-[85vh] flex items-center overflow-hidden" id="home">
         <div className="absolute inset-0 bg-[#14171a]" />
         <video autoPlay muted loop playsInline className="absolute inset-0 w-full h-full object-cover">
@@ -122,7 +121,6 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* 2. OUR WORK — proof, not a generic card gallery */}
       <section className="w-full bg-[var(--surface)] border-t border-[var(--line)]" id="gallery">
         <div className="max-w-7xl mx-auto px-6 py-24 sm:px-10">
           <div className="flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
@@ -132,7 +130,6 @@ function HomeContent() {
             </div>
             <p className="max-w-md text-sm leading-relaxed text-[var(--text-muted)]">Real trailers. Real businesses. Different needs. Every build starts with the operation—not a fixed template.</p>
           </div>
-
           <div className="mt-12 grid grid-cols-1 gap-5 lg:grid-cols-12">
             <a href="#custom-build" className="group relative min-h-[430px] overflow-hidden rounded-xl bg-[var(--text)] lg:col-span-7">
               <ImageFrame src={clientWork[0].image} alt={clientWork[0].name} className="absolute inset-0 h-full w-full opacity-90" />
@@ -144,7 +141,6 @@ function HomeContent() {
                 <span className="mt-5 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.18em] text-white/75">Explore the custom experience <span>→</span></span>
               </div>
             </a>
-
             <div className="grid grid-cols-2 gap-5 lg:col-span-5">
               {clientWork.slice(1).map((work) => (
                 <a key={work.name} href="#custom-build" className="group relative min-h-[205px] overflow-hidden rounded-xl bg-[var(--text)]">
@@ -161,10 +157,8 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* 3. THE MAIN EXPERIENCE */}
       <TrailerExperience />
 
-      {/* 4. EARLY CTA */}
       <section className="w-full bg-[var(--text)] text-white border-t border-white/10">
         <div className="max-w-5xl mx-auto px-6 py-16 sm:py-20 flex flex-col sm:flex-row items-center justify-between gap-8">
           <div>
@@ -176,7 +170,6 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* 5. WHY US */}
       <section className="w-full blueprint-bg border-t border-[var(--line)]">
         <div className="max-w-6xl mx-auto px-6 py-24">
           <span className="tag-pill mb-4">Why us</span>
@@ -194,7 +187,6 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* 6. CLIENT NAMES / SOCIAL PROOF STRIP */}
       <section className="w-full py-4 receipt-strip overflow-hidden">
         <div className="flex gap-14 w-max animate-marquee-left">
           {[...clientNames, ...clientNames, ...clientNames, ...clientNames].map((name, i) => (
@@ -203,7 +195,6 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* 7. PROCESS */}
       <section className="w-full blueprint-bg border-t border-[var(--line)]">
         <div className="max-w-6xl mx-auto px-6 py-24">
           <span className="tag-pill mb-4 block w-fit mx-auto">Process</span>
@@ -223,7 +214,6 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* 8. MAIN CONVERSION FORM */}
       <section className="w-full blueprint-bg border-t border-[var(--line)]" id="contact">
         <div className="max-w-5xl mx-auto px-6 py-24 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
@@ -236,20 +226,13 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* 9. ABOUT */}
       <section className="w-full bg-[var(--surface)] border-t border-[var(--line)]" id="about">
         <div className="max-w-6xl mx-auto px-6 py-24">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
-            <div>
-              <span className="tag-pill mb-4">Since day one</span>
-              <h2 className="font-display text-3xl sm:text-4xl font-semibold text-[var(--text)]">{t.about.heading}</h2>
-              <p className="mt-6 text-[var(--text-muted)] leading-relaxed">{t.about.paragraph1}</p>
-              <p className="mt-4 text-[var(--text-muted)] leading-relaxed">{t.about.paragraph2}</p>
-            </div>
-            <div className="stacked-card overflow-hidden -rotate-1">
-              <span className="corner-mark tl" /><span className="corner-mark br" />
-              <img src="/photos/hero-trailer.jpg" alt="All Custom Trailers build" className="h-72 lg:h-full w-full object-cover" />
-            </div>
+          <div className="max-w-3xl">
+            <span className="tag-pill mb-4">Since day one</span>
+            <h2 className="font-display text-3xl sm:text-4xl font-semibold text-[var(--text)]">{t.about.heading}</h2>
+            <p className="mt-6 text-[var(--text-muted)] leading-relaxed">{t.about.paragraph1}</p>
+            <p className="mt-4 text-[var(--text-muted)] leading-relaxed">{t.about.paragraph2}</p>
           </div>
           <div className="mt-16 grid grid-cols-1 sm:grid-cols-3 gap-8 border-t border-dashed border-[var(--line)] pt-12">
             {t.about.stats.map((stat, i) => <div key={i}><p className="font-mono text-3xl font-semibold text-[var(--accent-2)]">{stat.value}</p><p className="mt-1 text-sm text-[var(--text-muted)]">{stat.label}</p></div>)}
@@ -257,7 +240,6 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* 10. TESTIMONIAL */}
       <section className="w-full bg-[var(--surface)] border-t border-[var(--line)]">
         <div className="max-w-lg mx-auto px-6 py-24 text-center">
           <div className="stacked-card p-10 -rotate-1 relative">
@@ -269,7 +251,6 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* 11. FINAL CTA */}
       <section className="w-full bg-[var(--text)] text-white border-t border-white/10">
         <div className="max-w-5xl mx-auto px-6 py-24 text-center">
           <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/40">All Custom Trailers</span>
