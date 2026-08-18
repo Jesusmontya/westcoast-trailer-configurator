@@ -12,10 +12,21 @@
   --line: rgba(27, 31, 35, 0.12);
 }
 
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+html {
+  overscroll-behavior-x: none;
+}
+
 body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-body), Arial, sans-serif;
+  touch-action: pan-y;
 }
 
 .font-display {
@@ -145,15 +156,9 @@ body {
   animation: marquee-left 35s linear infinite;
 }
 
-/* Mobile: keep the hero fast and clean instead of showing a stalled video. */
+/* Keep the success state from changing page position on mobile. */
 @media (max-width: 639px) {
-  #home > div:first-child {
-    background-image: linear-gradient(rgba(20, 23, 26, 0.28), rgba(20, 23, 26, 0.28)), url("/photos/captain calabash.jpg");
-    background-size: cover;
-    background-position: center;
-  }
-
-  #home video {
-    display: none;
+  #contact .stacked-card.ticket-notch {
+    min-height: 390px;
   }
 }
