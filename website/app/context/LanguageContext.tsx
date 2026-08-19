@@ -19,6 +19,7 @@ const translations = {
       paragraph: "Custom food trailers, built in Nevada, from the frame up — for people ready to start something of their own.",
       trustLine: "100+ trailers delivered · 3+ years in Nevada",
       cta: "Step inside, in 3D",
+      seoLine: "Custom Food Trailers & Mobile Kitchens Built in Nevada",
     },
     advantages: {
       heading: "Why build with All Custom Trailers",
@@ -29,6 +30,17 @@ const translations = {
         { question: "BUILT TO LAST.", title: "Structural Warranty", text: "Coverage backed by our build quality and craftsmanship." },
         { question: "READY FOR VOLUME.", title: "Commercial-Grade Equipment", text: "Professional equipment made for real daily volume." },
         { question: "BUILT FOR REAL BUDGETS.", title: "Accessible Pricing", text: "Quality builds designed around real small-business budgets." },
+      ],
+    },
+    services: {
+      eyebrow: "What we build",
+      heading: "CUSTOM TRAILERS BUILT AROUND YOUR BUSINESS.",
+      intro: "From mobile kitchens to specialty builds, every trailer starts with how you plan to operate.",
+      items: [
+        { title: "Food Trailers", text: "Custom layouts built around your menu, equipment and workflow." },
+        { title: "Mobile Kitchens", text: "Commercial kitchen trailers for catering, events and mobile operations." },
+        { title: "Beverage Trailers", text: "Coffee, drinks, bars and specialty beverage concepts built to order." },
+        { title: "Specialty Trailers", text: "Custom commercial builds for ideas that need something outside a standard trailer." },
       ],
     },
     gallery: { heading: "Trailers we've built", subheading: "Real clients, real projects. Click any trailer to see more." },
@@ -76,6 +88,7 @@ const translations = {
       paragraph: "Trailers de comida personalizados, hechos en Nevada, desde la estructura — para quienes están listos para empezar su propio negocio.",
       trustLine: "100+ trailers entregados · 3+ años en Nevada",
       cta: "Entra en 3D",
+      seoLine: "Food Trailers y Cocinas Móviles Personalizadas en Nevada",
     },
     advantages: {
       heading: "Por qué construir con All Custom Trailers",
@@ -86,6 +99,17 @@ const translations = {
         { question: "HECHO PARA DURAR.", title: "Garantía estructural", text: "Respaldada por nuestra calidad de construcción y trabajo." },
         { question: "LISTO PARA TRABAJO REAL.", title: "Equipo de calidad comercial", text: "Equipo profesional hecho para el volumen diario real." },
         { question: "PENSADO PARA TU PRESUPUESTO.", title: "Precios accesibles", text: "Calidad pensada para presupuestos reales de pequeños negocios." },
+      ],
+    },
+    services: {
+      eyebrow: "Lo que construimos",
+      heading: "TRAILERS PERSONALIZADOS ALREDEDOR DE TU NEGOCIO.",
+      intro: "Desde cocinas móviles hasta proyectos especiales, cada trailer empieza con la forma en que vas a trabajar.",
+      items: [
+        { title: "Food Trailers", text: "Diseños personalizados alrededor de tu menú, equipo y flujo de trabajo." },
+        { title: "Cocinas Móviles", text: "Trailers de cocina comercial para catering, eventos y operaciones móviles." },
+        { title: "Trailers de Bebidas", text: "Café, bebidas, barras y conceptos especiales construidos a la medida." },
+        { title: "Trailers Especiales", text: "Construcciones comerciales personalizadas para ideas fuera de un trailer estándar." },
       ],
     },
     gallery: { heading: "Trailers que hemos construido", subheading: "Clientes reales, proyectos reales. Haz click en cualquiera para ver más." },
