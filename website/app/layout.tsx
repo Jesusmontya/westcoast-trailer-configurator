@@ -23,8 +23,8 @@ const mono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "All Custom Trailers",
-  description: "Custom food trailers built in Nevada.",
+  title: "Custom Food Trailers & Mobile Kitchens in Nevada | All Custom Trailers",
+  description: "Custom food trailers and mobile kitchens built in Nevada. Fully custom layouts, commercial equipment and financing options for your next business.",
 };
 
 export default function RootLayout({
