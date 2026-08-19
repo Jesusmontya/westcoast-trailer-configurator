@@ -109,7 +109,7 @@ function HomeContent() {
           <div className="max-w-2xl">
             <span className="inline-block font-mono text-[10px] uppercase tracking-wide text-white/70 border border-white/25 rounded px-3 py-1 mb-5">{t.hero.eyebrow}</span>
             <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-semibold tracking-tight leading-[0.96] text-white">{t.hero.headline}</h1>
-            <p className="mt-4 font-mono text-xs sm:text-sm uppercase tracking-[0.12em] text-white/75">Custom Food Trailers &amp; Mobile Kitchens Built in Nevada</p>
+            <p className="mt-4 font-mono text-xs sm:text-sm uppercase tracking-[0.12em] text-white/75">{t.hero.seoLine}</p>
             <p className="mt-6 max-w-xl text-lg text-white/80">{t.hero.paragraph}</p>
             <p className="mt-3 font-mono text-sm text-white/60">{t.hero.trustLine}</p>
             <div className="mt-9 flex flex-wrap gap-3">
@@ -177,7 +177,29 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* 5. WHY US */}
+      {/* 5. WHAT WE BUILD — SEO support without turning the landing into a wall of text */}
+      <section className="w-full bg-[var(--surface)] border-t border-[var(--line)]">
+        <div className="max-w-6xl mx-auto px-6 py-24">
+          <span className="tag-pill mb-4">{t.services.eyebrow}</span>
+          <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <h2 className="font-display text-3xl sm:text-4xl font-semibold text-[var(--text)] max-w-2xl">{t.services.heading}</h2>
+              <p className="mt-4 max-w-2xl text-[var(--text-muted)] leading-relaxed">{t.services.intro}</p>
+            </div>
+          </div>
+          <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            {t.services.items.map((item, i) => (
+              <div key={i} className="stacked-card ticket-notch p-6 pt-9">
+                <span className="font-mono text-xs text-[var(--accent-2)]">{String(i + 1).padStart(2, "0")}</span>
+                <h3 className="mt-3 font-display text-xl font-semibold text-[var(--text)]">{item.title}</h3>
+                <p className="mt-2 text-sm text-[var(--text-muted)] leading-relaxed">{item.text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 6. WHY US */}
       <section className="w-full blueprint-bg border-t border-[var(--line)]">
         <div className="max-w-6xl mx-auto px-6 py-24">
           <span className="tag-pill mb-4">Why us</span>
@@ -195,7 +217,7 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* 6. CLIENT NAMES / SOCIAL PROOF STRIP */}
+      {/* 7. CLIENT NAMES / SOCIAL PROOF STRIP */}
       <section className="w-full py-4 receipt-strip overflow-hidden">
         <div className="flex gap-14 w-max animate-marquee-left">
           {[...clientNames, ...clientNames, ...clientNames, ...clientNames].map((name, i) => (
@@ -204,7 +226,7 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* 7. PROCESS */}
+      {/* 8. PROCESS */}
       <section className="w-full blueprint-bg border-t border-[var(--line)]">
         <div className="max-w-6xl mx-auto px-6 py-24">
           <span className="tag-pill mb-4 block w-fit mx-auto">Process</span>
@@ -224,7 +246,7 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* 8. MAIN CONVERSION FORM */}
+      {/* 9. MAIN CONVERSION FORM */}
       <section className="w-full blueprint-bg border-t border-[var(--line)]" id="contact">
         <div className="max-w-5xl mx-auto px-6 py-24 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div>
@@ -237,7 +259,7 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* 9. ABOUT */}
+      {/* 10. ABOUT */}
       <section className="w-full bg-[var(--surface)] border-t border-[var(--line)]" id="about">
         <div className="max-w-6xl mx-auto px-6 py-24">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
@@ -258,7 +280,7 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* 10. TESTIMONIAL */}
+      {/* 11. TESTIMONIAL */}
       <section className="w-full bg-[var(--surface)] border-t border-[var(--line)]">
         <div className="max-w-lg mx-auto px-6 py-24 text-center">
           <div className="stacked-card p-10 -rotate-1 relative">
@@ -270,7 +292,7 @@ function HomeContent() {
         </div>
       </section>
 
-      {/* 11. FINAL CTA */}
+      {/* 12. FINAL CTA */}
       <section className="w-full bg-[var(--text)] text-white border-t border-white/10">
         <div className="max-w-5xl mx-auto px-6 py-24 text-center">
           <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-white/40">All Custom Trailers</span>
