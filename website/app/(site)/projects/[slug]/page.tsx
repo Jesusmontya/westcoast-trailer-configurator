@@ -112,8 +112,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
               <Link href="/#contact" className="rounded bg-[var(--accent)] px-7 py-3.5 font-semibold text-white hover:bg-[var(--accent-glow)] transition-colors">
                 GET A QUOTE →
               </Link>
-              <a href="tel:+17754096847" className="rounded border border-[var(--line)] px-7 py-3.5 font-semibold text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors">
-                CALL (775) 409-6847
+              <a href="tel:+17754700219" className="rounded border border-[var(--line)] px-7 py-3.5 font-semibold text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors">
+                CALL (775) 470-0219
               </a>
             </div>
           </div>

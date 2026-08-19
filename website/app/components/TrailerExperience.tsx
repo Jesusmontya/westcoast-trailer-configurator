@@ -10,16 +10,16 @@ export default function TrailerExperience() {
   const location = lang === "es"
     ? {
         eyebrow: "NEVADA Y MÁS ALLÁ",
-        heading: "CONSTRUIDOS EN RENO. ENTREGADOS DONDE LOS NECESITES.",
-        text: "All Custom Trailers construye food trailers y cocinas móviles personalizadas en Reno, Nevada. Atendemos Reno y sus alrededores, y coordinamos envíos a California y cualquier lugar de Estados Unidos. El costo de envío aplica.",
-        local: "Reno · Sparks · Carson City · Norte de Nevada",
+        heading: "CONSTRUIDOS EN SPARKS. ENTREGADOS DONDE LOS NECESITES.",
+        text: "All Custom Trailers construye food trailers y cocinas móviles personalizadas en Sparks, Nevada. Atendemos Reno y sus alrededores, y coordinamos envíos a California y cualquier lugar de Estados Unidos. El costo de envío aplica.",
+        local: "Sparks · Reno · Carson City · Norte de Nevada",
         delivery: "California y envíos nacionales disponibles",
       }
     : {
         eyebrow: "NEVADA & BEYOND",
-        heading: "BUILT IN RENO. DELIVERED WHERE YOU NEED IT.",
-        text: "All Custom Trailers builds custom food trailers and mobile kitchens in Reno, Nevada. We serve businesses throughout the Reno area and can coordinate delivery to California and locations across the U.S. Shipping costs apply.",
-        local: "Reno · Sparks · Carson City · Northern Nevada",
+        heading: "BUILT IN SPARKS. DELIVERED WHERE YOU NEED IT.",
+        text: "All Custom Trailers builds custom food trailers and mobile kitchens in Sparks, Nevada. We serve businesses throughout Reno and Northern Nevada, and can coordinate delivery to California and locations across the U.S. Shipping costs apply.",
+        local: "Sparks · Reno · Carson City · Northern Nevada",
         delivery: "California & nationwide delivery available",
       };
 
@@ -42,7 +42,7 @@ export default function TrailerExperience() {
       </section>
 
       <a
-        href="tel:+17754096847"
+        href="tel:+17754700219"
         aria-label="Call All Custom Trailers"
         className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent)] text-white shadow-xl transition-transform hover:scale-105 active:scale-95"
       >

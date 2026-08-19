@@ -5,7 +5,7 @@ const SERVICES = {
   "custom-food-trailers": {
     title: "Custom Food Trailers",
     metaTitle: "Custom Food Trailers in Nevada | All Custom Trailers",
-    metaDescription: "Custom food trailers built in Reno, Nevada around your menu, equipment and workflow. Delivery available to California and beyond.",
+    metaDescription: "Custom food trailers built in Sparks, Nevada around your menu, equipment and workflow. Delivery available to California and beyond.",
     intro: "Custom food trailers designed around how your business actually operates—not a fixed template.",
     points: [
       "Custom kitchen layouts built around your menu and workflow.",
@@ -17,7 +17,7 @@ const SERVICES = {
   "mobile-kitchen-trailers": {
     title: "Mobile Kitchen Trailers",
     metaTitle: "Mobile Kitchen Trailers in Nevada | All Custom Trailers",
-    metaDescription: "Commercial mobile kitchen trailers built in Reno, Nevada for catering, events and mobile food operations. Custom layouts and equipment.",
+    metaDescription: "Commercial mobile kitchen trailers built in Sparks, Nevada for catering, events and mobile food operations. Custom layouts and equipment.",
     intro: "A professional kitchen on wheels, planned around the volume, equipment and workflow your operation requires.",
     points: [
       "Commercial kitchen layouts for real daily production.",
@@ -29,7 +29,7 @@ const SERVICES = {
   "beverage-trailers": {
     title: "Beverage Trailers",
     metaTitle: "Custom Beverage Trailers in Nevada | All Custom Trailers",
-    metaDescription: "Custom beverage trailers for coffee, drinks and specialty concepts, built in Reno, Nevada with delivery available across California and beyond.",
+    metaDescription: "Custom beverage trailers for coffee, drinks and specialty concepts, built in Sparks, Nevada with delivery available across California and beyond.",
     intro: "Purpose-built beverage trailers for coffee, drinks, bars and specialty concepts that need a mobile operation.",
     points: [
       "Layouts tailored to your drink menu and equipment.",
@@ -41,7 +41,7 @@ const SERVICES = {
   "specialty-trailers": {
     title: "Specialty Trailers",
     metaTitle: "Custom Specialty Trailers in Nevada | All Custom Trailers",
-    metaDescription: "Custom specialty and commercial trailers built in Reno, Nevada for unique business concepts. Designed around your operation and delivered where needed.",
+    metaDescription: "Custom specialty and commercial trailers built in Sparks, Nevada for unique business concepts. Designed around your operation and delivered where needed.",
     intro: "When your idea does not fit a standard trailer, we build around the operation you actually need.",
     points: [
       "Custom commercial layouts for unusual or specialized operations.",
@@ -83,7 +83,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
   return (
     <main className="blueprint-bg min-h-screen">
       <section className="max-w-6xl mx-auto px-6 py-24 sm:py-32">
-        <span className="tag-pill">All Custom Trailers · Reno, Nevada</span>
+        <span className="tag-pill">All Custom Trailers · Sparks, Nevada</span>
         <h1 className="mt-5 max-w-4xl font-display text-5xl sm:text-6xl font-semibold tracking-tight text-[var(--text)]">{service.title}</h1>
         <p className="mt-6 max-w-2xl text-xl leading-relaxed text-[var(--text-muted)]">{service.intro}</p>
 
@@ -100,7 +100,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
           <div>
             <span className="tag-pill">Built in Nevada</span>
             <h2 className="mt-4 font-display text-3xl font-semibold text-[var(--text)]">Built around your business.</h2>
-            <p className="mt-4 text-[var(--text-muted)] leading-relaxed">We build in Reno, serve the surrounding Northern Nevada area, and can coordinate delivery to California and other U.S. locations when the customer covers shipping.</p>
+            <p className="mt-4 text-[var(--text-muted)] leading-relaxed">We build in Sparks, serve Reno and the surrounding Northern Nevada area, and can coordinate delivery to California and other U.S. locations when the customer covers shipping.</p>
           </div>
           <div className="stacked-card p-8 bg-[var(--text)] text-white">
             <span className="font-mono text-xs uppercase tracking-[0.2em] text-white/45">Ready to start?</span>
@@ -108,7 +108,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
             <p className="mt-4 text-white/60">No commitment. We will help you figure out the right layout, equipment and next step.</p>
             <div className="mt-7 flex flex-wrap gap-3">
               <Link href="/#contact" className="rounded bg-[var(--accent)] px-6 py-3 font-semibold text-white">Get a Quote →</Link>
-              <a href="tel:+17754096847" className="rounded border border-white/20 px-6 py-3 font-semibold text-white">Call (775) 409-6847</a>
+              <a href="tel:+17754700219" className="rounded border border-white/20 px-6 py-3 font-semibold text-white">Call (775) 470-0219</a>
             </div>
           </div>
         </div>
