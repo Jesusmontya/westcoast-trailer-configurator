@@ -74,9 +74,9 @@ const translations = {
     footer: {
       tagline: "We build the trailer. You build the business.",
       contactHeading: "Contact",
-      phone: "(775) 409-6847",
+      phone: "(775) 470-0219",
       email: "luisinfante@allcustomtrailers.com",
-      location: "Nevada, USA — we ship anywhere (shipping cost applies)",
+      location: "729 E Glendale Ave, Sparks, NV 89431 — we ship anywhere (shipping cost applies)",
       copyright: "All Custom Trailers LLC. All rights reserved.",
     },
   },
@@ -143,9 +143,9 @@ const translations = {
     footer: {
       tagline: "Nosotros hacemos el trailer. Tú haces el negocio.",
       contactHeading: "Contacto",
-      phone: "(775) 409-6847",
+      phone: "(775) 470-0219",
       email: "luisinfante@allcustomtrailers.com",
-      location: "Nevada, USA — enviamos a cualquier lugar (costo de envío aplica)",
+      location: "729 E Glendale Ave, Sparks, NV 89431 — enviamos a cualquier lugar (costo de envío aplica)",
       copyright: "All Custom Trailers LLC. Todos los derechos reservados.",
     },
   },
