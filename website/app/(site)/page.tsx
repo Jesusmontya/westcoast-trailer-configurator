@@ -18,6 +18,29 @@ const clientWork = [
 
 const clientNames = clientWork.map((work) => work.name);
 
+const buildDetails: Record<string, { type: string; focus: string[] }> = {
+  "Captain Calabash": {
+    type: "Custom Food Trailer",
+    focus: ["Custom food-service layout", "Workflow built around the operation", "Electrical, plumbing and equipment integration"],
+  },
+  "Left Coast Pizza": {
+    type: "Pizza Trailer",
+    focus: ["Pizza-focused production workflow", "Custom service and prep layout", "Commercial electrical and equipment planning"],
+  },
+  "Pancho's Tacos": {
+    type: "Taco Trailer",
+    focus: ["Taco-service workflow", "Custom prep and service layout", "Commercial utility and equipment integration"],
+  },
+  "Rico's Mexican Food": {
+    type: "Food Trailer",
+    focus: ["Custom mobile-kitchen layout", "Service flow built around the concept", "Commercial equipment and utility planning"],
+  },
+  "Tortilleria Rey Tacamba": {
+    type: "Custom Food Trailer",
+    focus: ["Custom production and service layout", "Workflow designed around the business", "Commercial equipment and utility integration"],
+  },
+};
+
 function ImageFrame({ src, alt, className = "" }: { src: string; alt: string; className?: string }) {
   return (
     <div className={`relative overflow-hidden bg-[var(--surface-2)] ${className}`}>
@@ -85,6 +108,7 @@ function ContactForm() {
 function HomeContent() {
   const { t } = useLanguage();
   const searchParams = useSearchParams();
+  const [selectedBuild, setSelectedBuild] = useState<string | null>(null);
 
   const configuratorUrl = (() => {
     const utmSource = searchParams.get("utm_source");
@@ -135,32 +159,70 @@ function HomeContent() {
           </div>
 
           <div className="mt-12 grid grid-cols-1 gap-5 lg:grid-cols-12">
-            <a href="#custom-build" className="group relative min-h-[430px] overflow-hidden rounded-xl bg-[var(--text)] lg:col-span-7">
-              <ImageFrame src={clientWork[0].image} alt={clientWork[0].name} className="absolute inset-0 h-full w-full opacity-90" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-7 sm:p-9">
-                <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-white/55">Featured build</p>
-                <h3 className="mt-2 font-display text-3xl font-semibold text-white sm:text-4xl">{clientWork[0].name}</h3>
-                <p className="mt-1 text-sm text-white/60">{clientWork[0].type}</p>
-                <span className="mt-5 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.18em] text-white/75">Explore the custom experience <span>→</span></span>
-              </div>
-            </a>
+            <div className="group relative min-h-[430px] overflow-hidden rounded-xl bg-[var(--text)] lg:col-span-7">
+              <a href="#custom-build" className="absolute inset-0">
+                <ImageFrame src={clientWork[0].image} alt={clientWork[0].name} className="absolute inset-0 h-full w-full opacity-90" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/15 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 p-7 sm:p-9">
+                  <p className="font-mono text-[9px] uppercase tracking-[0.25em] text-white/55">Featured build</p>
+                  <h3 className="mt-2 font-display text-3xl font-semibold text-white sm:text-4xl">{clientWork[0].name}</h3>
+                  <p className="mt-1 text-sm text-white/60">{clientWork[0].type}</p>
+                  <span className="mt-5 inline-flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.18em] text-white/75">Explore the custom experience <span>→</span></span>
+                </div>
+              </a>
+              <button type="button" onClick={() => setSelectedBuild(clientWork[0].name)} className="absolute top-4 right-4 z-20 rounded-full border border-white/25 bg-black/45 px-3.5 py-2 font-mono text-[9px] uppercase tracking-[0.18em] text-white backdrop-blur-sm hover:bg-black/65 transition-colors">Build details</button>
+            </div>
 
             <div className="grid grid-cols-2 gap-5 lg:col-span-5">
               {clientWork.slice(1).map((work) => (
-                <a key={work.name} href="#custom-build" className="group relative min-h-[205px] overflow-hidden rounded-xl bg-[var(--text)]">
-                  <ImageFrame src={work.image} alt={work.name} className="absolute inset-0 h-full w-full opacity-85" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
-                  <div className="absolute bottom-0 left-0 right-0 p-4">
-                    <p className="font-display text-lg font-semibold text-white leading-tight">{work.name}</p>
-                    <p className="mt-1 font-mono text-[8px] uppercase tracking-wider text-white/50">{work.type}</p>
-                  </div>
-                </a>
+                <div key={work.name} className="group relative min-h-[205px] overflow-hidden rounded-xl bg-[var(--text)]">
+                  <a href="#custom-build" className="absolute inset-0">
+                    <ImageFrame src={work.image} alt={work.name} className="absolute inset-0 h-full w-full opacity-85" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/10 to-transparent" />
+                    <div className="absolute bottom-0 left-0 right-0 p-4">
+                      <p className="font-display text-lg font-semibold text-white leading-tight">{work.name}</p>
+                      <p className="mt-1 font-mono text-[8px] uppercase tracking-wider text-white/50">{work.type}</p>
+                    </div>
+                  </a>
+                  <button type="button" onClick={() => setSelectedBuild(work.name)} className="absolute top-3 right-3 z-20 rounded-full border border-white/20 bg-black/45 px-2.5 py-1.5 font-mono text-[8px] uppercase tracking-[0.15em] text-white backdrop-blur-sm hover:bg-black/65 transition-colors">Info</button>
+                </div>
               ))}
             </div>
           </div>
         </div>
       </section>
+
+      {/* BUILD DETAILS */}
+      {selectedBuild && buildDetails[selectedBuild] && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/70 px-5 py-8 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={`${selectedBuild} build details`} onClick={() => setSelectedBuild(null)}>
+          <div className="w-full max-w-lg rounded-2xl bg-[var(--surface)] p-7 sm:p-9 shadow-2xl border border-[var(--line)]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-6">
+              <div>
+                <span className="tag-pill">Build details</span>
+                <h2 className="mt-3 font-display text-3xl font-semibold text-[var(--text)]">{selectedBuild}</h2>
+                <p className="mt-1 font-mono text-xs uppercase tracking-wider text-[var(--accent-2)]">{buildDetails[selectedBuild].type}</p>
+              </div>
+              <button type="button" onClick={() => setSelectedBuild(null)} aria-label="Close build details" className="text-2xl leading-none text-[var(--text-muted)] hover:text-[var(--text)]">×</button>
+            </div>
+
+            <div className="mt-7">
+              <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-[var(--text-muted)]">Typical build focus</p>
+              <div className="mt-3 grid gap-3">
+                {buildDetails[selectedBuild].focus.map((item) => (
+                  <div key={item} className="rounded-lg border border-[var(--line)] bg-[var(--surface-2)] px-4 py-3 text-sm text-[var(--text)]">{item}</div>
+                ))}
+              </div>
+            </div>
+
+            <p className="mt-6 text-sm leading-relaxed text-[var(--text-muted)]">Every project is customized to the business. Exact equipment and layout vary by build and are confirmed during the design and quote process.</p>
+
+            <div className="mt-7 flex flex-wrap gap-3">
+              <a href="#contact" onClick={() => setSelectedBuild(null)} className="rounded bg-[var(--accent)] px-5 py-3 text-sm font-semibold text-white hover:bg-[var(--accent-glow)] transition-colors">GET A QUOTE →</a>
+              <a href="tel:+17754096847" onClick={() => setSelectedBuild(null)} className="rounded border border-[var(--line)] px-5 py-3 text-sm font-semibold text-[var(--text)] hover:bg-[var(--surface-2)] transition-colors">CALL (775) 409-6847</a>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* 3. THE MAIN EXPERIENCE */}
       <TrailerExperience />
