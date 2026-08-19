@@ -10,21 +10,21 @@ export default function Navbar() {
   return (
     <header className="sticky top-0 z-50 w-full bg-[var(--text)]/90 backdrop-blur-md border-b border-white/10">
       <nav className="max-w-7xl mx-auto flex items-center justify-between px-6 py-4">
-        <a href="#home" className="font-display text-lg font-semibold tracking-tight text-white">
+        <a href="/#home" className="font-display text-lg font-semibold tracking-tight text-white">
           All Custom Trailers
         </a>
 
         <div className="hidden md:flex items-center gap-8 text-sm font-medium text-white/60 font-mono uppercase tracking-wide">
-          <a href="#home" className="hover:text-white transition-colors">
+          <a href="/#home" className="hover:text-white transition-colors">
             {t.nav.home}
           </a>
-          <a href="#gallery" className="hover:text-white transition-colors">
+          <a href="/#gallery" className="hover:text-white transition-colors">
             {t.nav.gallery}
           </a>
-          <a href="#about" className="hover:text-white transition-colors">
+          <a href="/#about" className="hover:text-white transition-colors">
             {t.nav.about}
           </a>
-          <a href="#contact" className="hover:text-white transition-colors">
+          <a href="/#contact" className="hover:text-white transition-colors">
             {t.nav.contact}
           </a>
         </div>
