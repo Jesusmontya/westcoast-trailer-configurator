@@ -3,6 +3,7 @@ import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { LanguageProvider } from "./context/LanguageContext";
 import PhoneNormalizer from "./components/PhoneNormalizer";
+import GalleryLinkFixer from "./components/GalleryLinkFixer";
 
 const fraunces = Fraunces({
   subsets: ["latin"],
@@ -38,6 +39,7 @@ export default function RootLayout({
       <body className={`${fraunces.variable} ${inter.variable} ${mono.variable}`}>
         <LanguageProvider>
           <PhoneNormalizer />
+          <GalleryLinkFixer />
           {children}
         </LanguageProvider>
       </body>
