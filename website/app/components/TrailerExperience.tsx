@@ -1,13 +1,46 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useLanguage } from "../context/LanguageContext";
 
 const TrailerExperience3D = dynamic(() => import("./TrailerExperience3D"), { ssr: false });
 
 export default function TrailerExperience() {
+  const { lang } = useLanguage();
+  const location = lang === "es"
+    ? {
+        eyebrow: "NEVADA Y MÁS ALLÁ",
+        heading: "CONSTRUIDOS EN RENO. ENTREGADOS DONDE LOS NECESITES.",
+        text: "All Custom Trailers construye food trailers y cocinas móviles personalizadas en Reno, Nevada. Atendemos Reno y sus alrededores, y coordinamos envíos a California y cualquier lugar de Estados Unidos. El costo de envío aplica.",
+        local: "Reno · Sparks · Carson City · Norte de Nevada",
+        delivery: "California y envíos nacionales disponibles",
+      }
+    : {
+        eyebrow: "NEVADA & BEYOND",
+        heading: "BUILT IN RENO. DELIVERED WHERE YOU NEED IT.",
+        text: "All Custom Trailers builds custom food trailers and mobile kitchens in Reno, Nevada. We serve businesses throughout the Reno area and can coordinate delivery to California and locations across the U.S. Shipping costs apply.",
+        local: "Reno · Sparks · Carson City · Northern Nevada",
+        delivery: "California & nationwide delivery available",
+      };
+
   return (
     <>
       <TrailerExperience3D />
+
+      <section className="w-full blueprint-bg border-t border-[var(--line)]" aria-labelledby="service-area-heading">
+        <div className="max-w-6xl mx-auto px-6 py-20 sm:py-24">
+          <span className="tag-pill mb-4">{location.eyebrow}</span>
+          <div className="max-w-3xl">
+            <h2 id="service-area-heading" className="font-display text-3xl sm:text-4xl font-semibold text-[var(--text)]">{location.heading}</h2>
+            <p className="mt-5 text-[var(--text-muted)] leading-relaxed max-w-2xl">{location.text}</p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <span className="corner-ticket">{location.local}</span>
+              <span className="corner-ticket">{location.delivery}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <a
         href="tel:+17754096847"
         aria-label="Call All Custom Trailers"
