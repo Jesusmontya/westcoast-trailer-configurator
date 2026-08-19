@@ -109,6 +109,7 @@ function HomeContent() {
           <div className="max-w-2xl">
             <span className="inline-block font-mono text-[10px] uppercase tracking-wide text-white/70 border border-white/25 rounded px-3 py-1 mb-5">{t.hero.eyebrow}</span>
             <h1 className="font-display text-5xl sm:text-6xl lg:text-7xl font-semibold tracking-tight leading-[0.96] text-white">{t.hero.headline}</h1>
+            <p className="mt-4 font-mono text-xs sm:text-sm uppercase tracking-[0.12em] text-white/75">Custom Food Trailers &amp; Mobile Kitchens Built in Nevada</p>
             <p className="mt-6 max-w-xl text-lg text-white/80">{t.hero.paragraph}</p>
             <p className="mt-3 font-mono text-sm text-white/60">{t.hero.trustLine}</p>
             <div className="mt-9 flex flex-wrap gap-3">
