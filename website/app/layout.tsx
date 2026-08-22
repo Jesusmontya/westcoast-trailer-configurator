@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { LanguageProvider } from "./context/LanguageContext";
 import PhoneNormalizer from "./components/PhoneNormalizer";
@@ -37,6 +38,18 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${fraunces.variable} ${inter.variable} ${mono.variable}`}>
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-4S6FH3LEB6"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-4S6FH3LEB6');
+          `}
+        </Script>
         <LanguageProvider>
           <PhoneNormalizer />
           <GalleryLinkFixer />
